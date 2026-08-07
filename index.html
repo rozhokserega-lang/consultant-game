@@ -471,6 +471,27 @@ function playerFacing8(ang) {
   return sector;
 }
 
+/** Боковой профиль: в листе walk_left = тот же вид вправо, зеркалим для влево. */
+function playerSideWalkFlip(ang) {
+  return Math.cos(ang) < 0;
+}
+
+function pickPlayerLocomotionAnim(ang, moving, dashing) {
+  const cos = Math.cos(ang);
+  const sin = Math.sin(ang);
+  const absC = Math.abs(cos);
+  const absS = Math.abs(sin);
+  if (dashing) return { anim: 'sprint', flip: cos < 0 };
+  if (moving && absC > 0.55 && absS < 0.55) return { anim: 'run', flip: cos < 0 };
+  if (absC > absS && absC > 0.42) return { anim: 'walk_right', flip: cos < 0 };
+  if (sin < -0.45) return { anim: 'walk_up', flip: false };
+  if (sin > 0.45) return { anim: 'walk_down', flip: false };
+  const face = playerFacing8(ang);
+  if (face === 5 || face === 3) return { anim: 'diag_ul', flip: false };
+  if (face === 7 || face === 1) return { anim: 'diag_ur', flip: false };
+  return { anim: 'walk_down', flip: false };
+}
+
 const ENEMY_SKIN_POOLS = {
   normal: ['enemy_elder', 'enemy_woman_purple', 'enemy_cane', 'enemy_manager', 'enemy_fast', 'enemy_tank'],
   fast: ['enemy_fast', 'enemy_woman_purple', 'enemy_cane'],
@@ -1596,46 +1617,23 @@ class Player {
       frameIdx = Math.min(keys.length - 1, Math.floor(t * keys.length));
       flip = false;
     } else if (this.attacking) {
-      // боковой/верхний удар — кадр направления + оружие в руке
-      const map = {
-        0: 'walk_right', 1: 'walk_right', 2: 'walk_down', 3: 'walk_left',
-        4: 'walk_left', 5: 'diag_ul', 6: 'walk_up', 7: 'diag_ur',
-      };
-      anim = map[face] || 'walk_right';
-      if (Math.abs(Math.cos(ang)) > 0.5) anim = Math.cos(ang) < 0 ? 'walk_left' : 'walk_right';
+      const loco = pickPlayerLocomotionAnim(ang, false, false);
+      anim = loco.anim;
+      flip = loco.flip;
       frameIdx = Math.min(2, this._animFrame || 0);
-      flip = false;
     } else if (this.dashTime > 0) {
       anim = 'sprint';
       flip = Math.cos(ang) < 0;
     } else if (this._wasMoving) {
-      // бег по горизонтали / спринтовые циклы; иначе walk по 8 направлениям
-      const absC = Math.abs(Math.cos(ang));
-      const absS = Math.abs(Math.sin(ang));
-      if (absC > 0.55 && absS < 0.55) {
-        anim = 'run';
-        flip = Math.cos(ang) < 0;
-      } else {
-        const map = {
-          0: 'walk_right', 1: 'walk_right', 2: 'walk_down', 3: 'walk_left',
-          4: 'walk_left', 5: 'diag_ul', 6: 'walk_up', 7: 'diag_ur',
-        };
-        anim = map[face] || 'walk_down';
-        flip = false;
-        // если нет нижних диагоналей — боковой цикл
-        if (face === 1) { anim = 'walk_right'; }
-        if (face === 3) { anim = 'walk_left'; }
-      }
+      const loco = pickPlayerLocomotionAnim(ang, true, false);
+      anim = loco.anim;
+      flip = loco.flip;
       frameIdx = this._animFrame || 0;
     } else {
-      // idle — первый кадр направления
-      const map = {
-        0: 'walk_right', 1: 'walk_right', 2: 'walk_down', 3: 'walk_left',
-        4: 'walk_left', 5: 'diag_ul', 6: 'walk_up', 7: 'diag_ur',
-      };
-      anim = map[face] || 'walk_down';
+      const loco = pickPlayerLocomotionAnim(ang, false, false);
+      anim = loco.anim;
+      flip = loco.flip;
       frameIdx = 0;
-      flip = false;
     }
 
     const keys = PLAYER_ANIM.anims[anim] || PLAYER_ANIM.anims.walk_down;
@@ -1709,27 +1707,8 @@ class Player {
   tickAnim(dt, moving) {
     this._wasMoving = moving;
     if (this.attacking) return;
-    const face = playerFacing8(this.angle);
-    let anim = 'walk_down';
-    if (this.dashTime > 0) anim = 'sprint';
-    else if (moving) {
-      const absC = Math.abs(Math.cos(this.angle));
-      const absS = Math.abs(Math.sin(this.angle));
-      if (absC > 0.55 && absS < 0.55) anim = 'run';
-      else {
-        const map = {
-          0: 'walk_right', 1: 'walk_right', 2: 'walk_down', 3: 'walk_left',
-          4: 'walk_left', 5: 'diag_ul', 6: 'walk_up', 7: 'diag_ur',
-        };
-        anim = map[face] || 'walk_down';
-      }
-    } else {
-      const map = {
-        0: 'walk_right', 1: 'walk_right', 2: 'walk_down', 3: 'walk_left',
-        4: 'walk_left', 5: 'diag_ul', 6: 'walk_up', 7: 'diag_ur',
-      };
-      anim = map[face] || 'walk_down';
-    }
+    const loco = pickPlayerLocomotionAnim(this.angle, moving, this.dashTime > 0);
+    const anim = loco.anim;
     if (anim !== this._animName) {
       this._animName = anim;
       this._animFrame = 0;
