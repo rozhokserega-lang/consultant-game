@@ -119,6 +119,25 @@
     z-index: 15; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
     pointer-events: none; max-width: 90%;
   }
+  .shop-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px; max-height: min(48vh, 360px); overflow-y: auto; text-align: left; margin: 10px 0;
+  }
+  .shop-item {
+    background: rgba(255,255,255,0.06); border: 2px solid #555; border-radius: 12px;
+    padding: 10px; cursor: pointer; color: #fff;
+  }
+  .shop-item:hover { border-color: #f1c40f; }
+  .shop-item.owned { border-color: #2ecc71; }
+  .shop-item.locked { opacity: 0.45; cursor: not-allowed; }
+  .shop-item .price { color: #f1c40f; font-weight: 800; font-size: 13px; margin-top: 6px; }
+  .shop-item .ttl { font-weight: 700; font-size: 13px; }
+  .shop-item .desc { font-size: 11px; color: #aaa; margin-top: 2px; }
+  .shop-head { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
+  .coin-pill {
+    background: rgba(241,196,15,0.18); border: 1px solid #f1c40f; color: #f1c40f;
+    border-radius: 999px; padding: 4px 10px; font-weight: 800; font-size: 14px;
+  }
 </style>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>if(window.Telegram&&Telegram.WebApp){Telegram.WebApp.ready();Telegram.WebApp.expand();}</script>
@@ -144,6 +163,7 @@
 
   <div style="flex-direction:column;align-items:center;gap:0;">
     <span style="font-size:20px;font-weight:800;" id="hud-score">🔨 0</span>
+    <span class="coin-pill" id="hud-coins">🪙 0</span>
     <span class="hud-mode chase" id="hud-mode">🔴 ОХОТА 8.0с</span>
     <span class="hud-label" id="hud-combo" style="display:none;color:#f1c40f;font-weight:700;"></span>
   </div>
@@ -166,7 +186,7 @@
     <div id="joystick-base"><div id="joystick-thumb"></div></div>
   </div>
   <div id="attack-zone" class="mobile-only">
-    <div id="attack-btn">🔨</div>
+    <div id="attack-btn">⚔</div>
   </div>
   <div id="desktop-hint">WASD — ход · Пробел/клик — удар · P — пауза · 1–3 — апгрейд</div>
 
@@ -176,6 +196,21 @@
       <h2>⬆ Повышение!</h2>
       <p>Выбери бонус смены</p>
       <div class="cards" id="upgrade-cards"></div>
+    </div>
+  </div>
+
+  <!-- Магазин между волнами -->
+  <div class="overlay" id="shop-overlay">
+    <div class="panel" style="max-width:640px;">
+      <div class="shop-head">
+        <h2 style="margin:0;">🛒 Магазин смены</h2>
+        <span class="coin-pill" id="shop-coins">🪙 0</span>
+      </div>
+      <p id="shop-sub">Перед волной закупись. Монеты падают с покупателей.</p>
+      <div class="shop-grid" id="shop-grid"></div>
+      <div class="row-btns">
+        <button class="btn" id="btn-shop-go" type="button">В бой! ⚔</button>
+      </div>
     </div>
   </div>
 
@@ -199,10 +234,10 @@
       <div class="row-btns" style="flex-direction:column;align-items:stretch;">
         <button class="btn ghost" id="tog-sound" type="button">🔊 Звук: ВКЛ</button>
         <button class="btn ghost" id="tog-vibro" type="button">📳 Вибрация: ВКЛ</button>
-        <button class="btn ghost" id="tog-hammer" type="button">🔨 Молоток: Стандарт</button>
+        <button class="btn ghost" id="tog-hammer" type="button">⚔ Оружие: Молоток</button>
         <button class="btn" id="btn-settings-close" type="button">Закрыть</button>
       </div>
-      <p style="margin-top:12px;font-size:12px;">Рекорд: <b id="set-record">0</b> · Разблокировано молотков: <b id="set-hammers">1</b></p>
+      <p style="margin-top:12px;font-size:12px;">Рекорд: <b id="set-record">0</b> · Оружие: <b id="set-hammers">1</b> · Банк: <b id="set-bank">0</b></p>
     </div>
   </div>
 
@@ -312,18 +347,46 @@ const PHRASES = [
   'А мне бесплатно клеят',
 ];
 
-const HAMMERS = [
-  { id: 'standard', name: 'Стандарт', unlock: 0, stickLength: 42, cooldown: 0.35, damageBonus: 0, speedBonus: 0 },
-  { id: 'fast', name: 'Лёгкий', unlock: 25, stickLength: 34, cooldown: 0.22, damageBonus: 0, speedBonus: 20 },
-  { id: 'heavy', name: 'Тяжёлый', unlock: 50, stickLength: 54, cooldown: 0.48, damageBonus: 1, speedBonus: -25 },
+const WEAPONS = [
+  { id: 'hammer', name: 'Молоток', ico: '🔨', price: 0,
+    stickLength: 42, cooldown: 0.35, damage: 1, arc: Math.PI / 3, knock: 300, speedBonus: 0, stun: 0, color: '#8B4513', tip: '#95a5a6' },
+  { id: 'glove', name: 'Перчатка', ico: '🥊', price: 45, sprite: 'pickup_glove',
+    stickLength: 26, cooldown: 0.16, damage: 1, arc: Math.PI / 2.1, knock: 480, speedBonus: 15, stun: 0, color: '#c0392b', tip: '#e74c3c' },
+  { id: 'bat', name: 'Бита', ico: '🏏', price: 70,
+    stickLength: 60, cooldown: 0.46, damage: 2, arc: Math.PI / 3.4, knock: 420, speedBonus: -10, stun: 0, color: '#a67c2d', tip: '#d4a017' },
+  { id: 'taser', name: 'Шокер', ico: '⚡', price: 95, sprite: 'pickup_bolt',
+    stickLength: 34, cooldown: 0.52, damage: 1, arc: Math.PI / 2.4, knock: 180, speedBonus: 0, stun: 1.35, color: '#2980b9', tip: '#5dade2' },
+];
+
+// совместимость со старым сейвом
+const HAMMERS = WEAPONS;
+
+const SHOP_ITEMS = [
+  { id: 'heal', ico: '❤️', sprite: 'pickup_heart', ttl: 'Пластырь', desc: '+2 HP', price: 10,
+    apply: (p) => { p.hp = Math.min(p.maxHp, p.hp + 2); } },
+  { id: 'medkit', ico: '🩹', sprite: 'pickup_medkit', ttl: 'Аптечка', desc: 'Полное лечение', price: 26,
+    apply: (p) => { p.hp = p.maxHp; } },
+  { id: 'maxhp', ico: '💖', ttl: 'Жилетка', desc: 'Макс HP +1 и хил', price: 32,
+    apply: (p) => { p.maxHp++; p.hp = Math.min(p.hp + 1, p.maxHp); } },
+  { id: 'shoe', ico: '👟', sprite: 'pickup_shoe', ttl: 'Кроссы', desc: 'Скорость +22', price: 28,
+    apply: (p) => { p.bonusSpeed = (p.bonusSpeed || 0) + 22; p.recalcStats(); } },
+  { id: 'dmg', ico: '💥', ttl: 'Энергетик', desc: 'Урон +1', price: 36,
+    apply: (p) => { p.bonusDamage = (p.bonusDamage || 0) + 1; p.recalcStats(); } },
+  { id: 'shield', ico: '🛡️', sprite: 'pickup_shield', ttl: 'Бейдж', desc: 'Блок 1 удара', price: 30,
+    apply: (p) => { p.shieldCharges = (p.shieldCharges || 0) + 1; } },
+  { id: 'lucky', ico: '🎫', sprite: 'pickup_key', ttl: 'Купон', desc: 'Монеты ×1.25 до конца', price: 40,
+    apply: (p, g) => { g.coinMult = Math.min(2, (g.coinMult || 1) * 1.25); } },
+  { id: 'w_glove', weaponId: 'glove', ico: '🥊', sprite: 'pickup_glove', ttl: 'Перчатка', desc: 'Очень быстрые удары', price: 45 },
+  { id: 'w_bat', weaponId: 'bat', ico: '🏏', ttl: 'Бита', desc: 'Дальше и больнее', price: 70 },
+  { id: 'w_taser', weaponId: 'taser', ico: '⚡', sprite: 'pickup_bolt', ttl: 'Шокер', desc: 'Станит покупателей', price: 95 },
 ];
 
 const UPGRADES = [
   { id: 'hp', ico: '❤️', ttl: '+1 HP', desc: 'Макс. и текущее здоровье +1', apply: p => { p.maxHp++; p.hp = Math.min(p.hp + 1, p.maxHp); } },
-  { id: 'spd', ico: '💨', ttl: 'Скорость', desc: 'Бегай быстрее по ТЦ', apply: p => { p.speed += 20; } },
+  { id: 'spd', ico: '💨', ttl: 'Скорость', desc: 'Бегай быстрее по ТЦ', apply: p => { p.bonusSpeed = (p.bonusSpeed || 0) + 20; p.recalcStats(); } },
   { id: 'stick', ico: '📏', ttl: 'Длиннее', desc: 'Дальность удара +6', apply: p => { p.stickLength += 6; } },
   { id: 'atk', ico: '⚡', ttl: 'Быстрее удар', desc: 'Кулдаун атаки −0.04с', apply: p => { p.attackCooldownTime = Math.max(0.12, p.attackCooldownTime - 0.04); } },
-  { id: 'dmg', ico: '💥', ttl: 'Урон +1', desc: 'Молоток бьёт сильнее', apply: p => { p.damage += 1; } },
+  { id: 'dmg', ico: '💥', ttl: 'Урон +1', desc: 'Удар бьёт сильнее', apply: p => { p.bonusDamage = (p.bonusDamage || 0) + 1; p.recalcStats(); } },
   { id: 'heal', ico: '🩹', ttl: 'Аптечка', desc: 'Полностью вылечить', apply: p => { p.hp = p.maxHp; } },
   { id: 'combo', ico: '🔥', ttl: 'Комбо+', desc: 'Комбо не сбрасывается 8с', apply: (p, g) => { g.comboShield = 8; } },
 ];
@@ -375,6 +438,8 @@ class SFX {
   kill() { this.tone(320, 0.12, 'sawtooth', 0.09, 200); this.tone(480, 0.1, 'triangle', 0.05); }
   hurt() { this.tone(90, 0.2, 'sawtooth', 0.12, -40); }
   pickup() { this.tone(520, 0.1, 'sine', 0.08, 200); }
+  coin() { this.tone(880, 0.06, 'sine', 0.07); this.tone(1175, 0.08, 'triangle', 0.05); }
+  shop() { this.tone(300, 0.08, 'triangle', 0.07); this.tone(450, 0.1, 'triangle', 0.06); }
   mode() { this.tone(240, 0.15, 'triangle', 0.1); this.tone(360, 0.15, 'triangle', 0.06); }
   level() { this.tone(400, 0.1, 'sine', 0.08); setTimeout(() => this.tone(600, 0.12, 'sine', 0.08), 80); }
   win() { [400,500,600,800].forEach((f,i) => setTimeout(() => this.tone(f, 0.15, 'sine', 0.08), i * 90)); }
@@ -447,21 +512,41 @@ class SpeechBubble {
 }
 
 class Pickup {
-  constructor(x, y, type = 'heal') {
-    this.x = x; this.y = y; this.type = type; this.life = 10; this.r = 14;
+  constructor(x, y, type = 'heal', value = 1) {
+    this.x = x; this.y = y; this.type = type; this.value = value;
+    this.life = type === 'coin' ? 12 : 10; this.r = type === 'coin' ? 12 : 14;
+    this.vx = rand(-40, 40); this.vy = rand(-60, -10);
   }
-  update(dt) { this.life -= dt; }
+  update(dt, player) {
+    this.life -= dt;
+    if (this.type === 'coin' && player) {
+      const d = dist(this.x, this.y, player.x, player.y);
+      if (d < 90) {
+        const pull = (90 - d) * 4.5;
+        const a = angleTo(this.x, this.y, player.x, player.y);
+        this.vx += Math.cos(a) * pull * dt;
+        this.vy += Math.sin(a) * pull * dt;
+      }
+    }
+    this.x += this.vx * dt; this.y += this.vy * dt;
+    this.vx *= 0.92; this.vy *= 0.92;
+  }
   get dead() { return this.life <= 0; }
   get alpha() { return this.life < 1.5 ? this.life / 1.5 : 1; }
   draw(c) {
     const a = this.alpha; if (a < 0.02) return;
     const pulse = 1 + Math.sin(performance.now() / 200) * 0.12;
     c.save(); c.globalAlpha = a;
-    const isLunch = this.type === 'lunch';
-    const name = isLunch ? 'pickup_bolt' : 'pickup_heart';
-    if (!drawSprite(c, name, this.x, this.y, { scale: 1.1 * pulse, anchorY: 0.5 })) {
-      c.fillStyle = isLunch ? '#f39c12' : '#e74c3c';
+    let name = 'pickup_heart';
+    if (this.type === 'lunch') name = 'pickup_bolt';
+    else if (this.type === 'coin') name = 'pickup_coin';
+    if (!drawSprite(c, name, this.x, this.y, { scale: (this.type === 'coin' ? 0.95 : 1.1) * pulse, anchorY: 0.5 })) {
+      c.fillStyle = this.type === 'lunch' ? '#f39c12' : this.type === 'coin' ? '#f1c40f' : '#e74c3c';
       c.beginPath(); c.arc(this.x, this.y, this.r * pulse, 0, Math.PI*2); c.fill();
+    }
+    if (this.type === 'coin' && this.value > 1) {
+      c.fillStyle = '#fff'; c.font = 'bold 11px sans-serif'; c.textAlign = 'center';
+      c.fillText('×' + this.value, this.x, this.y - 14);
     }
     c.restore();
   }
@@ -499,34 +584,34 @@ class Enemy {
     switch (type) {
       case 'fast':
         this.r = rand(10, 13); this.hp = randi(1, 2); this.speed = rand(130, 175); this.xpReward = 2;
-        this.nameTag = 'Торопыга'; break;
+        this.coinDrop = randi(2, 3); this.nameTag = 'Торопыга'; break;
       case 'tank':
         this.r = rand(18, 23); this.hp = randi(5, 8); this.speed = rand(30, 55); this.xpReward = 4;
-        this.nameTag = 'Танк'; break;
+        this.coinDrop = randi(5, 8); this.nameTag = 'Танк'; break;
       case 'fatty':
         this.r = rand(24, 30); this.hp = randi(6, 10); this.speed = rand(28, 45); this.xpReward = 5;
-        this.nameTag = 'Жирный'; this.explodes = true; break;
+        this.coinDrop = randi(6, 10); this.nameTag = 'Жирный'; this.explodes = true; break;
       case 'boss':
         this.r = rand(26, 32); this.hp = randi(12, 18); this.speed = rand(25, 45); this.xpReward = 10;
-        this.nameTag = 'Админ'; break;
+        this.coinDrop = randi(18, 28); this.nameTag = 'Админ'; break;
       case 'queue':
         this.r = rand(12, 15); this.hp = randi(2, 3); this.speed = rand(55, 80); this.xpReward = 2;
-        this.nameTag = 'Очередь'; break;
+        this.coinDrop = randi(1, 3); this.nameTag = 'Очередь'; break;
       case 'returner':
         this.r = rand(14, 17); this.hp = randi(3, 5); this.speed = rand(45, 70); this.xpReward = 3;
-        this.nameTag = 'Возврат'; break;
+        this.coinDrop = randi(3, 5); this.nameTag = 'Возврат'; break;
       case 'manager':
         this.r = rand(16, 19); this.hp = randi(4, 6); this.speed = rand(50, 75); this.xpReward = 5;
-        this.nameTag = 'Менеджер'; break;
+        this.coinDrop = randi(6, 10); this.nameTag = 'Менеджер'; break;
       case 'influencer':
         this.r = rand(20, 24); this.hp = randi(8, 12); this.speed = rand(25, 40); this.xpReward = 8;
-        this.nameTag = 'Инфлюенсер'; break;
+        this.coinDrop = randi(10, 15); this.nameTag = 'Инфлюенсер'; break;
       case 'director':
         this.r = 36; this.hp = 40; this.speed = 55; this.xpReward = 25;
-        this.nameTag = 'Директор'; break;
+        this.coinDrop = 40; this.nameTag = 'Директор'; break;
       default:
         this.r = rand(13, 17); this.hp = randi(2, 4); this.speed = rand(40, 100); this.xpReward = 1;
-        this.nameTag = 'Покупатель';
+        this.coinDrop = randi(1, 2); this.nameTag = 'Покупатель';
     }
 
     // Сильнее с каждой волной
@@ -537,7 +622,9 @@ class Enemy {
     this.hp = Math.max(1, Math.ceil(this.hp * hpMul));
     this.speed *= spdMul;
     this.xpReward = Math.max(1, Math.round(this.xpReward * (1 + (w - 1) * 0.08)));
+    this.coinDrop = Math.max(1, Math.round(this.coinDrop * (1 + (w - 1) * 0.12)));
     this.wave = w;
+    this.stunTimer = 0;
 
     this.maxHp = this.hp;
     const pool = ENEMY_SKIN_POOLS[type] || ENEMY_SKIN_POOLS.normal;
@@ -570,6 +657,15 @@ class Enemy {
     this.y += this.knockback.y * dt;
     this.knockback.x *= Math.exp(-10 * dt);
     this.knockback.y *= Math.exp(-10 * dt);
+
+    if (this.stunTimer > 0) {
+      this.stunTimer -= dt;
+      this.speedBuff = 1;
+      const m = this.r + 5;
+      this.x = Math.max(m, Math.min(worldW - m, this.x));
+      this.y = Math.max(m, Math.min(worldH - m, this.y));
+      return;
+    }
 
     // Менеджер баффает союзников
     if (this.type === 'manager') {
@@ -693,32 +789,57 @@ class Enemy {
     if (this.bubble && !this.bubble.dead) this.bubble.draw(c, this.x, this.y - this.r - 22);
   }
 
-  hit(damage, fromX, fromY) {
+  hit(damage, fromX, fromY, knock = 300, stun = 0) {
     this.hp -= damage;
     this.hitFlash = 0.15;
     const a = angleTo(fromX, fromY, this.x, this.y);
-    this.knockback.x = Math.cos(a) * 300;
-    this.knockback.y = Math.sin(a) * 300;
+    this.knockback.x = Math.cos(a) * knock;
+    this.knockback.y = Math.sin(a) * knock;
+    if (stun > 0) this.stunTimer = Math.max(this.stunTimer || 0, stun);
     return this.hp <= 0;
   }
 }
 
 class Player {
-  constructor(x, y, hammer) {
+  constructor(x, y, weapon) {
     this.x = x; this.y = y; this.r = 18; this.angle = 0;
-    this.baseSpeed = 220 + (hammer?.speedBonus || 0);
+    this.bonusSpeed = 0;
+    this.bonusDamage = 0;
+    this.shieldCharges = 0;
+    this.weapon = weapon || WEAPONS[0];
+    this.baseSpeed = 220;
     this.speed = this.baseSpeed;
     this.hp = 5; this.maxHp = 5; this.invincible = 0;
     this.knockback = { x: 0, y: 0 };
     this.attacking = false; this.attackTimer = 0; this.attackDuration = 0.18;
     this.attackCooldown = 0;
-    this.attackCooldownTime = hammer?.cooldown || 0.35;
-    this.stickLength = hammer?.stickLength || 42;
+    this.attackCooldownTime = 0.35;
+    this.stickLength = 42;
+    this.hitArc = Math.PI / 3;
+    this.knockPower = 300;
+    this.stunOnHit = 0;
     this.stickSwingAngle = 0; this.hitEnemies = new Set();
     this.level = 1; this.xp = 0; this.xpToNext = 10;
-    this.damage = 1 + (hammer?.damageBonus || 0);
-    // дебаффы / баффы
+    this.damage = 1;
     this.slowTimer = 0; this.muteAttack = 0; this.lunchTimer = 0;
+    this.applyWeapon(this.weapon);
+  }
+
+  applyWeapon(weapon) {
+    this.weapon = weapon || WEAPONS[0];
+    this.attackCooldownTime = this.weapon.cooldown;
+    this.stickLength = this.weapon.stickLength;
+    this.hitArc = this.weapon.arc;
+    this.knockPower = this.weapon.knock;
+    this.stunOnHit = this.weapon.stun || 0;
+    this.recalcStats();
+  }
+
+  recalcStats() {
+    const w = this.weapon || WEAPONS[0];
+    this.baseSpeed = 220 + (w.speedBonus || 0) + (this.bonusSpeed || 0);
+    this.damage = (w.damage || 1) + (this.bonusDamage || 0);
+    this.speed = this.baseSpeed * (this.slowTimer > 0 ? 0.55 : 1) * (this.lunchTimer > 0 ? 1.25 : 1);
   }
 
   gainXP(amount) {
@@ -739,7 +860,7 @@ class Player {
     if (this.muteAttack > 0) this.muteAttack -= dt;
     if (this.lunchTimer > 0) this.lunchTimer -= dt;
 
-    this.speed = this.baseSpeed * (this.slowTimer > 0 ? 0.55 : 1) * (this.lunchTimer > 0 ? 1.25 : 1);
+    this.recalcStats();
 
     this.x += this.knockback.x * dt;
     this.y += this.knockback.y * dt;
@@ -791,12 +912,17 @@ class Player {
     let diff = a - this.angle;
     while (diff > Math.PI) diff -= Math.PI * 2;
     while (diff < -Math.PI) diff += Math.PI * 2;
-    const halfArc = Math.PI / 3;
+    const halfArc = (this.hitArc || Math.PI / 3) * 0.5;
     return Math.abs(diff - this.stickSwingAngle * 0.5) < halfArc;
   }
 
   takeDamage(fromX, fromY) {
     if (this.invincible > 0 || this.lunchTimer > 0) return false;
+    if (this.shieldCharges > 0) {
+      this.shieldCharges--;
+      this.invincible = 0.6;
+      return false;
+    }
     this.hp -= 1;
     this.invincible = 0.8;
     const a = angleTo(fromX, fromY, this.x, this.y);
@@ -819,13 +945,11 @@ class Player {
     const blink = this.invincible > 0 && Math.floor(this.invincible * 20) % 2 === 0;
     if (blink && this.lunchTimer <= 0) return;
     c.save();
-    // тень
     c.fillStyle = 'rgba(0,0,0,0.28)';
     c.beginPath(); c.ellipse(this.x + 2, this.y + 4, 14, 6, 0, 0, Math.PI * 2); c.fill();
 
     let name = 'player_front';
     const ang = this.angle;
-    const moving = Math.hypot(this.knockback.x, this.knockback.y) > 20;
     if (this.attacking) name = 'player_attack';
     else if (Math.abs(Math.cos(ang)) > Math.abs(Math.sin(ang))) {
       name = (this._animPhase || 0) > 0.5 ? 'player_run1' : 'player_run2';
@@ -838,19 +962,27 @@ class Player {
     if (this.lunchTimer > 0) { c.shadowColor = '#f1c40f'; c.shadowBlur = 16; }
     if (this.slowTimer > 0) c.globalAlpha = 0.85;
     if (!drawSprite(c, name, this.x, this.y + 4, { scale, flip, anchorY: 1 })) {
-      // fallback круг
       c.fillStyle = '#3498db'; c.beginPath(); c.arc(this.x, this.y, this.r, 0, Math.PI*2); c.fill();
     }
 
-    // Молоток поверх при атаке
+    if (this.shieldCharges > 0) {
+      c.strokeStyle = 'rgba(52,152,219,0.85)'; c.lineWidth = 3;
+      c.beginPath(); c.arc(this.x, this.y, this.r + 8, 0, Math.PI * 2); c.stroke();
+    }
+
     if (this.attacking || this.attackCooldown > this.attackCooldownTime - 0.05) {
       const stick = this.getStickEnd();
-      c.strokeStyle = '#8B4513'; c.lineWidth = 4; c.lineCap = 'round';
+      const w = this.weapon || WEAPONS[0];
+      c.strokeStyle = w.color || '#8B4513'; c.lineWidth = w.id === 'bat' ? 5 : 4; c.lineCap = 'round';
       c.beginPath();
       c.moveTo(this.x, this.y - 8);
       c.lineTo(stick.x, stick.y); c.stroke();
-      c.fillStyle = '#95a5a6';
-      c.beginPath(); c.arc(stick.x, stick.y, 6, 0, Math.PI * 2); c.fill();
+      if (w.sprite) {
+        drawSprite(c, w.sprite, stick.x, stick.y, { scale: 0.7, anchorY: 0.5, rotation: stick.angle });
+      } else {
+        c.fillStyle = w.tip || '#95a5a6';
+        c.beginPath(); c.arc(stick.x, stick.y, w.id === 'bat' ? 7 : 6, 0, Math.PI * 2); c.fill();
+      }
     }
     c.restore();
   }
@@ -865,9 +997,19 @@ class Game {
   constructor() {
     this.save = loadSave();
     this.highScore = this.save.highScore || 0;
-    this.hammerId = this.save.hammerId || 'standard';
+    this.bankCoins = this.save.bankCoins || 0;
+    const owned = this.save.ownedWeapons || ['hammer'];
+    this.ownedWeapons = Array.from(new Set(['hammer', ...owned]));
+    // migrate old hammer ids
+    const mapOld = { standard: 'hammer', fast: 'glove', heavy: 'bat' };
+    this.weaponId = mapOld[this.save.weaponId] || mapOld[this.save.hammerId] || this.save.weaponId || 'hammer';
+    if (!this.ownedWeapons.includes(this.weaponId)) this.weaponId = 'hammer';
+    this.hammerId = this.weaponId; // compat
     sfx.enabled = this.save.sound !== false;
     this.vibro = this.save.vibro !== false;
+    this.coins = 0;
+    this.coinMult = 1;
+    this.shopping = false;
 
     this.player = null;
     this.enemies = [];
@@ -919,13 +1061,15 @@ class Game {
     this.loop(this.lastTime);
   }
 
-  getHammer() {
-    return HAMMERS.find(h => h.id === this.hammerId) || HAMMERS[0];
+  getWeapon() {
+    return WEAPONS.find(w => w.id === this.weaponId) || WEAPONS[0];
   }
+  getHammer() { return this.getWeapon(); }
 
-  unlockedHammers() {
-    return HAMMERS.filter(h => this.highScore >= h.unlock);
+  unlockedWeapons() {
+    return WEAPONS.filter(w => this.ownedWeapons.includes(w.id));
   }
+  unlockedHammers() { return this.unlockedWeapons(); }
 
   cacheHud() {
     this.$hpFill = document.getElementById('hud-hp-fill');
@@ -934,6 +1078,7 @@ class Game {
     this.$xpText = document.getElementById('hud-xp-text');
     this.$level = document.getElementById('hud-level');
     this.$score = document.getElementById('hud-score');
+    this.$coins = document.getElementById('hud-coins');
     this.$mode = document.getElementById('hud-mode');
     this.$wave = document.getElementById('hud-wave');
     this.$enemies = document.getElementById('hud-enemies');
@@ -959,13 +1104,16 @@ class Game {
       this.vibro = !this.vibro; this.persist(); this.refreshSettingsUI();
     };
     document.getElementById('tog-hammer').onclick = () => {
-      const list = this.unlockedHammers();
-      const idx = list.findIndex(h => h.id === this.hammerId);
-      this.hammerId = list[(idx + 1) % list.length].id;
+      const list = this.unlockedWeapons();
+      const idx = list.findIndex(h => h.id === this.weaponId);
+      this.weaponId = list[(idx + 1) % list.length].id;
+      this.hammerId = this.weaponId;
+      if (this.player) this.player.applyWeapon(this.getWeapon());
       this.persist();
       this.refreshSettingsUI();
       sfx.click();
     };
+    document.getElementById('btn-shop-go').onclick = () => this.closeShopAndFight();
   }
 
   persist() {
@@ -973,15 +1121,19 @@ class Game {
       highScore: this.highScore,
       sound: sfx.enabled,
       vibro: this.vibro,
-      hammerId: this.hammerId,
+      weaponId: this.weaponId,
+      hammerId: this.weaponId,
+      ownedWeapons: this.ownedWeapons,
+      bankCoins: this.bankCoins,
     });
   }
 
   hideOverlays() {
-    ['upgrade-overlay','pause-overlay','settings-overlay','end-overlay'].forEach(id => {
+    ['upgrade-overlay','pause-overlay','settings-overlay','end-overlay','shop-overlay'].forEach(id => {
       document.getElementById(id).classList.remove('show');
     });
     this.choosingUpgrade = false;
+    this.shopping = false;
     this.paused = false;
   }
 
@@ -1004,13 +1156,15 @@ class Game {
   refreshSettingsUI() {
     document.getElementById('tog-sound').textContent = sfx.enabled ? '🔊 Звук: ВКЛ' : '🔇 Звук: ВЫКЛ';
     document.getElementById('tog-vibro').textContent = this.vibro ? '📳 Вибрация: ВКЛ' : '📳 Вибрация: ВЫКЛ';
-    document.getElementById('tog-hammer').textContent = '🔨 Молоток: ' + this.getHammer().name;
+    document.getElementById('tog-hammer').textContent = '⚔ Оружие: ' + this.getWeapon().name;
     document.getElementById('set-record').textContent = this.highScore;
-    document.getElementById('set-hammers').textContent = this.unlockedHammers().length + '/' + HAMMERS.length;
+    document.getElementById('set-hammers').textContent = this.unlockedWeapons().length + '/' + WEAPONS.length;
+    const bankEl = document.getElementById('set-bank');
+    if (bankEl) bankEl.textContent = this.bankCoins;
   }
 
   togglePause(force) {
-    if (this.gameOver || this.won || this.choosingUpgrade) return;
+    if (this.gameOver || this.won || this.choosingUpgrade || this.shopping) return;
     this.paused = force !== undefined ? force : !this.paused;
     document.getElementById('pause-overlay').classList.toggle('show', this.paused);
     if (this.paused) sfx.click();
@@ -1036,20 +1190,22 @@ class Game {
 
   resetGame() {
     this.hideOverlays();
-    const hammer = this.getHammer();
-    this.player = new Player(this.worldW / 2, this.worldH / 2, hammer);
+    const weapon = this.getWeapon();
+    this.player = new Player(this.worldW / 2, this.worldH / 2, weapon);
     this.enemies = []; this.particles = []; this.projectiles = []; this.pickups = [];
     this.boomFx = [];
     this.score = 0; this.wave = 1;
+    this.coins = 25;
+    this.coinMult = 1;
     this.waveKills = 0;
     this.waveSpawned = 0;
-    this.wavePhase = 'mobs';
+    this.wavePhase = 'shop';
     this.killsPerWave = KILLS_PER_WAVE;
     this.screenShake = 0;
     this.modeTimer = 0; this.isChaseMode = true; this.modeFlash = 0;
     this.combo = 0; this.maxCombo = 0; this.comboTimer = 0; this.comboShield = 0;
     this.pendingUpgrades = 0; this.upgradeChoices = [];
-    this.choosingUpgrade = false; this.paused = false;
+    this.choosingUpgrade = false; this.shopping = false; this.paused = false;
     this.gameOver = false; this.won = false; this.killedBy = '';
     this.directorSpawned = false; this.dayDone = false;
     this.fuseBombs = [];
@@ -1147,16 +1303,105 @@ class Game {
     this.wave = n;
     this.waveKills = 0;
     this.waveSpawned = 0;
-    this.wavePhase = 'mobs';
+    this.wavePhase = 'shop';
     this.directorSpawned = false;
-    this.enemies = this.enemies.filter(e => false); // очистка поля
+    this.enemies = [];
     this.projectiles = [];
     this.fuseBombs = [];
-    // Стартовый набор на поле (не больше MAX и не больше цели волны)
+    this.openShop();
+  }
+
+  beginWaveCombat() {
+    this.wavePhase = 'mobs';
+    this.waveKills = 0;
+    this.waveSpawned = 0;
     const initial = Math.min(MAX_ENEMIES_ON_FIELD, this.killsPerWave);
     for (let i = 0; i < initial; i++) this.spawnWaveMob();
     this.modeFlash = 0.45;
     sfx.mode();
+  }
+
+  openShop() {
+    this.shopping = true;
+    this.paused = true;
+    document.getElementById('shop-sub').textContent =
+      this.wave === 1
+        ? 'Стартовый закуп. Монеты падают с покупателей — сложнее моб = больше монет.'
+        : `Волна ${this.wave}: потрать добычу или копи на оружие подороже.`;
+    this.renderShop();
+    document.getElementById('shop-overlay').classList.add('show');
+    sfx.shop();
+  }
+
+  renderShop() {
+    document.getElementById('shop-coins').textContent = '🪙 ' + this.coins;
+    const grid = document.getElementById('shop-grid');
+    grid.innerHTML = '';
+    for (const item of SHOP_ITEMS) {
+      const isWeapon = !!item.weaponId;
+      const owned = isWeapon && this.ownedWeapons.includes(item.weaponId);
+      const equipped = isWeapon && this.weaponId === item.weaponId;
+      const canBuy = !owned && this.coins >= item.price;
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'shop-item' + (owned ? ' owned' : '') + (!canBuy && !owned ? ' locked' : '');
+      const priceTxt = owned ? (equipped ? 'Экипировано' : 'Взять в руки') : ('🪙 ' + item.price);
+      el.innerHTML = `<div class="ttl">${item.ico || ''} ${item.ttl}</div><div class="desc">${item.desc}</div><div class="price">${priceTxt}</div>`;
+      el.onclick = () => this.buyShopItem(item);
+      grid.appendChild(el);
+    }
+  }
+
+  buyShopItem(item) {
+    if (item.weaponId) {
+      if (this.ownedWeapons.includes(item.weaponId)) {
+        this.weaponId = item.weaponId;
+        this.hammerId = this.weaponId;
+        this.player.applyWeapon(this.getWeapon());
+        this.persist();
+        this.renderShop();
+        sfx.click();
+        return;
+      }
+      if (this.coins < item.price) { sfx.hurt(); return; }
+      this.coins -= item.price;
+      this.ownedWeapons.push(item.weaponId);
+      this.weaponId = item.weaponId;
+      this.hammerId = this.weaponId;
+      this.player.applyWeapon(this.getWeapon());
+      this.persist();
+      sfx.coin();
+      this.renderShop();
+      return;
+    }
+    if (this.coins < item.price) { sfx.hurt(); return; }
+    this.coins -= item.price;
+    item.apply(this.player, this);
+    sfx.pickup();
+    this.renderShop();
+    this.updateHUD();
+  }
+
+  closeShopAndFight() {
+    document.getElementById('shop-overlay').classList.remove('show');
+    this.shopping = false;
+    this.paused = false;
+    this.beginWaveCombat();
+    sfx.click();
+  }
+
+  dropCoins(enemy) {
+    let amount = enemy.coinDrop || 1;
+    amount = Math.max(1, Math.round(amount * (this.coinMult || 1)));
+    if (this.combo >= 5) amount += Math.floor(this.combo / 5);
+    // несколько визуальных монет
+    const n = Math.min(5, amount);
+    let left = amount;
+    for (let i = 0; i < n; i++) {
+      const part = i === n - 1 ? left : Math.max(1, Math.floor(amount / n));
+      left -= part;
+      this.pickups.push(new Pickup(enemy.x + rand(-16, 16), enemy.y + rand(-16, 16), 'coin', part));
+    }
   }
 
   spawnWaveMob() {
@@ -1315,6 +1560,7 @@ class Game {
         if (died) {
           this.score += 1;
           this.player.gainXP(e.xpReward);
+          this.dropCoins(e);
           if (e.type === 'fatty' || e.explodes) {
             e._pendingFuse = true;
           } else {
@@ -1369,13 +1615,16 @@ class Game {
     const isNew = this.score > this.highScore;
     if (isNew) {
       this.highScore = this.score;
-      this.persist();
     }
+    // в банк кладём часть монет забега
+    const bankGain = Math.floor(this.coins * 0.35) + (won ? 15 : 0);
+    this.bankCoins += bankGain;
+    this.persist();
     document.getElementById('end-title').textContent = won ? '🏆 Смена закрыта!' : '💀 Вас уволили';
     document.getElementById('end-sub').textContent = won
-      ? 'Все 10 волн пройдены. Можно идти домой.'
-      : (killer ? `Причина: ${killer}` : 'Покупатели победили');
-    document.getElementById('end-score').textContent = this.score;
+      ? `Все 10 волн пройдены. В банк: +${bankGain}🪙`
+      : ((killer ? `Причина: ${killer}. ` : '') + `В банк: +${bankGain}🪙`);
+    document.getElementById('end-score').textContent = this.score + ` · 🪙 ${this.coins}`;
     document.getElementById('end-wave').textContent = this.wave;
     document.getElementById('end-combo').textContent = this.maxCombo;
     document.getElementById('end-record').textContent = this.highScore;
@@ -1404,7 +1653,7 @@ class Game {
     canvas.addEventListener('click', e => {
       sfx.ensure();
       if (this.gameOver || this.won) return;
-      if (this.paused || this.choosingUpgrade) return;
+      if (this.paused || this.choosingUpgrade || this.shopping) return;
       if (this.player.attack()) {
         const rect = canvas.getBoundingClientRect();
         this.player.angle = angleTo(this.player.x, this.player.y, e.clientX - rect.left + this.camera.x, e.clientY - rect.top + this.camera.y);
@@ -1412,7 +1661,7 @@ class Game {
       }
     });
     canvas.addEventListener('mousemove', e => {
-      if (this.paused || this.choosingUpgrade || this.gameOver) return;
+      if (this.paused || this.choosingUpgrade || this.shopping || this.gameOver) return;
       const rect = canvas.getBoundingClientRect();
       if (!this.player.attacking) {
         this.player.angle = angleTo(this.player.x, this.player.y,
@@ -1515,6 +1764,7 @@ class Game {
     this.$xpText.textContent = `${p.xp}/${p.xpToNext}`;
     this.$level.textContent = p.level;
     this.$score.textContent = '🔨 ' + this.score;
+    if (this.$coins) this.$coins.textContent = '🪙 ' + this.coins;
     this.$wave.textContent = this.wavePhase === 'boss'
       ? `🌊 Волна ${this.wave} · БОСС`
       : `🌊 Волна ${this.wave}/${SHIFT_WAVES}`;
@@ -1539,11 +1789,14 @@ class Game {
     if (p.slowTimer > 0) tags.push(`<span class="buff-tag bad">📋 Жалоба ${p.slowTimer.toFixed(1)}с</span>`);
     if (p.muteAttack > 0) tags.push(`<span class="buff-tag bad">🤐 Без удара ${p.muteAttack.toFixed(1)}с</span>`);
     if (this.comboShield > 0) tags.push(`<span class="buff-tag good">🔥 Комбо-щит ${this.comboShield.toFixed(0)}с</span>`);
+    if (p.shieldCharges > 0) tags.push(`<span class="buff-tag good">🛡️ Блок ×${p.shieldCharges}</span>`);
+    if ((this.coinMult || 1) > 1.01) tags.push(`<span class="buff-tag good">🎫 Монеты ×${this.coinMult.toFixed(2)}</span>`);
+    const w = p.weapon; if (w) tags.push(`<span class="buff-tag good">${w.ico || '⚔'} ${w.name}</span>`);
     this.$buffBar.innerHTML = tags.join('');
   }
 
   update(dt) {
-    if (this.paused || this.choosingUpgrade || this.gameOver || this.won) return;
+    if (this.paused || this.choosingUpgrade || this.shopping || this.gameOver || this.won) return;
     const realDt = Math.min(dt, 0.1);
 
     if ((this.keys[' '] || this.attackHeld) && this.player.attack()) {
@@ -1613,8 +1866,8 @@ class Game {
       for (const enemy of this.enemies) {
         if (this.player.isEnemyInHitZone(enemy)) {
           this.player.hitEnemies.add(enemy);
-          const died = enemy.hit(this.player.damage, this.player.x, this.player.y);
-          this.spawnParticles(enemy.x, enemy.y, 8, '#ffaa00', 180, 0.4);
+          const died = enemy.hit(this.player.damage, this.player.x, this.player.y, this.player.knockPower || 300, this.player.stunOnHit || 0);
+          this.spawnParticles(enemy.x, enemy.y, 8, this.player.stunOnHit ? '#5dade2' : '#ffaa00', 180, 0.4);
           sfx.hit();
 
           // Разрушение витрин рядом — через прилавки с hp
@@ -1655,6 +1908,7 @@ class Game {
             const dropChance = enemy.type === 'boss' || enemy.type === 'director' ? 1 :
               enemy.type === 'fatty' ? 0.55 :
               enemy.type === 'influencer' ? 0.6 : 0.28;
+            this.dropCoins(enemy);
             if (Math.random() < dropChance) {
               this.pickups.push(new Pickup(enemy.x, enemy.y, Math.random() < 0.25 ? 'lunch' : 'heal'));
             }
@@ -1718,9 +1972,13 @@ class Game {
     this.boomFx = this.boomFx.filter(b => b.life > 0);
 
     for (const pk of this.pickups) {
-      pk.update(realDt);
-      if (!pk.dead && dist(this.player.x, this.player.y, pk.x, pk.y) < this.player.r + pk.r) {
-        if (pk.type === 'heal' && this.player.hp < this.player.maxHp) {
+      pk.update(realDt, this.player);
+      if (!pk.dead && dist(this.player.x, this.player.y, pk.x, pk.y) < this.player.r + pk.r + 4) {
+        if (pk.type === 'coin') {
+          this.coins += pk.value || 1;
+          pk.life = 0; sfx.coin();
+          this.spawnParticles(pk.x, pk.y, 8, '#f1c40f', 100, 0.35);
+        } else if (pk.type === 'heal' && this.player.hp < this.player.maxHp) {
           this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);
           pk.life = 0; sfx.pickup();
           this.spawnParticles(pk.x, pk.y, 12, '#ff6b6b', 120, 0.5);
