@@ -471,11 +471,7 @@ function playerFacing8(ang) {
   return sector;
 }
 
-/** Боковой профиль: в листе walk_left = тот же вид вправо, зеркалим для влево. */
-function playerSideWalkFlip(ang) {
-  return Math.cos(ang) < 0;
-}
-
+/** Боковой профиль: в листе оба ряда смотрят вправо — для влево включаем flip. */
 function pickPlayerLocomotionAnim(ang, moving, dashing) {
   const cos = Math.cos(ang);
   const sin = Math.sin(ang);
@@ -1605,7 +1601,6 @@ class Player {
     c.beginPath(); c.ellipse(this.x + 2, this.y + 4, 12, 5, 0, 0, Math.PI * 2); c.fill();
 
     const ang = this.angle;
-    const face = playerFacing8(ang);
     let flip = false;
     let anim = this._animName || 'walk_down';
     let frameIdx = this._animFrame || 0;
@@ -3221,6 +3216,16 @@ class Game {
     this.onEnemyKilled(enemy);
   }
 
+  /** Камера для отрисовки: привязка к пикселям экрана (убирает рябь тайлов при зуме). */
+  renderCamera() {
+    const z = this.viewZoom || 1;
+    return {
+      x: Math.round(this.camera.x * z) / z,
+      y: Math.round(this.camera.y * z) / z,
+      z,
+    };
+  }
+
   drawBackground() {
     const WW = this.worldW, WH = this.worldH;
     ctx.fillStyle = '#d9d2c5';
@@ -3228,12 +3233,14 @@ class Game {
 
     // Тайлы пола из атласа
     const tileSize = 64;
-    const vx1 = Math.floor(this.camera.x / tileSize) * tileSize;
-    const vy1 = Math.floor(this.camera.y / tileSize) * tileSize;
-    const vx2 = this.camera.x + this.viewW() + tileSize;
-    const vy2 = this.camera.y + this.viewH() + tileSize;
-    const tileName = atlasReady ? 'tile_beige' : null;
-    const f = tileName ? spr(tileName) : null;
+    const cam = this._renderCam || this.camera;
+    const vw = this.viewW();
+    const vh = this.viewH();
+    const vx1 = Math.floor(cam.x / tileSize) * tileSize;
+    const vy1 = Math.floor(cam.y / tileSize) * tileSize;
+    const vx2 = cam.x + vw + tileSize;
+    const vy2 = cam.y + vh + tileSize;
+    ctx.imageSmoothingEnabled = false;
     for (let x = vx1; x < vx2; x += tileSize) {
       for (let y = vy1; y < vy2; y += tileSize) {
         // зоны — другие тайлы
@@ -3247,7 +3254,8 @@ class Game {
             else if (z.type === 'checkout') name = 'tile_check';
           }
         }
-        if (!drawSprite(ctx, name, x + tileSize / 2, y + tileSize, { w: tileSize + 2, h: tileSize + 2, anchorY: 1, anchorX: 0.5 })) {
+        // ровно tileSize — без +2, иначе при зуме швы рябят
+        if (!drawSprite(ctx, name, x + tileSize / 2, y + tileSize, { w: tileSize, h: tileSize, anchorY: 1, anchorX: 0.5 })) {
           ctx.fillStyle = '#e8dcc8';
           ctx.fillRect(x, y, tileSize, tileSize);
         }
@@ -3297,9 +3305,9 @@ class Game {
   /** Затемнение карты со световым пятном вокруг игрока */
   drawPlayerLight(shakeX = 0, shakeY = 0) {
     if (!this.player) return;
-    const z = this.viewZoom || 1;
-    const px = (this.player.x - this.camera.x) * z + shakeX;
-    const py = (this.player.y - this.camera.y) * z + shakeY;
+    const cam = this._renderCam || this.renderCamera();
+    const px = (this.player.x - cam.x) * cam.z + shakeX;
+    const py = (this.player.y - cam.y) * cam.z + shakeY;
 
     // Радиус света — чуть больше в обед / на боссе
     let radius = Math.min(this.W, this.H) * 0.28;
@@ -3338,13 +3346,16 @@ class Game {
     ctx.clearRect(0, 0, this.W, this.H);
     let sx = 0, sy = 0;
     if (this.screenShake > 0) {
-      sx = (Math.random() - 0.5) * this.screenShake * 30;
-      sy = (Math.random() - 0.5) * this.screenShake * 30;
+      // shake тоже к целым пикселям — иначе пол мерцает
+      sx = Math.round((Math.random() - 0.5) * this.screenShake * 30);
+      sy = Math.round((Math.random() - 0.5) * this.screenShake * 30);
     }
+    const cam = this.renderCamera();
+    this._renderCam = cam;
     ctx.save();
-    const z = this.viewZoom || 1;
-    ctx.scale(z, z);
-    ctx.translate(-this.camera.x + sx / z, -this.camera.y + sy / z);
+    ctx.imageSmoothingEnabled = false;
+    ctx.scale(cam.z, cam.z);
+    ctx.translate(-cam.x + sx / cam.z, -cam.y + sy / cam.z);
     this.drawBackground();
     this.drawObstacles();
     for (const p of this.particles) if (p.y < this.player.y - 30) p.draw(ctx);
