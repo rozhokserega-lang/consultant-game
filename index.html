@@ -162,6 +162,18 @@
   }
   #skill-btn.ready { opacity: 1; box-shadow: 0 0 16px rgba(241,196,15,0.9); }
   #dash-btn.cd, #skill-btn.cd { opacity: 0.4; filter: grayscale(0.4); }
+  .hub-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; text-align:left; margin:8px 0; }
+  @media (max-width:520px){ .hub-grid { grid-template-columns:1fr; } }
+  .hub-card {
+    background:rgba(255,255,255,0.06); border:2px solid #555; border-radius:12px;
+    padding:10px; cursor:pointer; color:#fff;
+  }
+  .hub-card:hover { border-color:#f1c40f; }
+  .hub-card.sel { border-color:#2ecc71; background:rgba(46,204,113,0.12); }
+  .hub-card .ttl { font-weight:700; font-size:13px; }
+  .hub-card .desc { font-size:11px; color:#aaa; margin-top:2px; }
+  .hub-card .meta { font-size:11px; color:#f1c40f; margin-top:4px; font-weight:700; }
+  .perk-row { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin:8px 0; }
   #dash-btn.pressed, #skill-btn.pressed { transform: scale(0.9); }
 </style>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -280,8 +292,26 @@
       <div class="stat-line">Счёт: <b id="end-score">0</b></div>
       <div class="stat-line">Волна: <b id="end-wave">1</b> · Комбо макс: <b id="end-combo">0</b></div>
       <div class="stat-line">Рекорд: <b id="end-record">0</b> <span id="end-newrec" style="display:none;color:#2ecc71;">★ НОВЫЙ РЕКОРД!</span></div>
+      <div class="stat-line" id="end-challenge-line"></div>
       <div class="row-btns">
-        <button class="btn" id="btn-again" type="button">Ещё раз</button>
+        <button class="btn" id="btn-again" type="button">В хаб смены</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Хаб между сменами -->
+  <div class="overlay" id="hub-overlay">
+    <div class="panel" style="max-width:640px;">
+      <h2>🏬 Хаб смены</h2>
+      <p>Банк: <b id="hub-bank">0</b> 🪙 · Рекорд: <b id="hub-record">0</b></p>
+      <h3 style="font-size:15px;margin:8px 0 4px;">Мета-перки</h3>
+      <div class="perk-row" id="hub-perks"></div>
+      <h3 style="font-size:15px;margin:8px 0 4px;">Зона ТЦ</h3>
+      <div class="hub-grid" id="hub-arenas"></div>
+      <h3 style="font-size:15px;margin:8px 0 4px;">Испытание</h3>
+      <div class="hub-grid" id="hub-challenges"></div>
+      <div class="row-btns">
+        <button class="btn" id="btn-hub-start" type="button">Начать смену ⚔</button>
       </div>
     </div>
   </div>
@@ -473,6 +503,106 @@ const SHOP_ITEMS = [
 
 const SHOP_BUYS_PER_VISIT = 2;
 
+const META_PERKS = [
+  { id: 'tank', ico: '🛡️', name: 'Танк', desc: '+1 макс HP / ур.', max: 3, cost: [40, 70, 110] },
+  { id: 'speed', ico: '💨', name: 'Скорость', desc: '+14 скорости / ур.', max: 3, cost: [35, 65, 100] },
+  { id: 'crit', ico: '💥', name: 'Крит', desc: '+12% крит / ур.', max: 3, cost: [45, 80, 120] },
+];
+
+const CHALLENGES = [
+  { id: 'none', ico: '🙂', name: 'Обычная смена', desc: 'Без модификаторов', bonus: 0 },
+  { id: 'no_damage', ico: '✨', name: 'Без урона', desc: 'Не получи урон за смену', bonus: 40 },
+  { id: 'hammer_only', ico: '🔨', name: 'Только молоток', desc: 'Молоток, без пикапов оружия', bonus: 30 },
+  { id: 'x2', ico: '🔥', name: 'x2 враги / x2 лут', desc: 'Вдвое больше киллов и монет', bonus: 50 },
+];
+
+const TEMP_WEAPONS = {
+  mop: { id: 'mop', name: 'Швабра', ico: '🧹', stickLength: 52, cooldown: 0.40, damage: 1, arc: Math.PI / 1.6, knock: 340, speedBonus: 0, stun: 0, color: '#2980b9', tip: '#85c1e9', duration: 14 },
+  stapler: { id: 'stapler', name: 'Степлер', ico: '📎', stickLength: 28, cooldown: 0.28, damage: 1, arc: Math.PI / 5, knock: 180, speedBonus: 5, stun: 0, color: '#566573', tip: '#ecf0f1', duration: 14, ranged: true },
+  extinguisher: { id: 'extinguisher', name: 'Огнетушитель', ico: '🧯', stickLength: 48, cooldown: 0.55, damage: 2, arc: Math.PI / 1.5, knock: 620, speedBonus: -10, stun: 0.2, color: '#c0392b', tip: '#fff', duration: 16, aoe: true },
+};
+
+const ARENA_THEMES = {
+  tech: {
+    id: 'tech', name: 'Tech', ico: '💻', tile: 'tile_dark', store: 'store_tech',
+    obstacles: [
+      { x: 0.22, y: 0.25, sprite: 'vending', cw: 36, ch: 50 },
+      { x: 0.48, y: 0.20, sprite: 'atm', cw: 32, ch: 40 },
+      { x: 0.72, y: 0.28, sprite: 'fold_table', cw: 64, ch: 28 },
+      { x: 0.15, y: 0.55, sprite: 'box_stack', cw: 48, ch: 28 },
+      { x: 0.38, y: 0.50, sprite: 'sale_pillar', cw: 36, ch: 55 },
+      { x: 0.62, y: 0.58, sprite: 'vending', cw: 36, ch: 50 },
+      { x: 0.85, y: 0.48, sprite: 'atm', cw: 32, ch: 40 },
+      { x: 0.28, y: 0.78, sprite: 'box_stack', cw: 48, ch: 28 },
+      { x: 0.55, y: 0.80, sprite: 'fold_table', cw: 64, ch: 28 },
+      { x: 0.78, y: 0.75, sprite: 'trash', cw: 28, ch: 40 },
+    ],
+    zones: [
+      { type: 'checkout', x: 0.70, y: 0.18, w: 160, h: 90 },
+      { type: 'slippery', x: 0.35, y: 0.55, w: 120, h: 80 },
+    ],
+  },
+  clothes: {
+    id: 'clothes', name: 'Clothes', ico: '👗', tile: 'tile_check', store: 'store_clothes',
+    obstacles: [
+      { x: 0.18, y: 0.22, sprite: 'clothes_rack', cw: 90, ch: 30 },
+      { x: 0.45, y: 0.18, sprite: 'mannequin', cw: 28, ch: 50 },
+      { x: 0.70, y: 0.24, sprite: 'clothes_rack', cw: 90, ch: 30 },
+      { x: 0.88, y: 0.42, sprite: 'mirror', cw: 28, ch: 48 },
+      { x: 0.12, y: 0.48, sprite: 'mannequin', cw: 28, ch: 50 },
+      { x: 0.35, y: 0.55, sprite: 'clothes_rack', cw: 90, ch: 30 },
+      { x: 0.58, y: 0.48, sprite: 'bench', cw: 70, ch: 28 },
+      { x: 0.78, y: 0.60, sprite: 'mannequin', cw: 28, ch: 50 },
+      { x: 0.25, y: 0.78, sprite: 'clothes_rack', cw: 90, ch: 30 },
+      { x: 0.55, y: 0.80, sprite: 'plant', cw: 28, ch: 40 },
+      { x: 0.82, y: 0.78, sprite: 'mirror', cw: 28, ch: 48 },
+    ],
+    zones: [
+      { type: 'checkout', x: 0.68, y: 0.20, w: 150, h: 90 },
+      { type: 'foodcourt', x: 0.12, y: 0.60, w: 140, h: 100 },
+    ],
+  },
+  food: {
+    id: 'food', name: 'Food', ico: '🍔', tile: 'tile_wood', store: 'store_food',
+    obstacles: [
+      { x: 0.20, y: 0.22, sprite: 'bench', cw: 70, ch: 28 },
+      { x: 0.45, y: 0.20, sprite: 'barrel_red', cw: 40, ch: 36 },
+      { x: 0.70, y: 0.25, sprite: 'trash', cw: 28, ch: 40 },
+      { x: 0.15, y: 0.48, sprite: 'cart', cw: 48, ch: 36 },
+      { x: 0.40, y: 0.52, sprite: 'bench', cw: 70, ch: 28 },
+      { x: 0.65, y: 0.48, sprite: 'barrel_red', cw: 40, ch: 36 },
+      { x: 0.85, y: 0.55, sprite: 'plant', cw: 28, ch: 40 },
+      { x: 0.28, y: 0.78, sprite: 'bench', cw: 70, ch: 28 },
+      { x: 0.55, y: 0.75, sprite: 'cart', cw: 48, ch: 36 },
+      { x: 0.80, y: 0.78, sprite: 'trash', cw: 28, ch: 40 },
+    ],
+    zones: [
+      { type: 'slippery', x: 0.40, y: 0.40, w: 220, h: 140 },
+      { type: 'foodcourt', x: 0.15, y: 0.55, w: 200, h: 130 },
+      { type: 'slippery', x: 0.70, y: 0.60, w: 160, h: 100 },
+    ],
+  },
+  sport: {
+    id: 'sport', name: 'Sport', ico: '⚽', tile: 'tile_speckle', store: 'store_sport',
+    obstacles: [
+      { x: 0.18, y: 0.22, sprite: 'sale_pillar', cw: 36, ch: 55 },
+      { x: 0.48, y: 0.18, sprite: 'bench', cw: 70, ch: 28 },
+      { x: 0.75, y: 0.24, sprite: 'barrel_red', cw: 40, ch: 36 },
+      { x: 0.12, y: 0.50, sprite: 'cart', cw: 48, ch: 36 },
+      { x: 0.38, y: 0.48, sprite: 'plant_cone', cw: 24, ch: 40 },
+      { x: 0.62, y: 0.52, sprite: 'sale_pillar', cw: 36, ch: 55 },
+      { x: 0.85, y: 0.45, sprite: 'fire_box', cw: 28, ch: 40 },
+      { x: 0.25, y: 0.78, sprite: 'bench', cw: 70, ch: 28 },
+      { x: 0.55, y: 0.80, sprite: 'plant_cone', cw: 24, ch: 40 },
+      { x: 0.80, y: 0.75, sprite: 'cart', cw: 48, ch: 36 },
+    ],
+    zones: [
+      { type: 'checkout', x: 0.65, y: 0.18, w: 160, h: 90 },
+      { type: 'slippery', x: 0.30, y: 0.55, w: 140, h: 90 },
+    ],
+  },
+};
+
 const UPGRADES = [
   { id: 'hp', ico: '❤️', ttl: '+1 HP', desc: 'Макс. и текущее здоровье +1', apply: p => { p.maxHp++; p.hp = Math.min(p.hp + 1, p.maxHp); } },
   { id: 'spd', ico: '💨', ttl: 'Скорость', desc: 'Бегай быстрее по ТЦ', apply: p => { p.bonusSpeed = (p.bonusSpeed || 0) + 20; p.recalcStats(); } },
@@ -632,9 +762,18 @@ class Pickup {
     let name = 'pickup_heart';
     if (this.type === 'lunch') name = 'pickup_bolt';
     else if (this.type === 'coin') name = 'pickup_coin';
+    else if (this.type === 'temp_mop' || this.type === 'temp_stapler' || this.type === 'temp_extinguisher') name = 'pickup_bolt';
     if (!drawSprite(c, name, this.x, this.y, { scale: (this.type === 'coin' ? 0.95 : 1.1) * pulse, anchorY: 0.5 })) {
-      c.fillStyle = this.type === 'lunch' ? '#f39c12' : this.type === 'coin' ? '#f1c40f' : '#e74c3c';
+      const colors = { lunch: '#f39c12', coin: '#f1c40f', temp_mop: '#2980b9', temp_stapler: '#7f8c8d', temp_extinguisher: '#c0392b' };
+      c.fillStyle = colors[this.type] || '#e74c3c';
       c.beginPath(); c.arc(this.x, this.y, this.r * pulse, 0, Math.PI*2); c.fill();
+    }
+    if (this.type.startsWith('temp_')) {
+      const tw = TEMP_WEAPONS[this.type.replace('temp_', '')];
+      if (tw) {
+        c.fillStyle = '#fff'; c.font = 'bold 14px sans-serif'; c.textAlign = 'center';
+        c.fillText(tw.ico, this.x, this.y + 4);
+      }
     }
     if (this.type === 'coin' && this.value > 1) {
       c.fillStyle = '#fff'; c.font = 'bold 11px sans-serif'; c.textAlign = 'center';
@@ -774,7 +913,7 @@ class Enemy {
     }
 
     const d = dist(this.x, this.y, player.x, player.y);
-    const rushMul = isRush ? 1.28 : 1;
+    const rushMul = (isRush ? 1.28 : 1) * (game && game.fireAlarm > 0 ? 1.35 : 1);
 
     // 1) Аура менеджера — ускорение + лёгкий реген союзникам
     if (this.type === 'manager') {
@@ -1111,6 +1250,10 @@ class Player {
     this.chargePower = 0;
     this.baseStickLength = 42;
     this.baseHitArc = Math.PI / 3;
+    this.critChance = 0;
+    this.equippedWeaponId = (weapon && weapon.id) || 'hammer';
+    this.tempWeapon = null;
+    this.tempWeaponTimer = 0;
     this.applyWeapon(this.weapon);
   }
 
@@ -1133,6 +1276,21 @@ class Player {
     this.speed = this.baseSpeed * (this.slowTimer > 0 ? 0.55 : 1) * (this.lunchTimer > 0 ? 1.25 : 1) * (this.shameTimer > 0 ? 0.85 : 1);
   }
 
+  applyTempWeapon(tw) {
+    if (!tw) return;
+    this.tempWeapon = tw;
+    this.tempWeaponTimer = tw.duration || 14;
+    this.applyWeapon(tw);
+  }
+
+  clearTempWeapon() {
+    if (!this.tempWeapon) return;
+    this.tempWeapon = null;
+    this.tempWeaponTimer = 0;
+    const base = WEAPONS.find(w => w.id === this.equippedWeaponId) || WEAPONS[0];
+    this.applyWeapon(base);
+  }
+
   gainXP(amount) {
     this.xp += amount;
     let leveled = 0;
@@ -1152,6 +1310,10 @@ class Player {
     if (this.lunchTimer > 0) this.lunchTimer -= dt;
     if (this.shameTimer > 0) this.shameTimer -= dt;
     if (this.dashCd > 0) this.dashCd -= dt;
+    if (this.tempWeaponTimer > 0) {
+      this.tempWeaponTimer -= dt;
+      if (this.tempWeaponTimer <= 0) this.clearTempWeapon();
+    }
 
     this.recalcStats();
 
@@ -1223,6 +1385,8 @@ class Player {
     const cdMul = (1 + t * 1.05) * (this.lunchTimer > 0 ? 0.7 : 1) * (this.shameTimer > 0 ? 1.55 : 1);
     this.attackCooldown = this.attackCooldownTime * cdMul;
     this.hitEnemies.clear();
+    this._justFiredRanged = !!(this.weapon && this.weapon.ranged);
+    this._justAoe = !!(this.weapon && this.weapon.aoe);
     return true;
   }
 
@@ -1385,6 +1549,17 @@ class Game {
     this.save = loadSave();
     this.highScore = this.save.highScore || 0;
     this.bankCoins = this.save.bankCoins || 0;
+    this.metaPerks = Object.assign({ tank: 0, speed: 0, crit: 0 }, this.save.metaPerks || {});
+    this.selectedArena = this.save.selectedArena || 'food';
+    this.selectedChallenge = 'none';
+    this.challengeFailed = false;
+    this.tookDamage = false;
+    this.playerProjectiles = [];
+    this.lightsOut = 0;
+    this.fireAlarm = 0;
+    this.eventCooldown = 0;
+    this._eventBanner = null;
+    this.inHub = true;
     const owned = this.save.ownedWeapons || ['hammer'];
     const validIds = new Set(WEAPONS.map(w => w.id));
     this.ownedWeapons = Array.from(new Set(['hammer', ...owned.filter(id => validIds.has(id))]));
@@ -1447,7 +1622,8 @@ class Game {
     this.bindUI();
     this.resize();
     this.setupInput();
-    this.resetGame();
+    this.prepareIdleWorld();
+    this.openHub();
     window.game = this;
     this.loop(this.lastTime);
   }
@@ -1480,8 +1656,9 @@ class Game {
   bindUI() {
     document.getElementById('btn-pause').onclick = () => this.togglePause();
     document.getElementById('btn-resume').onclick = () => this.togglePause(false);
-    document.getElementById('btn-restart').onclick = () => { this.hideOverlays(); this.resetGame(); };
-    document.getElementById('btn-again').onclick = () => { this.hideOverlays(); this.resetGame(); };
+    document.getElementById('btn-restart').onclick = () => { this.hideOverlays(); this.openHub(); };
+    document.getElementById('btn-again').onclick = () => { this.hideOverlays(); this.openHub(); };
+    document.getElementById('btn-hub-start').onclick = () => this.startShiftFromHub();
     document.getElementById('btn-settings').onclick = () => this.openSettings();
     document.getElementById('btn-pause-settings').onclick = () => this.openSettings();
     document.getElementById('btn-settings-close').onclick = () => this.closeSettings();
@@ -1516,11 +1693,13 @@ class Game {
       hammerId: this.weaponId,
       ownedWeapons: this.ownedWeapons,
       bankCoins: this.bankCoins,
+      metaPerks: this.metaPerks,
+      selectedArena: this.selectedArena,
     });
   }
 
   hideOverlays() {
-    ['upgrade-overlay','pause-overlay','settings-overlay','end-overlay','shop-overlay'].forEach(id => {
+    ['upgrade-overlay','pause-overlay','settings-overlay','end-overlay','shop-overlay','hub-overlay'].forEach(id => {
       document.getElementById(id).classList.remove('show');
     });
     this.choosingUpgrade = false;
@@ -1533,10 +1712,16 @@ class Game {
     document.getElementById('settings-overlay').classList.add('show');
     if (!this.gameOver && !this.won) this.paused = true;
     document.getElementById('pause-overlay').classList.remove('show');
+    document.getElementById('hub-overlay').classList.remove('show');
   }
 
   closeSettings() {
     document.getElementById('settings-overlay').classList.remove('show');
+    if (this.inHub) {
+      this.paused = true;
+      document.getElementById('hub-overlay').classList.add('show');
+      return;
+    }
     if (!this.gameOver && !this.won && this.paused) {
       document.getElementById('pause-overlay').classList.add('show');
     } else {
@@ -1555,7 +1740,7 @@ class Game {
   }
 
   togglePause(force) {
-    if (this.gameOver || this.won || this.choosingUpgrade || this.shopping) return;
+    if (this.inHub || this.gameOver || this.won || this.choosingUpgrade || this.shopping) return;
     this.paused = force !== undefined ? force : !this.paused;
     document.getElementById('pause-overlay').classList.toggle('show', this.paused);
     if (this.paused) sfx.click();
@@ -1579,15 +1764,122 @@ class Game {
     this.worldH = Math.max(800, Math.floor(this.H * 1.5));
   }
 
-  resetGame() {
-    this.hideOverlays();
+  prepareIdleWorld() {
+    this.generateObstacles();
+    this.generateStorefronts();
+    this.generateZones();
     const weapon = this.getWeapon();
     this.player = new Player(this.worldW / 2, this.worldH / 2, weapon);
+    this.enemies = []; this.particles = []; this.projectiles = []; this.pickups = [];
+    this.playerProjectiles = [];
+    this.boomFx = []; this.fuseBombs = [];
+    this.camera.x = this.player.x - this.W / 2;
+    this.camera.y = this.player.y - this.H / 2;
+    this.paused = true;
+    this.inHub = true;
+    this.gameOver = false; this.won = false;
+  }
+
+  openHub() {
+    this.hideOverlays();
+    this.inHub = true;
+    this.paused = true;
+    this.shopping = false;
+    this.choosingUpgrade = false;
+    this.gameOver = false;
+    this.won = false;
+    this.prepareIdleWorld();
+    this.renderHub();
+    document.getElementById('hub-overlay').classList.add('show');
+    sfx.click();
+  }
+
+  renderHub() {
+    document.getElementById('hub-bank').textContent = this.bankCoins;
+    document.getElementById('hub-record').textContent = this.highScore;
+    const perkWrap = document.getElementById('hub-perks');
+    perkWrap.innerHTML = '';
+    for (const pk of META_PERKS) {
+      const lv = this.metaPerks[pk.id] || 0;
+      const nextCost = lv >= pk.max ? null : pk.cost[lv];
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'hub-card' + (lv > 0 ? ' sel' : '');
+      el.style.minWidth = '120px';
+      el.innerHTML = `<div class="ttl">${pk.ico} ${pk.name} · ${lv}/${pk.max}</div>
+        <div class="desc">${pk.desc}</div>
+        <div class="meta">${nextCost == null ? 'Макс' : 'Купить 🪙 ' + nextCost}</div>`;
+      el.onclick = () => this.buyMetaPerk(pk.id);
+      perkWrap.appendChild(el);
+    }
+    const ar = document.getElementById('hub-arenas');
+    ar.innerHTML = '';
+    for (const th of Object.values(ARENA_THEMES)) {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'hub-card' + (this.selectedArena === th.id ? ' sel' : '');
+      el.innerHTML = `<div class="ttl">${th.ico} ${th.name}</div><div class="desc">Тематическая арена</div>`;
+      el.onclick = () => { this.selectedArena = th.id; this.persist(); this.renderHub(); sfx.click(); };
+      ar.appendChild(el);
+    }
+    const ch = document.getElementById('hub-challenges');
+    ch.innerHTML = '';
+    for (const c of CHALLENGES) {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'hub-card' + (this.selectedChallenge === c.id ? ' sel' : '');
+      el.innerHTML = `<div class="ttl">${c.ico} ${c.name}</div>
+        <div class="desc">${c.desc}</div>
+        <div class="meta">${c.bonus ? 'Бонус +' + c.bonus + '🪙' : '—'}</div>`;
+      el.onclick = () => { this.selectedChallenge = c.id; this.renderHub(); sfx.click(); };
+      ch.appendChild(el);
+    }
+  }
+
+  buyMetaPerk(id) {
+    const pk = META_PERKS.find(p => p.id === id);
+    if (!pk) return;
+    const lv = this.metaPerks[id] || 0;
+    if (lv >= pk.max) return;
+    const cost = pk.cost[lv];
+    if (this.bankCoins < cost) { sfx.hurt(); return; }
+    this.bankCoins -= cost;
+    this.metaPerks[id] = lv + 1;
+    this.persist();
+    this.renderHub();
+    sfx.shop();
+  }
+
+  applyMetaToPlayer() {
+    const p = this.player;
+    const tank = this.metaPerks.tank || 0;
+    const spd = this.metaPerks.speed || 0;
+    const crit = this.metaPerks.crit || 0;
+    if (tank > 0) { p.maxHp += tank; p.hp = p.maxHp; }
+    if (spd > 0) { p.bonusSpeed = (p.bonusSpeed || 0) + spd * 14; p.recalcStats(); }
+    p.critChance = crit * 0.12;
+  }
+
+  startShiftFromHub() {
+    document.getElementById('hub-overlay').classList.remove('show');
+    this.inHub = false;
+    this.resetGame();
+  }
+
+  resetGame() {
+    this.hideOverlays();
+    if (this.selectedChallenge === 'hammer_only') {
+      this.weaponId = 'hammer';
+      this.hammerId = 'hammer';
+    }
+    const weapon = this.getWeapon();
+    this.player = new Player(this.worldW / 2, this.worldH / 2, weapon);
+    this.player.equippedWeaponId = this.weaponId;
     this.enemies = []; this.particles = []; this.projectiles = []; this.pickups = [];
     this.boomFx = [];
     this.score = 0; this.wave = 1;
     this.coins = 8;
-    this.coinMult = 1;
+    this.coinMult = this.selectedChallenge === 'x2' ? 2 : 1;
     this.shopBuysLeft = SHOP_BUYS_PER_VISIT;
     this.shopBoughtRun = new Set(); // oncePerRun ids
     this.waveKills = 0;
@@ -1603,6 +1895,14 @@ class Game {
     this.directorSpawned = false; this.dayDone = false;
     this.fuseBombs = [];
     this.boomFx = [];
+    this.playerProjectiles = [];
+    this.lightsOut = 0;
+    this.fireAlarm = 0;
+    this.eventCooldown = 8;
+    this._eventBanner = null;
+    this.challengeFailed = false;
+    this.tookDamage = false;
+    this.applyMetaToPlayer();
     this.generateObstacles();
     this.generateStorefronts();
     this.generateZones();
@@ -1612,17 +1912,25 @@ class Game {
     sfx.click();
   }
 
+  getArenaTheme() {
+    return ARENA_THEMES[this.selectedArena] || ARENA_THEMES.food;
+  }
+
   generateZones() {
-    this.zones = [
-      { type: 'slippery', x: this.worldW * 0.55, y: this.worldH * 0.45, w: 180, h: 120 },
-      { type: 'foodcourt', x: this.worldW * 0.18, y: this.worldH * 0.55, w: 200, h: 140 },
-      { type: 'checkout', x: this.worldW * 0.72, y: this.worldH * 0.22, w: 160, h: 100 },
-    ];
+    const th = this.getArenaTheme();
+    this.zones = (th.zones || []).map(z => ({
+      type: z.type,
+      x: this.worldW * z.x,
+      y: this.worldH * z.y,
+      w: z.w,
+      h: z.h,
+    }));
   }
 
   generateObstacles() {
     this.obstacles = [];
-    const defs = [
+    const th = this.getArenaTheme();
+    const defs = th.obstacles || [
       { x: 0.18, y: 0.22, sprite: 'bench', cw: 70, ch: 28 },
       { x: 0.42, y: 0.18, sprite: 'fold_table', cw: 64, ch: 28 },
       { x: 0.70, y: 0.24, sprite: 'clothes_rack', cw: 90, ch: 30 },
@@ -1655,17 +1963,19 @@ class Game {
   generateStorefronts() {
     const wallW = 10;
     this.storefronts = [];
+    const th = this.getArenaTheme();
+    const primary = th.store || 'store_food';
     const top = [0.12, 0.32, 0.52, 0.72];
     top.forEach((fx, i) => {
       this.storefronts.push({
         x: this.worldW * fx, y: wallW,
-        w: 110, h: 95, sprite: STORE_SPRITES[i % STORE_SPRITES.length],
+        w: 110, h: 95, sprite: i % 2 === 0 ? primary : STORE_SPRITES[i % STORE_SPRITES.length],
       });
     });
     top.forEach((fx, i) => {
       this.storefronts.push({
         x: this.worldW * fx, y: this.worldH - wallW - 95,
-        w: 110, h: 95, sprite: STORE_SPRITES[(i + 2) % STORE_SPRITES.length],
+        w: 110, h: 95, sprite: i % 2 === 1 ? primary : STORE_SPRITES[(i + 2) % STORE_SPRITES.length],
       });
     });
   }
@@ -1714,11 +2024,14 @@ class Game {
     this.wavePhase = 'mobs';
     this.waveKills = 0;
     this.waveSpawned = 0;
-    this.killsPerWave = this.blackFriday
+    let kills = this.blackFriday
       ? Math.round(KILLS_PER_WAVE * 1.55)
       : KILLS_PER_WAVE;
+    if (this.selectedChallenge === 'x2') kills = Math.round(kills * 2);
+    this.killsPerWave = kills;
     this.waveCoinBonus = this.blackFriday ? 2 : 1;
-    const cap = this.blackFriday ? Math.min(MAX_ENEMIES_ON_FIELD + 4, 24) : MAX_ENEMIES_ON_FIELD;
+    let cap = this.blackFriday ? Math.min(MAX_ENEMIES_ON_FIELD + 4, 24) : MAX_ENEMIES_ON_FIELD;
+    if (this.selectedChallenge === 'x2') cap = Math.min(cap + 4, 26);
     this._fieldCap = cap;
     const initial = Math.min(cap, this.killsPerWave);
     for (let i = 0; i < initial; i++) this.spawnWaveMob();
@@ -1727,7 +2040,50 @@ class Game {
       this.modeFlash = 0.85;
       this._bfBanner = 2.2;
     }
+    if (this.wave >= 2) this.maybeTriggerMapEvent();
     sfx.mode();
+  }
+
+  maybeTriggerMapEvent() {
+    if (this.wave < 2) return;
+    if (this.eventCooldown > 0) return;
+    if (Math.random() > 0.55) { this.eventCooldown = 6; return; }
+    const roll = Math.random();
+    if (roll < 0.34) this.triggerFireAlarm();
+    else if (roll < 0.67) this.triggerLightsOut();
+    else this.triggerSaleRush();
+    this.eventCooldown = 14;
+  }
+
+  showEventBanner(text, dur = 2.2) {
+    this._eventBanner = { text, t: dur };
+  }
+
+  triggerFireAlarm() {
+    this.fireAlarm = 9;
+    this.showEventBanner('🚨 ПОЖАРНАЯ ТРЕВОГА! Покупатели ускорились');
+    sfx.mode();
+  }
+
+  triggerLightsOut() {
+    this.lightsOut = 8;
+    this.showEventBanner('💡 СВЕТ ВЫКЛЮЧИЛИ! Видимость упала');
+    sfx.hurt();
+  }
+
+  triggerSaleRush() {
+    this.showEventBanner('🏷️ РАСПРОДАЖА! Толпа у витрины');
+    const sx = this.worldW * rand(0.25, 0.75);
+    const sy = this.worldH * rand(0.25, 0.75);
+    const n = 5 + randi(0, 3);
+    for (let i = 0; i < n; i++) {
+      if (this.enemies.filter(e => e.hp > 0).length >= (this._fieldCap || MAX_ENEMIES_ON_FIELD)) break;
+      const e = new Enemy(sx + rand(-40, 40), sy + rand(-40, 40), Math.random() < 0.4 ? 'fast' : 'normal', this.wave);
+      e.nameTag = 'Распродажа';
+      this.enemies.push(e);
+      if (this.wavePhase === 'mobs') this.waveSpawned = Math.min(this.killsPerWave, this.waveSpawned + 1);
+    }
+    sfx.shop();
   }
 
   openShop() {
@@ -1782,11 +2138,15 @@ class Game {
   }
 
   buyShopItem(item) {
+    if (item.weaponId && this.selectedChallenge === 'hammer_only' && item.weaponId !== 'hammer') {
+      sfx.hurt(); return;
+    }
     if (item.weaponId) {
       if (this.ownedWeapons.includes(item.weaponId)) {
         this.weaponId = item.weaponId;
         this.hammerId = this.weaponId;
-        this.player.applyWeapon(this.getWeapon());
+        this.player.equippedWeaponId = this.weaponId;
+        if (!this.player.tempWeapon) this.player.applyWeapon(this.getWeapon());
         this.persist();
         this.renderShop();
         sfx.click();
@@ -1798,8 +2158,9 @@ class Game {
       this.shopBuysLeft--;
       this.ownedWeapons.push(item.weaponId);
       this.weaponId = item.weaponId;
+      this.player.equippedWeaponId = this.weaponId;
       this.hammerId = this.weaponId;
-      this.player.applyWeapon(this.getWeapon());
+      if (!this.player.tempWeapon) this.player.applyWeapon(this.getWeapon());
       this.persist();
       sfx.coin();
       this.renderShop();
@@ -1998,6 +2359,8 @@ class Game {
     if (this.player.invincible <= 0 && this.player.lunchTimer <= 0) {
       if (dist(x, y, this.player.x, this.player.y) < R + this.player.r) {
         if (this.player.takeDamage(x, y)) {
+          this.tookDamage = true;
+          if (this.selectedChallenge === 'no_damage') this.challengeFailed = true;
           this.endGame(false, 'Взрыв жирного покупателя 💣');
           return true;
         }
@@ -2069,8 +2432,15 @@ class Game {
     if (isNew) {
       this.highScore = this.score;
     }
-    // в банк кладём часть монет забега
-    const bankGain = Math.floor(this.coins * 0.35) + (won ? 15 : 0);
+    const ch = CHALLENGES.find(c => c.id === this.selectedChallenge) || CHALLENGES[0];
+    let challengeOk = won && ch.id !== 'none' && !this.challengeFailed;
+    if (ch.id === 'no_damage' && this.tookDamage) challengeOk = false;
+    let bankGain = Math.floor(this.coins * 0.35) + (won ? 15 : 0);
+    let challengeBonus = 0;
+    if (challengeOk) {
+      challengeBonus = ch.bonus || 0;
+      bankGain += challengeBonus;
+    }
     this.bankCoins += bankGain;
     this.persist();
     document.getElementById('end-title').textContent = won ? '🏆 Смена закрыта!' : '💀 Вас уволили';
@@ -2082,6 +2452,12 @@ class Game {
     document.getElementById('end-combo').textContent = this.maxCombo;
     document.getElementById('end-record').textContent = this.highScore;
     document.getElementById('end-newrec').style.display = isNew ? 'inline' : 'none';
+    const cl = document.getElementById('end-challenge-line');
+    if (cl) {
+      if (ch.id === 'none') cl.textContent = 'Испытание: не выбрано';
+      else if (challengeOk) cl.textContent = `Испытание «${ch.name}» ✅ · бонус +${challengeBonus}🪙`;
+      else cl.textContent = `Испытание «${ch.name}» ❌`;
+    }
     document.getElementById('end-overlay').classList.add('show');
     if (won) sfx.win(); else sfx.lose();
     this.vibrate(won ? [40, 40, 80] : 80);
@@ -2094,7 +2470,7 @@ class Game {
       if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
       if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') this.togglePause();
       if (e.key === 'r' || e.key === 'R') {
-        if (this.gameOver || this.won) { this.hideOverlays(); this.resetGame(); }
+        if (this.gameOver || this.won) { this.hideOverlays(); this.openHub(); }
       }
       if (this.choosingUpgrade && ['1','2','3'].includes(e.key)) {
         this.pickUpgrade(Number(e.key) - 1);
@@ -2332,12 +2708,27 @@ class Game {
     if (p.shieldCharges > 0) tags.push(`<span class="buff-tag good">🛡️ Блок ×${p.shieldCharges}</span>`);
     if ((this.coinMult || 1) > 1.01) tags.push(`<span class="buff-tag good">🎫 Монеты ×${this.coinMult.toFixed(2)}</span>`);
     const w = p.weapon; if (w) tags.push(`<span class="buff-tag good">${w.ico || '⚔'} ${w.name}</span>`);
+    if (p.tempWeapon && p.tempWeaponTimer > 0) {
+      tags.push(`<span class="buff-tag good">${p.tempWeapon.ico} ${p.tempWeapon.name} ${p.tempWeaponTimer.toFixed(0)}с</span>`);
+    }
+    if (this.fireAlarm > 0) tags.push(`<span class="buff-tag bad">🚨 Тревога ${this.fireAlarm.toFixed(0)}с</span>`);
+    if (this.lightsOut > 0) tags.push(`<span class="buff-tag bad">💡 Темнота ${this.lightsOut.toFixed(0)}с</span>`);
+    const th = this.getArenaTheme();
+    if (th) tags.push(`<span class="buff-tag good">${th.ico} ${th.name}</span>`);
     this.$buffBar.innerHTML = tags.join('');
   }
 
   update(dt) {
-    if (this.paused || this.choosingUpgrade || this.shopping || this.gameOver || this.won) return;
+    if (this.inHub || this.paused || this.choosingUpgrade || this.shopping || this.gameOver || this.won) return;
     const realDt = Math.min(dt, 0.1);
+
+    if (this.eventCooldown > 0) this.eventCooldown -= realDt;
+    if (this.lightsOut > 0) this.lightsOut -= realDt;
+    if (this.fireAlarm > 0) this.fireAlarm -= realDt;
+    if (this._eventBanner) {
+      this._eventBanner.t -= realDt;
+      if (this._eventBanner.t <= 0) this._eventBanner = null;
+    }
 
     // Скользкий пол
     const zone = this.zoneAt(this.player.x, this.player.y);
@@ -2395,10 +2786,17 @@ class Game {
             this.player.knockback.x += Math.cos(a) * 100;
             this.player.knockback.y += Math.sin(a) * 100;
           }
+          const beforeHp = this.player.hp;
           if (this.player.takeDamage(enemy.x, enemy.y)) {
+            this.tookDamage = true;
+            if (this.selectedChallenge === 'no_damage') this.challengeFailed = true;
             this.spawnParticles(this.player.x, this.player.y, 40, '#e74c3c', 350, 0.8);
             this.endGame(false, enemy.nameTag || 'Покупатель');
             return;
+          }
+          if (this.player.hp < beforeHp) {
+            this.tookDamage = true;
+            if (this.selectedChallenge === 'no_damage') this.challengeFailed = true;
           }
           sfx.hurt(); this.vibrate(40);
           this.spawnParticles(this.player.x, this.player.y, 8, '#ff6b6b', 150, 0.4);
@@ -2409,13 +2807,24 @@ class Game {
       }
     }
 
+    // ranged stapler shot once per swing
+    if (this.player.attacking && this.player._justFiredRanged) {
+      this.player._justFiredRanged = false;
+      const a = this.player.angle;
+      this.playerProjectiles.push({
+        x: this.player.x, y: this.player.y, angle: a, speed: 420, life: 0.9, r: 7, dmg: this.player.damage,
+      });
+    }
+
     // Атака
     if (this.player.attacking) {
       for (const enemy of this.enemies) {
         if (this.player.isEnemyInHitZone(enemy)) {
           this.player.hitEnemies.add(enemy);
-          const dmg = this.player.getAttackDamage();
-          const knock = (this.player.knockPower || 300) * (1 + (this.player.chargePower || 0) * 0.4);
+          let dmg = this.player.getAttackDamage();
+          if (this.player.critChance && Math.random() < this.player.critChance) dmg += 1;
+          const knock = (this.player.knockPower || 300) * (1 + (this.player.chargePower || 0) * 0.4)
+            * (this.player._justAoe ? 1.35 : 1);
           const died = enemy.hit(dmg, this.player.x, this.player.y, knock, this.player.stunOnHit || 0);
           this.player.fillSkill(6 + (this.player.chargePower || 0) * 8);
           this.spawnParticles(enemy.x, enemy.y, 8, this.player.stunOnHit ? '#5dade2' : '#ffaa00', 180, 0.4);
@@ -2458,6 +2867,10 @@ class Game {
             this.dropCoins(enemy);
             if (Math.random() < dropChance) {
               this.pickups.push(new Pickup(enemy.x, enemy.y, Math.random() < 0.25 ? 'lunch' : 'heal'));
+            }
+            if (this.selectedChallenge !== 'hammer_only' && Math.random() < 0.09) {
+              const kinds = ['temp_mop', 'temp_stapler', 'temp_extinguisher'];
+              this.pickups.push(new Pickup(enemy.x + rand(-8, 8), enemy.y + rand(-8, 8), pick(kinds)));
             }
 
             if (enemy.type === 'fatty' || enemy.explodes) {
@@ -2531,15 +2944,64 @@ class Game {
           this.spawnParticles(pk.x, pk.y, 12, '#ff6b6b', 120, 0.5);
         } else if (pk.type === 'lunch') {
           this.player.fillSkill(55);
-          if (this.player.skill >= this.player.skillMax) {
-            // почти полный — можно сразу активировать, но оставляем игроку кнопку
-          }
           pk.life = 0; sfx.pickup();
           this.spawnParticles(pk.x, pk.y, 16, '#f39c12', 140, 0.5);
+        } else if (pk.type.startsWith('temp_') && this.selectedChallenge !== 'hammer_only') {
+          const id = pk.type.replace('temp_', '');
+          const tw = TEMP_WEAPONS[id];
+          if (tw) {
+            this.player.applyTempWeapon(tw);
+            pk.life = 0; sfx.pickup();
+            this.spawnParticles(pk.x, pk.y, 14, '#5dade2', 130, 0.45);
+          }
         }
       }
     }
     this.pickups = this.pickups.filter(p => !p.dead);
+
+    // player projectiles (stapler)
+    for (const pr of this.playerProjectiles) {
+      pr.x += Math.cos(pr.angle) * pr.speed * realDt;
+      pr.y += Math.sin(pr.angle) * pr.speed * realDt;
+      pr.life -= realDt;
+      for (const enemy of this.enemies) {
+        if (enemy.hp <= 0) continue;
+        if (dist(pr.x, pr.y, enemy.x, enemy.y) < enemy.r + pr.r) {
+          let dmg = pr.dmg || 1;
+          if (this.player.critChance && Math.random() < this.player.critChance) dmg += 1;
+          const died = enemy.hit(dmg, this.player.x, this.player.y, 220, 0);
+          this.player.fillSkill(5);
+          this.spawnParticles(enemy.x, enemy.y, 6, '#bdc3c7', 140, 0.3);
+          pr.life = 0;
+          if (died) this.handleEnemyDeath(enemy);
+          break;
+        }
+      }
+    }
+    this.playerProjectiles = this.playerProjectiles.filter(pr => pr.life > 0);
+  }
+
+  handleEnemyDeath(enemy) {
+    this.combo++;
+    this.comboTimer = 3.2;
+    this.maxCombo = Math.max(this.maxCombo, this.combo);
+    this.player.fillSkill(12 + Math.min(20, this.combo * 2));
+    const mult = 1 + Math.floor(this.combo / 3);
+    this.score += mult;
+    const leveled = this.player.gainXP(enemy.xpReward);
+    if (leveled) {
+      this.pendingUpgrades += leveled;
+      this.openUpgradeUI();
+    }
+    sfx.kill();
+    this.spawnParticles(enemy.x, enemy.y, 16, '#e74c3c', 220, 0.55);
+    this.dropCoins(enemy);
+    if (Math.random() < 0.22) this.pickups.push(new Pickup(enemy.x, enemy.y, Math.random() < 0.3 ? 'lunch' : 'heal'));
+    if (this.selectedChallenge !== 'hammer_only' && Math.random() < 0.08) {
+      const kinds = ['temp_mop', 'temp_stapler', 'temp_extinguisher'];
+      this.pickups.push(new Pickup(enemy.x, enemy.y, pick(kinds)));
+    }
+    this.onEnemyKilled(enemy);
   }
 
   drawBackground() {
@@ -2558,7 +3020,8 @@ class Game {
     for (let x = vx1; x < vx2; x += tileSize) {
       for (let y = vy1; y < vy2; y += tileSize) {
         // зоны — другие тайлы
-        let name = 'tile_beige';
+        const themeTile = (this.getArenaTheme() && this.getArenaTheme().tile) || 'tile_beige';
+        let name = themeTile;
         for (const z of this.zones) {
           if (x + tileSize / 2 >= z.x && x + tileSize / 2 <= z.x + z.w &&
               y + tileSize / 2 >= z.y && y + tileSize / 2 <= z.y + z.h) {
@@ -2626,7 +3089,11 @@ class Game {
     if (this.player.lunchTimer > 0) radius *= 1.25;
     if (this.wavePhase === 'boss') radius *= 1.1;
 
-    const darkness = this.isChaseMode ? 0.58 : 0.50;
+    let darkness = this.isChaseMode ? 0.38 : 0.32;
+    if (this.lightsOut > 0) {
+      darkness = 0.72;
+      radius *= 0.55;
+    }
 
     ctx.save();
     // Тёмный оверлей с прозрачным центром
@@ -2649,6 +3116,7 @@ class Game {
   }
 
   render() {
+    ctx.globalAlpha = 1;
     ctx.clearRect(0, 0, this.W, this.H);
     let sx = 0, sy = 0;
     if (this.screenShake > 0) {
@@ -2665,6 +3133,14 @@ class Game {
     for (const p of this.particles) if (p.y >= this.player.y - 30) p.draw(ctx);
     for (const pk of this.pickups) pk.draw(ctx);
     for (const pr of this.projectiles) pr.draw(ctx);
+    for (const pr of this.playerProjectiles) {
+      ctx.save();
+      ctx.translate(pr.x, pr.y);
+      ctx.rotate(pr.angle);
+      ctx.fillStyle = '#95a5a6';
+      ctx.fillRect(-8, -3, 16, 6);
+      ctx.restore();
+    }
 
     // Фитили жирных — мигает зона взрыва, успей убежать
     for (const bomb of this.fuseBombs) {
@@ -2715,6 +3191,7 @@ class Game {
     this.drawPlayerLight(sx, sy);
 
     if (this.modeFlash > 0) {
+      ctx.save();
       const flashAlpha = (this.modeFlash / 0.5) * 0.3;
       ctx.fillStyle = this.isChaseMode ? `rgba(255,60,30,${flashAlpha})` : `rgba(80,160,255,${flashAlpha})`;
       ctx.fillRect(0, 0, this.W, this.H);
@@ -2723,6 +3200,7 @@ class Game {
       ctx.textAlign = 'center';
       ctx.globalAlpha = Math.min(1, this.modeFlash * 2);
       ctx.fillText(this.isChaseMode ? '🔴 ЧАС ПИК!' : '🔵 ОБЫЧНАЯ СМЕНА', this.W / 2, this.H * 0.35);
+      ctx.restore();
     }
     if (this._bfBanner > 0) {
       this._bfBanner -= 1 / 60;
@@ -2737,15 +3215,27 @@ class Game {
       ctx.fillStyle = '#fff';
       ctx.fillText('Больше покупателей · больше монет', this.W / 2, this.H * 0.35 + 28);
       ctx.restore();
-      ctx.globalAlpha = 1;
+    }
+    if (this._eventBanner && this._eventBanner.t > 0) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(0, this.H * 0.22, this.W, 64);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 22px "Segoe UI", system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(this._eventBanner.text, this.W / 2, this.H * 0.28);
+      ctx.restore();
     }
 
     if (this.wavePhase === 'boss' && !this.won && !this.gameOver) {
-      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.save();
+      ctx.fillStyle = '#fff';
       ctx.font = 'bold 16px "Segoe UI", system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(this.directorSpawned ? '👔 ДИРЕКТОР НА СМЕНЕ' : '👔 БОСС ВОЛНЫ', this.W / 2, 28);
+      ctx.restore();
     }
+    ctx.globalAlpha = 1;
   }
 
   loop(time) {
