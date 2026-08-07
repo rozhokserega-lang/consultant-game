@@ -2448,7 +2448,13 @@ class Game {
       el.type = 'button';
       el.className = 'hub-card' + (this.selectedArena === th.id ? ' sel' : '');
       el.innerHTML = `<div class="ttl">${th.ico} ${th.name}</div><div class="desc">Тематическая арена</div>`;
-      el.onclick = () => { this.selectedArena = th.id; this.persist(); this.renderHub(); sfx.click(); };
+      el.onclick = () => {
+        this.selectedArena = th.id;
+        this.persist();
+        this.prepareIdleWorld();
+        this.renderHub();
+        sfx.click();
+      };
       ar.appendChild(el);
     }
     const ch = document.getElementById('hub-challenges');
@@ -2649,19 +2655,23 @@ class Game {
 
   generateZones() {
     const th = this.getArenaTheme();
-    this.zones = (th.zones || []).map(z => ({
-      type: z.type,
-      x: this.worldW * z.x,
-      y: this.worldH * z.y,
-      w: z.w,
-      h: z.h,
-    }));
+    const b = this.getArenaBounds();
+    this.zones = (th.zones || []).map(z => {
+      // лёгкий джиттер позиции зоны каждый забег
+      const jx = rand(-0.06, 0.06);
+      const jy = rand(-0.06, 0.06);
+      let x = this.worldW * Math.max(0.05, Math.min(0.85, z.x + jx));
+      let y = this.worldH * Math.max(0.12, Math.min(0.82, z.y + jy));
+      x = Math.max(b.x0 + 8, Math.min(b.x1 - z.w - 8, x));
+      y = Math.max(b.y0 + 8, Math.min(b.y1 - z.h - 8, y));
+      return { type: z.type, x, y, w: z.w, h: z.h };
+    });
   }
 
   generateObstacles() {
     this.obstacles = [];
     const th = this.getArenaTheme();
-    const defs = th.obstacles || [
+    const defs = [...(th.obstacles || [
       { x: 0.18, y: 0.22, sprite: 'bench', cw: 70, ch: 28 },
       { x: 0.42, y: 0.18, sprite: 'fold_table', cw: 64, ch: 28 },
       { x: 0.70, y: 0.24, sprite: 'clothes_rack', cw: 90, ch: 30 },
@@ -2680,16 +2690,62 @@ class Game {
       { x: 0.48, y: 0.30, sprite: 'checkout', cw: 36, ch: 40 },
       { x: 0.15, y: 0.70, sprite: 'sign_dir', cw: 32, ch: 48 },
       { x: 0.80, y: 0.18, sprite: 'fire_box', cw: 28, ch: 40 },
-    ];
+    ])];
+    // перемешиваем, чтобы состав/порядок не был статичным
+    for (let i = defs.length - 1; i > 0; i--) {
+      const j = randi(0, i);
+      const t = defs[i]; defs[i] = defs[j]; defs[j] = t;
+    }
+
+    const b = this.getArenaBounds();
+    const spawnX = this.worldW / 2;
+    const spawnY = this.worldH / 2;
+    const placed = [];
+    const pad = 18;
+    const gap = 36;
+
+    const overlaps = (x, y, w, h) => {
+      for (const p of placed) {
+        if (x < p.x + p.w + gap && x + w + gap > p.x && y < p.y + p.h + gap && y + h + gap > p.y) return true;
+      }
+      // зона старта свободная
+      const cx = x + w / 2, cy = y + h / 2;
+      if (dist(cx, cy, spawnX, spawnY) < 120) return true;
+      // не блокируем дверь снизу
+      if (Math.abs(cx - b.doorCx) < b.doorW * 0.55 && y + h > b.y1 - 90) return true;
+      return false;
+    };
+
     for (const def of defs) {
-      this.obstacles.push({
-        x: this.worldW * def.x - def.cw / 2,
-        y: this.worldH * def.y - def.ch / 2,
-        w: def.cw, h: def.ch,
-        dw: def.dw || null,
-        dh: def.dh || null,
-        sprite: def.sprite, type: 'prop',
-      });
+      const dw = def.dw || Math.round(def.cw * 1.15);
+      const dh = def.dh || Math.round(def.ch * 1.35);
+      // Footprint ≈ нижняя треть спрайта (зелёная зона), не весь высокий спрайт
+      const footW = Math.max(22, Math.round(dw * 0.78));
+      const footH = Math.max(20, Math.round(dh * 0.42));
+
+      let ox = this.worldW * def.x - footW / 2;
+      let oy = this.worldH * def.y - footH / 2;
+      let ok = false;
+      for (let tryN = 0; tryN < 48; tryN++) {
+        const cx = rand(b.x0 + pad + footW / 2, b.x1 - pad - footW / 2);
+        const cy = rand(b.y0 + pad + footH / 2 + 10, b.y1 - pad - footH / 2);
+        const tx = cx - footW / 2;
+        const ty = cy - footH / 2;
+        if (overlaps(tx, ty, footW, footH)) continue;
+        ox = tx; oy = ty; ok = true;
+        break;
+      }
+      if (!ok) {
+        // fallback на шаблон темы, если рандом не нашёл место
+        ox = Math.max(b.x0 + pad, Math.min(b.x1 - pad - footW, this.worldW * def.x - footW / 2));
+        oy = Math.max(b.y0 + pad, Math.min(b.y1 - pad - footH, this.worldH * def.y - footH / 2));
+      }
+      const ob = {
+        x: ox, y: oy, w: footW, h: footH,
+        dw, dh, sprite: def.sprite, type: 'prop',
+      };
+      this.obstacles.push(ob);
+      placed.push(ob);
     }
   }
 
@@ -4033,20 +4089,36 @@ class Game {
     }
   }
 
-  drawObstacles() {
-    // рисуем по Y для простого порядка
-    const sorted = [...this.obstacles].sort((a, b) => (a.y + a.h) - (b.y + b.h));
-    for (const ob of sorted) {
-      const cx = ob.x + ob.w / 2;
-      const by = ob.y + ob.h;
-      const dw = ob.dw || (ob.w * 1.15);
-      const dh = ob.dh || (ob.h * 1.35);
-      if (drawArenaProp(ctx, ob.sprite, cx, by, { w: dw, h: dh, anchorY: 1 })) continue;
-      if (!drawSprite(ctx, ob.sprite, cx, by, { w: dw, h: dh, anchorY: 1 })) {
-        ctx.fillStyle = '#c4b99a';
-        ctx.fillRect(ob.x, ob.y, ob.w, ob.h);
-      }
+  drawObstacle(ob) {
+    const cx = ob.x + ob.w / 2;
+    const by = ob.y + ob.h;
+    const dw = ob.dw || (ob.w * 1.15);
+    const dh = ob.dh || (ob.h * 1.35);
+    if (drawArenaProp(ctx, ob.sprite, cx, by, { w: dw, h: dh, anchorY: 1 })) return;
+    if (!drawSprite(ctx, ob.sprite, cx, by, { w: dw, h: dh, anchorY: 1 })) {
+      ctx.fillStyle = '#c4b99a';
+      ctx.fillRect(ob.x, ob.y, ob.w, ob.h);
     }
+  }
+
+  drawObstacles() {
+    const sorted = [...this.obstacles].sort((a, b) => (a.y + a.h) - (b.y + b.h));
+    for (const ob of sorted) this.drawObstacle(ob);
+  }
+
+  /** Пропы + персонажи по «ногам» — иначе лезем сквозь верх полок */
+  drawDepthSorted(vx0, vy0, vx1, vy1) {
+    const items = [];
+    for (const ob of this.obstacles) {
+      items.push({ y: ob.y + ob.h, z: 0, draw: () => this.drawObstacle(ob) });
+    }
+    for (const enemy of this.enemies) {
+      if (enemy.x < vx0 || enemy.x > vx1 || enemy.y < vy0 || enemy.y > vy1) continue;
+      items.push({ y: enemy.y, z: 1, draw: () => enemy.draw(ctx, this.isChaseMode) });
+    }
+    items.push({ y: this.player.y, z: 2, draw: () => this.player.draw(ctx) });
+    items.sort((a, b) => (a.y - b.y) || (a.z - b.z));
+    for (const it of items) it.draw();
   }
 
   /** Затемнение карты со световым пятном вокруг игрока */
@@ -4105,18 +4177,13 @@ class Game {
     // setTransform: после зума камера и shake попадают в целые пиксели экрана
     ctx.setTransform(cam.z, 0, 0, cam.z, -Math.round(cam.x * cam.z) + sx, -Math.round(cam.y * cam.z) + sy);
     this.drawBackground();
-    this.drawObstacles();
     const viewPad = 80;
     const vx0 = cam.x - viewPad, vy0 = cam.y - viewPad;
     const vx1 = cam.x + this.viewW() + viewPad, vy1 = cam.y + this.viewH() + viewPad;
     for (const p of this.particles) {
       if (p.y < this.player.y - 30 && p.x >= vx0 && p.x <= vx1 && p.y >= vy0 && p.y <= vy1) p.draw(ctx);
     }
-    for (const enemy of this.enemies) {
-      if (enemy.x < vx0 || enemy.x > vx1 || enemy.y < vy0 || enemy.y > vy1) continue;
-      enemy.draw(ctx, this.isChaseMode);
-    }
-    this.player.draw(ctx);
+    this.drawDepthSorted(vx0, vy0, vx1, vy1);
     for (const p of this.particles) {
       if (p.y >= this.player.y - 30 && p.x >= vx0 && p.x <= vx1 && p.y >= vy0 && p.y <= vy1) p.draw(ctx);
     }
