@@ -483,6 +483,16 @@ let wallDecorReady = false;
 wallDecorImg.onload = () => { wallDecorReady = true; };
 wallDecorImg.src = 'wall_decor_atlas.png';
 
+const PICKUP_FX_FRAMES = {"pickup_heart":{"x":6,"y":6,"w":25,"h":22},"pickup_bolt":{"x":46,"y":4,"w":18,"h":25},"pickup_coin":{"x":80,"y":6,"w":22,"h":22},"pickup_key":{"x":116,"y":5,"w":21,"h":23},"pickup_medkit":{"x":151,"y":5,"w":24,"h":23},"pickup_shield":{"x":188,"y":4,"w":22,"h":25},"pickup_shoe":{"x":223,"y":7,"w":24,"h":19},"fx_cloud":{"x":260,"y":6,"w":22,"h":21},"fx_spark":{"x":294,"y":4,"w":26,"h":25},"pickup_glove":{"x":326,"y":4,"w":34,"h":25},"fx_crosshair":{"x":6,"y":36,"w":26,"h":26},"fx_boom":{"x":43,"y":38,"w":23,"h":22},"fx_smoke1":{"x":80,"y":35,"w":21,"h":27},"fx_smoke2":{"x":112,"y":35,"w":30,"h":28},"fx_smoke3":{"x":147,"y":34,"w":31,"h":30},"fx_smoke4":{"x":187,"y":36,"w":23,"h":25},"fx_dmg10":{"x":226,"y":42,"w":18,"h":14},"fx_dmg25":{"x":261,"y":42,"w":19,"h":14}};
+const pickupFxImg = new Image();
+let pickupFxReady = false;
+pickupFxImg.onload = () => { pickupFxReady = true; };
+pickupFxImg.src = 'pickup_fx_atlas.png';
+
+function drawPickupFx(ctx, name, x, y, opts = {}) {
+  return drawAtlasFrame(ctx, pickupFxImg, pickupFxReady, PICKUP_FX_FRAMES, name, x, y, opts);
+}
+
 // ── Покупатели (анимированный лист 7×4) ──
 const ENEMY_MOB_FRAMES = {"mob_tank_idle":{"x":37,"y":11,"w":65,"h":84},"mob_tank_walk":{"x":173,"y":11,"w":70,"h":84},"mob_tank_run":{"x":296,"y":11,"w":99,"h":84},"mob_tank_attack":{"x":416,"y":12,"w":136,"h":83},"mob_purple_idle":{"x":587,"y":2,"w":69,"h":93},"mob_purple_walk":{"x":723,"y":2,"w":74,"h":93},"mob_purple_run":{"x":849,"y":3,"w":97,"h":92},"mob_purple_attack":{"x":974,"y":2,"w":123,"h":93},"mob_fast_idle":{"x":1145,"y":14,"w":57,"h":81},"mob_fast_walk":{"x":1278,"y":14,"w":67,"h":81},"mob_fast_run":{"x":1399,"y":14,"w":102,"h":81},"mob_fast_attack":{"x":1530,"y":14,"w":115,"h":81},"mob_elder_idle":{"x":1698,"y":13,"w":56,"h":82},"mob_elder_walk":{"x":1831,"y":13,"w":66,"h":82},"mob_elder_run":{"x":1960,"y":14,"w":84,"h":81},"mob_elder_attack":{"x":2079,"y":14,"w":121,"h":81},"mob_muscle_idle":{"x":2244,"y":12,"w":67,"h":83},"mob_muscle_walk":{"x":2381,"y":12,"w":70,"h":83},"mob_muscle_run":{"x":2502,"y":13,"w":104,"h":82},"mob_muscle_attack":{"x":2637,"y":13,"w":109,"h":82},"mob_pink_idle":{"x":2803,"y":12,"w":53,"h":83},"mob_pink_walk":{"x":2935,"y":12,"w":65,"h":83},"mob_pink_run":{"x":3062,"y":12,"w":88,"h":83},"mob_pink_attack":{"x":3178,"y":12,"w":131,"h":83},"mob_cane_idle":{"x":3350,"y":21,"w":63,"h":74},"mob_cane_walk":{"x":3487,"y":21,"w":65,"h":74},"mob_cane_run":{"x":3612,"y":21,"w":92,"h":74},"mob_cane_attack":{"x":3744,"y":21,"w":104,"h":74}};
 const ENEMY_MOB_ANIMS = {"mob_tank":{"idle":["mob_tank_idle"],"walk":["mob_tank_walk"],"run":["mob_tank_run"],"attack":["mob_tank_attack"]},"mob_purple":{"idle":["mob_purple_idle"],"walk":["mob_purple_walk"],"run":["mob_purple_run"],"attack":["mob_purple_attack"]},"mob_fast":{"idle":["mob_fast_idle"],"walk":["mob_fast_walk"],"run":["mob_fast_run"],"attack":["mob_fast_attack"]},"mob_elder":{"idle":["mob_elder_idle"],"walk":["mob_elder_walk"],"run":["mob_elder_run"],"attack":["mob_elder_attack"]},"mob_muscle":{"idle":["mob_muscle_idle"],"walk":["mob_muscle_walk"],"run":["mob_muscle_run"],"attack":["mob_muscle_attack"]},"mob_pink":{"idle":["mob_pink_idle"],"walk":["mob_pink_walk"],"run":["mob_pink_run"],"attack":["mob_pink_attack"]},"mob_cane":{"idle":["mob_cane_idle"],"walk":["mob_cane_walk"],"run":["mob_cane_run"],"attack":["mob_cane_attack"]}};
@@ -1006,10 +1016,18 @@ class Pickup {
     const pulse = 1 + Math.sin(performance.now() / 200) * 0.12;
     c.save(); c.globalAlpha = a;
     let name = 'pickup_heart';
-    if (this.type === 'lunch') name = 'pickup_bolt';
+    if (this.type === 'heal') name = 'pickup_medkit';
+    else if (this.type === 'lunch') name = 'pickup_bolt';
     else if (this.type === 'coin') name = 'pickup_coin';
-    else if (this.type === 'temp_mop' || this.type === 'temp_stapler' || this.type === 'temp_extinguisher') name = 'pickup_bolt';
-    if (!drawSprite(c, name, this.x, this.y, { scale: (this.type === 'coin' ? 0.95 : 1.1) * pulse, anchorY: 0.5 })) {
+    else if (this.type === 'temp_mop') name = 'pickup_shoe';
+    else if (this.type === 'temp_stapler') name = 'pickup_key';
+    else if (this.type === 'temp_extinguisher') name = 'pickup_glove';
+    const sc = (this.type === 'coin' ? 1.35 : 1.45) * pulse;
+    const drew = drawPickupFx(c, name, this.x, this.y, { scale: sc, anchorY: 0.5 })
+      || drawSprite(c, name === 'pickup_medkit' ? 'pickup_heart' : name, this.x, this.y, {
+        scale: (this.type === 'coin' ? 0.95 : 1.1) * pulse, anchorY: 0.5,
+      });
+    if (!drew) {
       const colors = { lunch: '#f39c12', coin: '#f1c40f', temp_mop: '#2980b9', temp_stapler: '#7f8c8d', temp_extinguisher: '#c0392b' };
       c.fillStyle = colors[this.type] || '#e74c3c';
       c.beginPath(); c.arc(this.x, this.y, this.r * pulse, 0, Math.PI*2); c.fill();
@@ -3726,8 +3744,14 @@ class Game {
 
     for (const b of this.boomFx) {
       const t = b.life / b.max;
-      const sc = 1.2 + (1 - t) * 1.8;
-      drawSprite(ctx, 'fx_boom', b.x, b.y, { scale: sc, anchorY: 0.5, alpha: t });
+      const sc = 1.8 + (1 - t) * 2.4;
+      if (!drawPickupFx(ctx, 'fx_boom', b.x, b.y, { scale: sc, anchorY: 0.5, alpha: t })) {
+        drawSprite(ctx, 'fx_boom', b.x, b.y, { scale: 1.2 + (1 - t) * 1.8, anchorY: 0.5, alpha: t });
+      }
+      if (t > 0.35) {
+        drawPickupFx(ctx, 'fx_spark', b.x + 10, b.y - 8, { scale: 1.2 + (1 - t), anchorY: 0.5, alpha: t * 0.8 });
+        drawPickupFx(ctx, 'fx_smoke2', b.x - 12, b.y + 6, { scale: 1.4 * (1 - t * 0.3), anchorY: 0.5, alpha: t * 0.55 });
+      }
       // кольцо взрыва
       ctx.save();
       ctx.globalAlpha = t * 0.5;
