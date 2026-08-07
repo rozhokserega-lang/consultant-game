@@ -238,6 +238,17 @@
   .book-row.zero { opacity:0.45; }
   .book-total { text-align:left; margin:4px 0 8px; font-size:12px; color:#aaa; }
   .wep-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .wep-card { display:flex; flex-direction:column; gap:4px; text-align:left; cursor:pointer; }
+  .wep-card .wep-up {
+    margin-top: 2px; width: 100%;
+    background: rgba(241,196,15,0.15); border: 1px solid rgba(241,196,15,0.45);
+    color: #f1c40f; border-radius: 8px; padding: 5px 6px; font-size: 11px; font-weight: 700;
+    cursor: pointer;
+  }
+  .wep-card .wep-up:disabled {
+    opacity: 0.45; cursor: default; border-color: #555; color: #888; background: rgba(255,255,255,0.04);
+  }
+  .wep-card.locked { opacity: 0.45; cursor: default; }
   .perk-row { display:flex; gap:6px; flex-wrap:wrap; justify-content:stretch; margin:6px 0; }
   .perk-row .hub-card { flex:1 1 90px; min-width:0; }
   #hub-overlay {
@@ -419,7 +430,7 @@
 
         <div class="hub-pane on" id="hub-pane-prep">
           <div class="hub-sec">Оружие на смену</div>
-          <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Выбери из купленного. В магазине во время смены оружие только покупается.</p>
+          <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Выбери из купленного. Прокачка до 10 ур. за монеты банка (по чуть-чуть).</p>
           <div class="wep-grid" id="hub-weapons"></div>
           <div class="hub-sec">Мета-перки</div>
           <div class="perk-row" id="hub-perks"></div>
@@ -813,6 +824,44 @@ const WEAPONS = [
   { id: 'cleaver', name: 'Тесак', ico: '🔪', icon: 'wicon_cleaver', price: 70,
     stickLength: 40, cooldown: 0.30, damage: 2, arc: Math.PI / 2.6, knock: 280, speedBonus: 5, stun: 0, color: '#566573', tip: '#ecf0f1' },
 ];
+
+const WEAPON_MAX_LEVEL = 10;
+/** Цены уровней 1→10 (сумма ~1600🪙 на одно оружие — слив банка). */
+const WEAPON_UPGRADE_COSTS = [28, 40, 55, 75, 100, 135, 180, 240, 320, 430];
+/**
+ * Мелкий прирост за уровень. Урон только точечно (не у тесака/перчатки).
+ * dmgAt — уровни, на которых +1 урона.
+ */
+const WEAPON_LEVEL_BONUS = {
+  hammer:  { cd: -0.005, knock: 10, dmgAt: [5, 10] },
+  glove:   { cd: -0.003, knock: 8, speed: 1.2 },
+  bat:     { reach: 1.0, knock: 12, dmgAt: [10] },
+  crowbar: { stun: 0.018, knock: 15, dmgAt: [10] },
+  pan:     { arc: 0.015, stun: 0.02, knock: 8, dmgAt: [10] },
+  cleaver: { knock: 10, speed: 1.0, cd: -0.003 },
+  sledge:  { stun: 0.012, reach: 0.9, knock: 16, dmgAt: [10] },
+};
+
+function weaponUpgradeCost(currentLevel) {
+  if (currentLevel < 0 || currentLevel >= WEAPON_MAX_LEVEL) return null;
+  return WEAPON_UPGRADE_COSTS[currentLevel];
+}
+
+function scaleWeaponStats(base, level) {
+  const lv = Math.max(0, Math.min(WEAPON_MAX_LEVEL, level | 0));
+  const def = WEAPON_LEVEL_BONUS[base.id] || {};
+  const dmgBonus = (def.dmgAt || []).filter(t => lv >= t).length;
+  return Object.assign({}, base, {
+    cooldown: Math.max(0.12, +(base.cooldown + (def.cd || 0) * lv).toFixed(3)),
+    knock: Math.round(base.knock + (def.knock || 0) * lv),
+    stickLength: Math.round(base.stickLength + (def.reach || 0) * lv),
+    speedBonus: Math.round(((base.speedBonus || 0) + (def.speed || 0) * lv) * 10) / 10,
+    stun: Math.max(0, +((base.stun || 0) + (def.stun || 0) * lv).toFixed(3)),
+    arc: base.arc + (def.arc || 0) * lv,
+    damage: (base.damage || 1) + dmgBonus,
+    level: lv,
+  });
+}
 
 const HAMMERS = WEAPONS;
 
@@ -1773,8 +1822,15 @@ class Player {
     if (!this.tempWeapon) return;
     this.tempWeapon = null;
     this.tempWeaponTimer = 0;
-    const base = WEAPONS.find(w => w.id === this.equippedWeaponId) || WEAPONS[0];
-    this.applyWeapon(base);
+    if (this._loadoutWeapon) this.applyWeapon(this._loadoutWeapon);
+    else {
+      const base = WEAPONS.find(w => w.id === this.equippedWeaponId) || WEAPONS[0];
+      this.applyWeapon(base);
+    }
+    if (this._metaReachBonus) {
+      this.stickLength += this._metaReachBonus;
+      this.baseStickLength += this._metaReachBonus;
+    }
   }
 
   gainXP(amount) {
@@ -2126,6 +2182,7 @@ class Game {
     this.metaPerks = Object.assign({
       tank: 0, speed: 0, crit: 0, life: 0, wallet: 0, magnet: 0, reach: 0, dash: 0, thick: 0,
     }, this.save.metaPerks || {});
+    this.weaponLevels = Object.assign({}, this.save.weaponLevels || {});
     this.killLog = Object.assign({}, this.save.killLog || {});
     this.hubTab = 'prep';
     this.selectedArena = this.save.selectedArena || 'food';
@@ -2208,15 +2265,36 @@ class Game {
     this.loop(this.lastTime);
   }
 
+  getWeaponLevel(id) {
+    const lv = this.weaponLevels[id] || 0;
+    return Math.max(0, Math.min(WEAPON_MAX_LEVEL, lv | 0));
+  }
+
   getWeapon() {
-    return WEAPONS.find(w => w.id === this.weaponId) || WEAPONS[0];
+    const base = WEAPONS.find(w => w.id === this.weaponId) || WEAPONS[0];
+    return scaleWeaponStats(base, this.getWeaponLevel(base.id));
   }
   getHammer() { return this.getWeapon(); }
 
   unlockedWeapons() {
-    return WEAPONS.filter(w => this.ownedWeapons.includes(w.id));
+    return WEAPONS.filter(w => this.ownedWeapons.includes(w.id)).map(w => scaleWeaponStats(w, this.getWeaponLevel(w.id)));
   }
   unlockedHammers() { return this.unlockedWeapons(); }
+
+  refreshPlayerLoadoutWeapon() {
+    const p = this.player;
+    if (!p) return;
+    const w = this.getWeapon();
+    p.equippedWeaponId = w.id;
+    p._loadoutWeapon = w;
+    p.applyWeapon(w);
+    const reach = this.metaPerks.reach || 0;
+    p._metaReachBonus = reach * 5;
+    if (p._metaReachBonus) {
+      p.stickLength += p._metaReachBonus;
+      p.baseStickLength += p._metaReachBonus;
+    }
+  }
 
   cacheHud() {
     this.$hpFill = document.getElementById('hud-hp-fill');
@@ -2262,7 +2340,7 @@ class Game {
       const idx = list.findIndex(h => h.id === this.weaponId);
       this.weaponId = list[(idx + 1) % list.length].id;
       this.hammerId = this.weaponId;
-      if (this.player) this.player.applyWeapon(this.getWeapon());
+      if (this.player) this.refreshPlayerLoadoutWeapon();
       this.persist();
       this.refreshSettingsUI();
       sfx.click();
@@ -2278,6 +2356,7 @@ class Game {
       weaponId: this.weaponId,
       hammerId: this.weaponId,
       ownedWeapons: this.ownedWeapons,
+      weaponLevels: this.weaponLevels,
       bankCoins: this.bankCoins,
       metaPerks: this.metaPerks,
       selectedArena: this.selectedArena,
@@ -2371,6 +2450,7 @@ class Game {
     this.generateZones();
     const weapon = this.getWeapon();
     this.player = new Player(this.worldW / 2, this.worldH / 2, weapon);
+    this.refreshPlayerLoadoutWeapon();
     this.enemies = []; this.particles = []; this.projectiles = []; this.pickups = [];
     this.playerProjectiles = [];
     this.boomFx = []; this.fuseBombs = [];
@@ -2448,31 +2528,62 @@ class Game {
     if (!wrap) return;
     wrap.innerHTML = '';
     const hammerOnly = this.selectedChallenge === 'hammer_only';
-    for (const w of WEAPONS) {
-      const owned = this.ownedWeapons.includes(w.id);
-      const locked = !owned || (hammerOnly && w.id !== 'hammer');
-      const el = document.createElement('button');
-      el.type = 'button';
-      el.className = 'hub-card' + (this.weaponId === w.id && !locked ? ' sel' : '') + (locked ? ' locked' : '');
-      const meta = !owned ? 'Не куплено' : (hammerOnly && w.id !== 'hammer' ? 'Испытание' : (this.weaponId === w.id ? 'Выбрано' : 'Взять'));
-      el.innerHTML = `<div class="ttl">${w.ico} ${w.name}</div>
+    for (const base of WEAPONS) {
+      const owned = this.ownedWeapons.includes(base.id);
+      const locked = !owned || (hammerOnly && base.id !== 'hammer');
+      const lv = this.getWeaponLevel(base.id);
+      const w = scaleWeaponStats(base, lv);
+      const el = document.createElement('div');
+      el.className = 'hub-card wep-card' + (this.weaponId === base.id && !locked ? ' sel' : '') + (locked ? ' locked' : '');
+      const meta = !owned ? 'Не куплено' : (hammerOnly && base.id !== 'hammer' ? 'Испытание' : (this.weaponId === base.id ? 'Выбрано' : 'Нажми — взять'));
+      const nextCost = owned ? weaponUpgradeCost(lv) : null;
+      el.innerHTML = `<div class="ttl">${base.ico} ${base.name} · ${lv}/${WEAPON_MAX_LEVEL}</div>
         <div class="desc">Урон ${w.damage} · КД ${w.cooldown.toFixed(2)}с</div>
         <div class="meta">${meta}</div>`;
       if (!locked) {
-        el.onclick = () => {
-          this.weaponId = w.id;
-          this.hammerId = w.id;
-          if (this.player) {
-            this.player.equippedWeaponId = w.id;
-            this.player.applyWeapon(this.getWeapon());
-          }
+        el.onclick = (ev) => {
+          if (ev.target && ev.target.closest && ev.target.closest('.wep-up')) return;
+          this.weaponId = base.id;
+          this.hammerId = base.id;
+          if (this.player) this.refreshPlayerLoadoutWeapon();
           this.persist();
           this.renderHub();
           sfx.click();
         };
       }
+      if (owned) {
+        const up = document.createElement('button');
+        up.type = 'button';
+        up.className = 'wep-up';
+        if (nextCost == null) {
+          up.textContent = 'Макс. уровень';
+          up.disabled = true;
+        } else {
+          up.textContent = `Прокачать 🪙 ${nextCost}`;
+          up.disabled = this.bankCoins < nextCost;
+          up.onclick = (ev) => {
+            ev.stopPropagation();
+            this.buyWeaponUpgrade(base.id);
+          };
+        }
+        el.appendChild(up);
+      }
       wrap.appendChild(el);
     }
+  }
+
+  buyWeaponUpgrade(id) {
+    if (!this.ownedWeapons.includes(id)) return;
+    const lv = this.getWeaponLevel(id);
+    const cost = weaponUpgradeCost(lv);
+    if (cost == null) return;
+    if (this.bankCoins < cost) { sfx.hurt(); return; }
+    this.bankCoins -= cost;
+    this.weaponLevels[id] = lv + 1;
+    if (this.weaponId === id && this.player) this.refreshPlayerLoadoutWeapon();
+    this.persist();
+    this.renderHub();
+    sfx.shop();
   }
 
   renderHub() {
@@ -2561,19 +2672,16 @@ class Game {
     const crit = this.metaPerks.crit || 0;
     const life = this.metaPerks.life || 0;
     const magnet = this.metaPerks.magnet || 0;
-    const reach = this.metaPerks.reach || 0;
     const dash = this.metaPerks.dash || 0;
     const thick = this.metaPerks.thick || 0;
+    // оружие + reach через общий refresh (с учётом уровней)
+    this.refreshPlayerLoadoutWeapon();
     if (tank > 0) { p.maxHp += tank; p.hp = p.maxHp; }
     if (spd > 0) { p.bonusSpeed = (p.bonusSpeed || 0) + spd * 14; p.recalcStats(); }
     p.critChance = crit * 0.12;
     p.extraLives = life;
     p.coinMagnet = 90 + magnet * 55;
     p.coinMagnetBonus = magnet * 2.2;
-    if (reach > 0) {
-      p.stickLength += reach * 5;
-      p.baseStickLength += reach * 5;
-    }
     p.dashCdBase = Math.max(0.35, 1.05 - dash * 0.3);
     p.complaintResist = thick * 0.3;
   }
@@ -3783,7 +3891,7 @@ class Game {
     if (p.shieldCharges > 0) tags.push(`<span class="buff-tag good">🛡️ Блок ×${p.shieldCharges}</span>`);
     if ((p.extraLives || 0) > 0) tags.push(`<span class="buff-tag good">💖 Жизнь ×${p.extraLives}</span>`);
     if ((this.coinMult || 1) > 1.01) tags.push(`<span class="buff-tag good">🎫 Монеты ×${this.coinMult.toFixed(2)}</span>`);
-    const w = p.weapon; if (w) tags.push(`<span class="buff-tag good">${w.ico || '⚔'} ${w.name}</span>`);
+    const w = p.weapon; if (w) tags.push(`<span class="buff-tag good">${w.ico || '⚔'} ${w.name}${w.level ? ' ·' + w.level : ''}</span>`);
     if (p.tempWeapon && p.tempWeaponTimer > 0) {
       tags.push(`<span class="buff-tag good">${p.tempWeapon.ico} ${p.tempWeapon.name} ${p.tempWeaponTimer.toFixed(0)}с</span>`);
     }
