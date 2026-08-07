@@ -2275,6 +2275,19 @@ class Game {
     }
   }
 
+  /** Если квота спавна исчерпана, а живых нет и киллов не хватает — доспавнить (антисофтлок). */
+  ensureWaveMobProgress() {
+    if (this.wavePhase !== 'mobs') return;
+    if (this.paused || this.choosingUpgrade || this.shopping || this.gameOver || this.won) return;
+    const living = this.enemies.filter(e => e.hp > 0).length;
+    if (living > 0) return;
+    if (this.waveKills >= this.killsPerWave) return;
+    if (this.waveSpawned >= this.killsPerWave) {
+      this.waveSpawned = this.waveKills;
+    }
+    this.spawnWaveMob();
+  }
+
   spawnWaveBoss() {
     this.wavePhase = 'boss';
     this.projectiles = [];
@@ -2420,11 +2433,9 @@ class Game {
           this.score += 1;
           this.player.gainXP(e.xpReward);
           this.dropCoins(e);
-          if (e.type === 'fatty' || e.explodes) {
-            e._pendingFuse = true;
-          } else {
-            this.onEnemyKilled(e);
-          }
+          // сразу кредитовать килл: _pendingFuse раньше терялся при filter в том же кадре
+          if (e.type === 'fatty' || e.explodes) this.armFattyFuse(e);
+          this.onEnemyKilled(e);
         }
       }
     }
@@ -2930,15 +2941,6 @@ class Game {
       }
     }
 
-    // Цепные фитили от взрыва
-    for (const e of this.enemies) {
-      if (e._pendingFuse && e.hp <= 0) {
-        e._pendingFuse = false;
-        this.armFattyFuse(e);
-        this.onEnemyKilled(e);
-      }
-    }
-
     // Тикают бомбы — взрыв с задержкой
     for (const bomb of this.fuseBombs) {
       bomb.life -= realDt;
@@ -2949,11 +2951,21 @@ class Game {
     }
     this.fuseBombs = this.fuseBombs.filter(b => !b.exploded);
 
+    // на случай старых _pendingFuse (до фикса explodeAt)
+    for (const e of this.enemies) {
+      if (e._pendingFuse && e.hp <= 0) {
+        e._pendingFuse = false;
+        this.armFattyFuse(e);
+        this.onEnemyKilled(e);
+      }
+    }
+
     this.enemies = this.enemies.filter(e => e.hp > 0);
     if (this._clearMobsAfterKill) {
       this.enemies = this.enemies.filter(e => e.type === 'boss' || e.type === 'miniboss' || e.type === 'director');
       this._clearMobsAfterKill = false;
     }
+    this.ensureWaveMobProgress();
 
     // Снаряды (книга жалоб)
     for (const pr of this.projectiles) {
