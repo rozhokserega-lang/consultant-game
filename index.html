@@ -172,6 +172,26 @@
   .hub-card .ttl { font-weight:700; font-size:12px; line-height:1.25; }
   .hub-card .desc { font-size:10px; color:#aaa; margin-top:2px; }
   .hub-card .meta { font-size:10px; color:#f1c40f; margin-top:3px; font-weight:700; }
+  .hub-card.locked { opacity:0.4; cursor:not-allowed; }
+  .hub-tabs { display:flex; gap:6px; margin:8px 0 6px; }
+  .hub-tab {
+    flex:1; padding:10px 8px; border-radius:10px; border:2px solid #555;
+    background:rgba(255,255,255,0.06); color:#fff; font-weight:800; font-size:13px; cursor:pointer;
+  }
+  .hub-tab.on { border-color:#f1c40f; background:rgba(241,196,15,0.15); }
+  .hub-pane { display:none; }
+  .hub-pane.on { display:block; }
+  .book-list { display:flex; flex-direction:column; gap:6px; text-align:left; }
+  .book-row {
+    display:flex; align-items:center; gap:10px; padding:8px 10px;
+    background:rgba(255,255,255,0.06); border:1px solid #444; border-radius:10px;
+  }
+  .book-row .ico { font-size:22px; width:28px; text-align:center; }
+  .book-row .nm { flex:1; font-weight:700; font-size:13px; }
+  .book-row .cnt { font-weight:800; color:#f1c40f; font-size:14px; }
+  .book-row.zero { opacity:0.45; }
+  .book-total { text-align:left; margin:4px 0 8px; font-size:12px; color:#aaa; }
+  .wep-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
   .perk-row { display:flex; gap:6px; flex-wrap:wrap; justify-content:stretch; margin:6px 0; }
   .perk-row .hub-card { flex:1 1 90px; min-width:0; }
   #hub-overlay {
@@ -286,7 +306,7 @@
         <h2 style="margin:0;">🛒 Магазин смены</h2>
         <span class="coin-pill" id="shop-coins">🪙 0</span>
       </div>
-      <p id="shop-sub">Перед волной закупись. Лимит покупок за визит: 2 (смена оружия бесплатна).</p>
+      <p id="shop-sub">Перед волной закупись. Лимит покупок: 2. Оружие только купить — взять в руки можно перед сменой.</p>
       <div class="shop-grid" id="shop-grid"></div>
       <div class="row-btns">
         <button class="btn" id="btn-shop-go" type="button">В бой! ⚔</button>
@@ -315,6 +335,7 @@
         <button class="btn ghost" id="tog-sound" type="button">🔊 Звук: ВКЛ</button>
         <button class="btn ghost" id="tog-vibro" type="button">📳 Вибрация: ВКЛ</button>
         <button class="btn ghost" id="tog-hammer" type="button">⚔ Оружие: Молоток</button>
+        <p style="font-size:11px;color:#aaa;margin-top:4px;">Смена оружия — только в подготовке к смене</p>
         <button class="btn" id="btn-settings-close" type="button">Закрыть</button>
       </div>
       <p style="margin-top:12px;font-size:12px;">Рекорд: <b id="set-record">0</b> · Оружие: <b id="set-hammers">1</b> · Банк: <b id="set-bank">0</b></p>
@@ -338,17 +359,33 @@
 </div>
 
   <!-- Хаб между сменами (вне game-container — на весь экран) -->
-  <div class="overlay" id="hub-overlay">
+    <div class="overlay" id="hub-overlay">
     <div class="panel hub-panel">
       <div class="hub-scroll">
-        <h2>🏬 Хаб смены</h2>
+        <h2>🛒 Консультант</h2>
         <p>Банк: <b id="hub-bank">0</b> 🪙 · Рекорд: <b id="hub-record">0</b></p>
-        <div class="hub-sec">Мета-перки</div>
-        <div class="perk-row" id="hub-perks"></div>
-        <div class="hub-sec">Зона ТЦ</div>
-        <div class="hub-grid" id="hub-arenas"></div>
-        <div class="hub-sec">Испытание</div>
-        <div class="hub-grid" id="hub-challenges"></div>
+        <div class="hub-tabs">
+          <button type="button" class="hub-tab on" data-hub-tab="prep" id="hub-tab-prep">Подготовка к смене</button>
+          <button type="button" class="hub-tab" data-hub-tab="book" id="hub-tab-book">📖 Книга жалоб</button>
+        </div>
+
+        <div class="hub-pane on" id="hub-pane-prep">
+          <div class="hub-sec">Оружие на смену</div>
+          <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Выбери из купленного. В магазине во время смены оружие только покупается.</p>
+          <div class="wep-grid" id="hub-weapons"></div>
+          <div class="hub-sec">Мета-перки</div>
+          <div class="perk-row" id="hub-perks"></div>
+          <div class="hub-sec">Зона ТЦ</div>
+          <div class="hub-grid" id="hub-arenas"></div>
+          <div class="hub-sec">Испытание</div>
+          <div class="hub-grid" id="hub-challenges"></div>
+        </div>
+
+        <div class="hub-pane" id="hub-pane-book">
+          <div class="hub-sec">📖 Книга жалоб</div>
+          <p class="book-total" id="book-total">Всего выписано жалоб: 0</p>
+          <div class="book-list" id="hub-book"></div>
+        </div>
       </div>
       <div class="hub-footer">
         <button class="btn" id="btn-hub-start" type="button">Начать смену ⚔</button>
@@ -756,6 +793,24 @@ const CHALLENGES = [
   { id: 'hammer_only', ico: '🔨', name: 'Только молоток', desc: 'Молоток, без пикапов оружия', bonus: 30 },
   { id: 'x2', ico: '🔥', name: 'x2 враги / x2 лут', desc: 'Вдвое больше киллов и монет', bonus: 50 },
 ];
+
+/** Записи книги жалоб — статистика киллов по типам. */
+const COMPLAINT_BOOK = [
+  { id: 'normal', name: 'Покупатель', ico: '🧍' },
+  { id: 'fast', name: 'Торопыга', ico: '🏃' },
+  { id: 'tank', name: 'Танк', ico: '🛡️' },
+  { id: 'fatty', name: 'Жирный', ico: '💣' },
+  { id: 'queue', name: 'Очередь', ico: '🧍‍♂️' },
+  { id: 'returner', name: 'Возврат', ico: '📕' },
+  { id: 'manager', name: 'Менеджер', ico: '👔' },
+  { id: 'influencer', name: 'Инфлюенсер', ico: '📸' },
+  { id: 'blogger', name: 'Блогер', ico: '📱' },
+  { id: 'child', name: 'Ребёнок', ico: '🧒' },
+  { id: 'boss', name: 'Админ', ico: '📢' },
+  { id: 'miniboss', name: 'Мини-босс', ico: '👮' },
+  { id: 'director', name: 'Директор', ico: '💼' },
+];
+
 
 const TEMP_WEAPONS = {
   mop: { id: 'mop', name: 'Швабра', ico: '🧹', stickLength: 52, cooldown: 0.40, damage: 1, arc: Math.PI / 1.6, knock: 340, speedBonus: 0, stun: 0, color: '#2980b9', tip: '#85c1e9', duration: 14 },
@@ -1904,6 +1959,8 @@ class Game {
     this.highScore = this.save.highScore || 0;
     this.bankCoins = this.save.bankCoins || 0;
     this.metaPerks = Object.assign({ tank: 0, speed: 0, crit: 0 }, this.save.metaPerks || {});
+    this.killLog = Object.assign({}, this.save.killLog || {});
+    this.hubTab = 'prep';
     this.selectedArena = this.save.selectedArena || 'food';
     this.selectedChallenge = 'none';
     this.challengeFailed = false;
@@ -2014,6 +2071,8 @@ class Game {
     document.getElementById('btn-restart').onclick = () => { this.hideOverlays(); this.openHub(); };
     document.getElementById('btn-again').onclick = () => { this.hideOverlays(); this.openHub(); };
     document.getElementById('btn-hub-start').onclick = () => this.startShiftFromHub();
+    document.getElementById('hub-tab-prep').onclick = () => this.setHubTab('prep');
+    document.getElementById('hub-tab-book').onclick = () => this.setHubTab('book');
     document.getElementById('btn-settings').onclick = () => this.openSettings();
     document.getElementById('btn-pause-settings').onclick = () => this.openSettings();
     document.getElementById('btn-settings-close').onclick = () => this.closeSettings();
@@ -2027,6 +2086,10 @@ class Game {
       this.vibro = !this.vibro; this.persist(); this.refreshSettingsUI();
     };
     document.getElementById('tog-hammer').onclick = () => {
+      if (!this.inHub) {
+        sfx.hurt();
+        return;
+      }
       const list = this.unlockedWeapons();
       const idx = list.findIndex(h => h.id === this.weaponId);
       this.weaponId = list[(idx + 1) % list.length].id;
@@ -2050,6 +2113,7 @@ class Game {
       bankCoins: this.bankCoins,
       metaPerks: this.metaPerks,
       selectedArena: this.selectedArena,
+      killLog: this.killLog,
     });
   }
 
@@ -2164,9 +2228,82 @@ class Game {
     sfx.click();
   }
 
+  setHubTab(tab) {
+    this.hubTab = tab === 'book' ? 'book' : 'prep';
+    this.renderHub();
+    sfx.click();
+  }
+
+  recordKill(type) {
+    if (!type) return;
+    if (!this.killLog) this.killLog = {};
+    this.killLog[type] = (this.killLog[type] || 0) + 1;
+  }
+
+  renderComplaintBook() {
+    const list = document.getElementById('hub-book');
+    if (!list) return;
+    list.innerHTML = '';
+    let total = 0;
+    for (const entry of COMPLAINT_BOOK) {
+      const n = (this.killLog && this.killLog[entry.id]) || 0;
+      total += n;
+      const el = document.createElement('div');
+      el.className = 'book-row' + (n <= 0 ? ' zero' : '');
+      el.innerHTML = `<div class="ico">${entry.ico}</div>
+        <div class="nm">${entry.name}</div>
+        <div class="cnt">${n}</div>`;
+      list.appendChild(el);
+    }
+    const tot = document.getElementById('book-total');
+    if (tot) tot.textContent = 'Всего выписано жалоб: ' + total;
+  }
+
+  renderHubWeapons() {
+    const wrap = document.getElementById('hub-weapons');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    const hammerOnly = this.selectedChallenge === 'hammer_only';
+    for (const w of WEAPONS) {
+      const owned = this.ownedWeapons.includes(w.id);
+      const locked = !owned || (hammerOnly && w.id !== 'hammer');
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'hub-card' + (this.weaponId === w.id && !locked ? ' sel' : '') + (locked ? ' locked' : '');
+      const meta = !owned ? 'Не куплено' : (hammerOnly && w.id !== 'hammer' ? 'Испытание' : (this.weaponId === w.id ? 'Выбрано' : 'Взять'));
+      el.innerHTML = `<div class="ttl">${w.ico} ${w.name}</div>
+        <div class="desc">Урон ${w.damage} · КД ${w.cooldown.toFixed(2)}с</div>
+        <div class="meta">${meta}</div>`;
+      if (!locked) {
+        el.onclick = () => {
+          this.weaponId = w.id;
+          this.hammerId = w.id;
+          if (this.player) {
+            this.player.equippedWeaponId = w.id;
+            this.player.applyWeapon(this.getWeapon());
+          }
+          this.persist();
+          this.renderHub();
+          sfx.click();
+        };
+      }
+      wrap.appendChild(el);
+    }
+  }
+
   renderHub() {
     document.getElementById('hub-bank').textContent = this.bankCoins;
     document.getElementById('hub-record').textContent = this.highScore;
+    if (!this.hubTab) this.hubTab = 'prep';
+    document.getElementById('hub-tab-prep').classList.toggle('on', this.hubTab === 'prep');
+    document.getElementById('hub-tab-book').classList.toggle('on', this.hubTab === 'book');
+    document.getElementById('hub-pane-prep').classList.toggle('on', this.hubTab === 'prep');
+    document.getElementById('hub-pane-book').classList.toggle('on', this.hubTab === 'book');
+    document.getElementById('btn-hub-start').style.display = this.hubTab === 'prep' ? '' : 'none';
+
+    this.renderHubWeapons();
+    this.renderComplaintBook();
+
     const perkWrap = document.getElementById('hub-perks');
     perkWrap.innerHTML = '';
     for (const pk of META_PERKS) {
@@ -2200,7 +2337,15 @@ class Game {
       el.innerHTML = `<div class="ttl">${c.ico} ${c.name}</div>
         <div class="desc">${c.desc}</div>
         <div class="meta">${c.bonus ? 'Бонус +' + c.bonus + '🪙' : '—'}</div>`;
-      el.onclick = () => { this.selectedChallenge = c.id; this.renderHub(); sfx.click(); };
+      el.onclick = () => {
+        this.selectedChallenge = c.id;
+        if (c.id === 'hammer_only') {
+          this.weaponId = 'hammer';
+          this.hammerId = 'hammer';
+        }
+        this.renderHub();
+        sfx.click();
+      };
       ch.appendChild(el);
     }
   }
@@ -2614,7 +2759,7 @@ class Game {
     this.shopBuysLeft = SHOP_BUYS_PER_VISIT;
     this.shopWaveStock = {}; // id -> bought count this visit
     document.getElementById('shop-sub').textContent =
-      `Волна ${this.wave}: осталось покупок ${this.shopBuysLeft}. Смена уже купленного оружия — бесплатно.`;
+      `Волна ${this.wave}: осталось покупок ${this.shopBuysLeft}. Оружие только покупается — смена в подготовке к смене.`;
     this.renderShop();
     document.getElementById('shop-overlay').classList.add('show');
     sfx.shop();
@@ -2632,16 +2777,16 @@ class Game {
       const waveBought = (this.shopWaveStock && this.shopWaveStock[item.id]) || 0;
       const waveLimit = item.perWave || 0;
       const soldOut = (item.oncePerRun && runBought) || (waveLimit && waveBought >= waveLimit);
-      const needsBuySlot = !(isWeapon && owned); // equip free
+      const needsBuySlot = true;
       const canAfford = this.coins >= item.price;
-      const canBuy = !owned && !soldOut && canAfford && (!needsBuySlot || this.shopBuysLeft > 0);
+      const canBuy = !owned && !soldOut && canAfford && this.shopBuysLeft > 0;
       const el = document.createElement('button');
       el.type = 'button';
-      el.className = 'shop-item' + (owned ? ' owned' : '') + ((!canBuy && !owned) || soldOut ? ' locked' : '');
+      el.className = 'shop-item' + (owned ? ' owned' : '') + ((!canBuy && !owned) || soldOut || owned ? ' locked' : '');
       let priceTxt;
-      if (owned) priceTxt = equipped ? 'Экипировано' : 'Взять в руки';
+      if (owned) priceTxt = 'Куплено';
       else if (soldOut) priceTxt = 'Распродано';
-      else if (this.shopBuysLeft <= 0 && needsBuySlot) priceTxt = 'Лимит покупок';
+      else if (this.shopBuysLeft <= 0) priceTxt = 'Лимит покупок';
       else priceTxt = '🪙 ' + item.price;
       const wpn = isWeapon ? WEAPONS.find(w => w.id === item.weaponId) : null;
       const ico = (wpn && wpn.icon) ? '' : (item.ico || '');
@@ -2665,13 +2810,7 @@ class Game {
     }
     if (item.weaponId) {
       if (this.ownedWeapons.includes(item.weaponId)) {
-        this.weaponId = item.weaponId;
-        this.hammerId = this.weaponId;
-        this.player.equippedWeaponId = this.weaponId;
-        if (!this.player.tempWeapon) this.player.applyWeapon(this.getWeapon());
-        this.persist();
-        this.renderShop();
-        sfx.click();
+        sfx.hurt();
         return;
       }
       if (this.shopBuysLeft <= 0) { sfx.hurt(); return; }
@@ -2679,14 +2818,12 @@ class Game {
       this.coins -= item.price;
       this.shopBuysLeft--;
       this.ownedWeapons.push(item.weaponId);
-      this.weaponId = item.weaponId;
-      this.player.equippedWeaponId = this.weaponId;
-      this.hammerId = this.weaponId;
-      if (!this.player.tempWeapon) this.player.applyWeapon(this.getWeapon());
+      // Не меняем экипировку во время смены — только покупка в коллекцию
       this.persist();
       sfx.coin();
       this.renderShop();
-      document.getElementById('shop-sub').textContent = `Волна ${this.wave}: осталось покупок ${this.shopBuysLeft}.`;
+      document.getElementById('shop-sub').textContent =
+        `Волна ${this.wave}: куплено «${item.ttl}». Взять в руки — перед следующей сменой. Покупок: ${this.shopBuysLeft}.`;
       return;
     }
     if (item.oncePerRun && this.shopBoughtRun.has(item.id)) { sfx.hurt(); return; }
@@ -2735,6 +2872,7 @@ class Game {
   }
 
   onEnemyKilled(enemy) {
+    this.recordKill(enemy.type);
     if (enemy.type === 'director') {
       this.endGame(true);
       return;
