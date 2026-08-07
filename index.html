@@ -456,11 +456,13 @@ const BOSS_PHRASES = {
 
 const STORE_SPRITES = ["store_tech", "store_clothes", "store_food", "store_sport"];
 
-const KILLS_PER_WAVE = 30;
-const MAX_ENEMIES_ON_FIELD = 18;
+/** −20% к давлению врагов (HP, скорость, длина волны, плотность). */
+const DIFFICULTY_EASE = 0.8;
+const KILLS_PER_WAVE = Math.round(30 * DIFFICULTY_EASE);
+const MAX_ENEMIES_ON_FIELD = Math.max(12, Math.round(18 * DIFFICULTY_EASE));
 const SHIFT_WAVES = 10;
-const FATTY_EXPLODE_RADIUS = 110;
-const FATTY_FUSE_TIME = 1.35; // сек до взрыва — успеть убежать
+const FATTY_EXPLODE_RADIUS = Math.round(110 * DIFFICULTY_EASE);
+const FATTY_FUSE_TIME = 1.35 / DIFFICULTY_EASE; // чуть больше времени убежать
 
 // ═══════════════════════════════════════
 //  КОНСУЛЬТАНТ — полная смена
@@ -901,8 +903,8 @@ class Enemy {
     const isBossLike = type === 'boss' || type === 'director';
     const hpMul = isBossLike ? (1 + (w - 1) * 0.22) : (1 + (w - 1) * 0.16);
     const spdMul = isBossLike ? (1 + (w - 1) * 0.05) : (1 + (w - 1) * 0.07);
-    this.hp = Math.max(1, Math.ceil(this.hp * hpMul));
-    this.speed *= spdMul;
+    this.hp = Math.max(1, Math.ceil(this.hp * hpMul * DIFFICULTY_EASE));
+    this.speed *= spdMul * DIFFICULTY_EASE;
     this.xpReward = Math.max(1, Math.round(this.xpReward * (1 + (w - 1) * 0.08)));
     this.coinDrop = Math.max(1, Math.round(this.coinDrop * (1 + (w - 1) * 0.06)));
     this.wave = w;
@@ -952,7 +954,8 @@ class Enemy {
     }
 
     const d = dist(this.x, this.y, player.x, player.y);
-    const rushMul = (isRush ? 1.28 : 1) * (game && game.fireAlarm > 0 ? 1.35 : 1);
+    const rushBase = (isRush ? 1.28 : 1) * (game && game.fireAlarm > 0 ? 1.35 : 1);
+    const rushMul = (rushBase - 1) * DIFFICULTY_EASE + 1;
 
     // 1) Аура менеджера — ускорение + лёгкий реген союзникам
     if (this.type === 'manager') {
@@ -1013,7 +1016,7 @@ class Enemy {
 
     // 5) Танк — таран: разгоняется на игрока вблизи
     if (this.type === 'tank' && d < 170) {
-      this.ramBoost = 1.55;
+      this.ramBoost = 1 + (1.55 - 1) * DIFFICULTY_EASE;
     } else {
       this.ramBoost = 1;
     }
@@ -2065,7 +2068,7 @@ class Game {
     this.waveKills = 0;
     this.waveSpawned = 0;
     let kills = this.blackFriday
-      ? Math.round(KILLS_PER_WAVE * 1.55)
+      ? Math.round(KILLS_PER_WAVE * (1 + 0.55 * DIFFICULTY_EASE))
       : KILLS_PER_WAVE;
     if (this.selectedChallenge === 'x2') kills = Math.round(kills * 2);
     this.killsPerWave = kills;
@@ -2115,7 +2118,7 @@ class Game {
     this.showEventBanner('🏷️ РАСПРОДАЖА! Толпа у витрины');
     const sx = this.worldW * rand(0.25, 0.75);
     const sy = this.worldH * rand(0.25, 0.75);
-    const n = 5 + randi(0, 3);
+    const n = Math.max(3, Math.round((5 + randi(0, 3)) * DIFFICULTY_EASE));
     for (let i = 0; i < n; i++) {
       if (this.enemies.filter(e => e.hp > 0).length >= (this._fieldCap || MAX_ENEMIES_ON_FIELD)) break;
       const e = new Enemy(sx + rand(-40, 40), sy + rand(-40, 40), Math.random() < 0.4 ? 'fast' : 'normal', this.wave);
@@ -2302,9 +2305,9 @@ class Game {
     if (this.wave % 3 === 0) {
       // мини-боссы на 3 / 6 / 9
       const e = new Enemy(this.worldW * 0.5, this.worldH * 0.35, 'miniboss', this.wave);
-      if (this.wave === 3) { e.nameTag = 'Старший кассир'; e.hp = e.maxHp = 24; }
-      else if (this.wave === 6) { e.nameTag = 'Охрана ТЦ'; e.hp = e.maxHp = 30; e.speed *= 1.15; }
-      else { e.nameTag = 'Маркетолог'; e.hp = e.maxHp = 34; e.summonTimer = 4; }
+      if (this.wave === 3) { e.nameTag = 'Старший кассир'; e.hp = e.maxHp = Math.max(1, Math.round(24 * DIFFICULTY_EASE)); }
+      else if (this.wave === 6) { e.nameTag = 'Охрана ТЦ'; e.hp = e.maxHp = Math.max(1, Math.round(30 * DIFFICULTY_EASE)); e.speed *= 1.15; }
+      else { e.nameTag = 'Маркетолог'; e.hp = e.maxHp = Math.max(1, Math.round(34 * DIFFICULTY_EASE)); e.summonTimer = 4; }
       this.enemies.push(e);
       this.modeFlash = 0.7;
       this._bossBanner = e.nameTag;
