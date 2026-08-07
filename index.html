@@ -464,12 +464,24 @@ function drawPlayerAnimFrame(ctx, frameKey, x, y, opts = {}) {
 }
 
 // ── Пропы арен (новый лист объектов) ──
-const ARENA_PROP_FRAMES = {"shelf_front":{"x":2,"y":2,"w":138,"h":117},"fridge_front":{"x":142,"y":2,"w":145,"h":117},"clothes_rack_hd":{"x":289,"y":2,"w":146,"h":96},"clothes_shelves":{"x":437,"y":2,"w":123,"h":98},"mannequin_hd":{"x":562,"y":2,"w":35,"h":91},"food_case":{"x":599,"y":2,"w":136,"h":104},"veggie_stand":{"x":737,"y":2,"w":126,"h":110},"sport_shelf":{"x":865,"y":2,"w":130,"h":113},"fitting_room":{"x":2,"y":121,"w":68,"h":111},"shoe_shelf":{"x":72,"y":121,"w":144,"h":113},"checkout_hd":{"x":218,"y":121,"w":98,"h":113},"vending_hd":{"x":318,"y":121,"w":66,"h":113}};
+const ARENA_PROP_FRAMES = {"atm":{"x":57,"y":63,"w":36,"h":51},"atm_hd":{"x":205,"y":63,"w":36,"h":51},"barrel_red":{"x":355,"y":70,"w":32,"h":44},"bench":{"x":486,"y":70,"w":65,"h":44},"bench_hd":{"x":634,"y":70,"w":65,"h":44},"box_stack":{"x":786,"y":60,"w":57,"h":54},"cart":{"x":927,"y":66,"w":72,"h":48},"cart_hd":{"x":1075,"y":66,"w":72,"h":48},"checkout":{"x":9,"y":179,"w":132,"h":49},"checkout_hd":{"x":177,"y":139,"w":92,"h":89},"checkout_mall":{"x":305,"y":179,"w":132,"h":49},"checkout_side":{"x":497,"y":141,"w":43,"h":87},"clothes_rack":{"x":594,"y":166,"w":146,"h":62},"clothes_rack_hd":{"x":745,"y":137,"w":139,"h":91},"clothes_rack_mall":{"x":890,"y":166,"w":146,"h":62},"clothes_rack_side":{"x":1088,"y":137,"w":46,"h":91},"clothes_shelves":{"x":19,"y":251,"w":111,"h":91},"fire_box":{"x":209,"y":286,"w":27,"h":56},"fitting_open":{"x":342,"y":254,"w":58,"h":88},"fitting_room":{"x":488,"y":254,"w":61,"h":88},"fold_table":{"x":650,"y":278,"w":34,"h":64},"food_case":{"x":750,"y":257,"w":129,"h":85},"fridge_front":{"x":894,"y":231,"w":138,"h":111},"fridge_side":{"x":1080,"y":230,"w":62,"h":112},"mannequin":{"x":57,"y":399,"w":36,"h":57},"mannequin_hd":{"x":209,"y":366,"w":27,"h":90},"mannequin_mall":{"x":353,"y":399,"w":36,"h":57},"mannequin_side":{"x":504,"y":366,"w":29,"h":90},"map_board":{"x":638,"y":413,"w":58,"h":43},"mirror":{"x":800,"y":389,"w":30,"h":67},"mirror_hd":{"x":948,"y":389,"w":30,"h":67},"plant":{"x":1095,"y":401,"w":32,"h":55},"plant_cone":{"x":62,"y":512,"w":25,"h":58},"plant_round":{"x":207,"y":515,"w":32,"h":55},"sale_pillar":{"x":348,"y":507,"w":45,"h":63},"shelf_front":{"x":454,"y":458,"w":129,"h":112},"shoe_shelf":{"x":622,"y":481,"w":89,"h":89},"sign_dir":{"x":786,"y":527,"w":58,"h":43},"sport_shelf":{"x":902,"y":479,"w":122,"h":91},"sport_shelf_n":{"x":1091,"y":479,"w":39,"h":91},"trash_hd":{"x":48,"y":606,"w":53,"h":78},"veggie_stand":{"x":164,"y":598,"w":117,"h":86},"vending":{"x":352,"y":633,"w":37,"h":51},"vending_hd":{"x":491,"y":595,"w":56,"h":89},"vending_mall":{"x":648,"y":633,"w":37,"h":51},"wet_floor":{"x":787,"y":625,"w":55,"h":59},"wet_floor_hd":{"x":935,"y":625,"w":55,"h":59},"trash":{"x":48,"y":606,"w":53,"h":78}};
 
 const arenaPropImg = new Image();
 let arenaPropReady = false;
 arenaPropImg.onload = () => { arenaPropReady = true; };
 arenaPropImg.src = 'arena_props_atlas.png';
+
+const STOREFRONT_FRAMES = {"store_tech":{"x":7,"y":2,"w":94,"h":91},"store_clothes":{"x":111,"y":16,"w":100,"h":77},"store_food":{"x":216,"y":16,"w":105,"h":77},"store_sport":{"x":324,"y":16,"w":102,"h":77}};
+const storefrontImg = new Image();
+let storefrontReady = false;
+storefrontImg.onload = () => { storefrontReady = true; };
+storefrontImg.src = 'storefront_atlas.png';
+
+const WALL_DECOR_FRAMES = {"wall_sale":{"x":5,"y":2,"w":70,"h":106},"wall_burger":{"x":81,"y":14,"w":76,"h":94},"wall_exit":{"x":160,"y":47,"w":77,"h":61},"wall_dir":{"x":239,"y":16,"w":76,"h":92},"wall_nosmoke":{"x":328,"y":30,"w":57,"h":78}};
+const wallDecorImg = new Image();
+let wallDecorReady = false;
+wallDecorImg.onload = () => { wallDecorReady = true; };
+wallDecorImg.src = 'wall_decor_atlas.png';
 
 // ── Покупатели (анимированный лист 7×4) ──
 const ENEMY_MOB_FRAMES = {"mob_tank_idle":{"x":37,"y":11,"w":65,"h":84},"mob_tank_walk":{"x":173,"y":11,"w":70,"h":84},"mob_tank_run":{"x":296,"y":11,"w":99,"h":84},"mob_tank_attack":{"x":416,"y":12,"w":136,"h":83},"mob_purple_idle":{"x":587,"y":2,"w":69,"h":93},"mob_purple_walk":{"x":723,"y":2,"w":74,"h":93},"mob_purple_run":{"x":849,"y":3,"w":97,"h":92},"mob_purple_attack":{"x":974,"y":2,"w":123,"h":93},"mob_fast_idle":{"x":1145,"y":14,"w":57,"h":81},"mob_fast_walk":{"x":1278,"y":14,"w":67,"h":81},"mob_fast_run":{"x":1399,"y":14,"w":102,"h":81},"mob_fast_attack":{"x":1530,"y":14,"w":115,"h":81},"mob_elder_idle":{"x":1698,"y":13,"w":56,"h":82},"mob_elder_walk":{"x":1831,"y":13,"w":66,"h":82},"mob_elder_run":{"x":1960,"y":14,"w":84,"h":81},"mob_elder_attack":{"x":2079,"y":14,"w":121,"h":81},"mob_muscle_idle":{"x":2244,"y":12,"w":67,"h":83},"mob_muscle_walk":{"x":2381,"y":12,"w":70,"h":83},"mob_muscle_run":{"x":2502,"y":13,"w":104,"h":82},"mob_muscle_attack":{"x":2637,"y":13,"w":109,"h":82},"mob_pink_idle":{"x":2803,"y":12,"w":53,"h":83},"mob_pink_walk":{"x":2935,"y":12,"w":65,"h":83},"mob_pink_run":{"x":3062,"y":12,"w":88,"h":83},"mob_pink_attack":{"x":3178,"y":12,"w":131,"h":83},"mob_cane_idle":{"x":3350,"y":21,"w":63,"h":74},"mob_cane_walk":{"x":3487,"y":21,"w":65,"h":74},"mob_cane_run":{"x":3612,"y":21,"w":92,"h":74},"mob_cane_attack":{"x":3744,"y":21,"w":104,"h":74}};
@@ -532,21 +544,36 @@ function drawEnemyMob(ctx, frameKey, x, y, opts = {}) {
   return true;
 }
 
-function drawArenaProp(ctx, name, x, y, opts = {}) {
-  if (!arenaPropReady) return false;
-  const f = ARENA_PROP_FRAMES[name];
+function drawAtlasFrame(ctx, img, ready, frames, name, x, y, opts = {}) {
+  if (!ready) return false;
+  const f = frames[name];
   if (!f) return false;
-  const dw = opts.w ?? f.w * (opts.scale ?? 0.7);
-  const dh = opts.h ?? f.h * (opts.scale ?? 0.7);
+  const dw = opts.w ?? f.w * (opts.scale ?? 1);
+  const dh = opts.h ?? f.h * (opts.scale ?? 1);
   const ax = opts.anchorX ?? 0.5;
   const ay = opts.anchorY ?? 1.0;
   ctx.save();
   ctx.translate(x, y);
   if (opts.flip) ctx.scale(-1, 1);
+  if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(arenaPropImg, f.x, f.y, f.w, f.h, -dw * ax, -dh * ay, dw, dh);
+  ctx.drawImage(img, f.x, f.y, f.w, f.h, -dw * ax, -dh * ay, dw, dh);
   ctx.restore();
   return true;
+}
+
+function drawArenaProp(ctx, name, x, y, opts = {}) {
+  const o = Object.assign({ scale: 0.7 }, opts);
+  return drawAtlasFrame(ctx, arenaPropImg, arenaPropReady, ARENA_PROP_FRAMES, name, x, y, o);
+}
+
+function drawStorefrontSprite(ctx, name, x, y, opts = {}) {
+  if (drawAtlasFrame(ctx, storefrontImg, storefrontReady, STOREFRONT_FRAMES, name, x, y, opts)) return true;
+  return drawSprite(ctx, name, x, y, opts);
+}
+
+function drawWallDecor(ctx, name, x, y, opts = {}) {
+  return drawAtlasFrame(ctx, wallDecorImg, wallDecorReady, WALL_DECOR_FRAMES, name, x, y, opts);
 }
 
 /** 8 направлений по углу (0 = вправо, π/2 = вниз). */
@@ -730,17 +757,20 @@ const ARENA_THEMES = {
   tech: {
     id: 'tech', name: 'Tech', ico: '💻', tile: 'tile_dark', store: 'store_tech',
     fenceStripe: '#2980b9',
+    wallSigns: ['wall_dir', 'wall_nosmoke', 'wall_exit', 'wall_sale'],
     obstacles: [
       { x: 0.18, y: 0.22, sprite: 'vending_hd', cw: 40, ch: 28, dw: 52, dh: 90 },
       { x: 0.42, y: 0.20, sprite: 'shelf_front', cw: 78, ch: 30, dw: 100, dh: 88 },
       { x: 0.72, y: 0.24, sprite: 'checkout_hd', cw: 64, ch: 30, dw: 78, dh: 90 },
-      { x: 0.88, y: 0.48, sprite: 'vending_hd', cw: 40, ch: 28, dw: 52, dh: 90 },
+      { x: 0.88, y: 0.48, sprite: 'atm_hd', cw: 28, ch: 26, dw: 40, dh: 72 },
       { x: 0.14, y: 0.52, sprite: 'fridge_front', cw: 86, ch: 32, dw: 108, dh: 92 },
       { x: 0.48, y: 0.55, sprite: 'shelf_front', cw: 78, ch: 30, dw: 100, dh: 88 },
       { x: 0.72, y: 0.58, sprite: 'vending_hd', cw: 40, ch: 28, dw: 52, dh: 90 },
-      { x: 0.30, y: 0.80, sprite: 'checkout_hd', cw: 64, ch: 30, dw: 78, dh: 90 },
+      { x: 0.30, y: 0.80, sprite: 'bench', cw: 64, ch: 26, dw: 78, dh: 48 },
       { x: 0.58, y: 0.78, sprite: 'shelf_front', cw: 78, ch: 30, dw: 100, dh: 88 },
-      { x: 0.82, y: 0.78, sprite: 'trash', cw: 28, ch: 40 },
+      { x: 0.82, y: 0.78, sprite: 'trash', cw: 32, ch: 28, dw: 42, dh: 70 },
+      { x: 0.08, y: 0.35, sprite: 'plant_cone', cw: 22, ch: 22, dw: 30, dh: 70 },
+      { x: 0.92, y: 0.32, sprite: 'fire_box', cw: 22, ch: 24, dw: 28, dh: 62 },
     ],
     zones: [
       { type: 'checkout', x: 0.70, y: 0.18, w: 160, h: 90 },
@@ -750,6 +780,7 @@ const ARENA_THEMES = {
   clothes: {
     id: 'clothes', name: 'Clothes', ico: '👗', tile: 'tile_check', store: 'store_clothes',
     fenceStripe: '#c0392b',
+    wallSigns: ['wall_sale', 'wall_dir', 'wall_nosmoke', 'wall_exit'],
     obstacles: [
       { x: 0.18, y: 0.22, sprite: 'clothes_rack_hd', cw: 92, ch: 28, dw: 110, dh: 78 },
       { x: 0.48, y: 0.18, sprite: 'mannequin_hd', cw: 24, ch: 24, dw: 34, dh: 88 },
@@ -758,10 +789,11 @@ const ARENA_THEMES = {
       { x: 0.14, y: 0.50, sprite: 'mannequin_hd', cw: 24, ch: 24, dw: 34, dh: 88 },
       { x: 0.38, y: 0.52, sprite: 'clothes_rack_hd', cw: 92, ch: 28, dw: 110, dh: 78 },
       { x: 0.62, y: 0.50, sprite: 'shoe_shelf', cw: 84, ch: 30, dw: 105, dh: 88 },
-      { x: 0.82, y: 0.62, sprite: 'mannequin_hd', cw: 24, ch: 24, dw: 34, dh: 88 },
-      { x: 0.28, y: 0.80, sprite: 'clothes_shelves', cw: 72, ch: 28, dw: 92, dh: 80 },
+      { x: 0.82, y: 0.62, sprite: 'mirror', cw: 24, ch: 26, dw: 34, dh: 80 },
+      { x: 0.28, y: 0.80, sprite: 'fold_table', cw: 40, ch: 26, dw: 48, dh: 70 },
       { x: 0.55, y: 0.78, sprite: 'checkout_hd', cw: 64, ch: 30, dw: 78, dh: 90 },
-      { x: 0.80, y: 0.80, sprite: 'fitting_room', cw: 46, ch: 30, dw: 58, dh: 95 },
+      { x: 0.80, y: 0.80, sprite: 'sale_pillar', cw: 34, ch: 28, dw: 48, dh: 78 },
+      { x: 0.08, y: 0.72, sprite: 'plant', cw: 24, ch: 24, dw: 34, dh: 62 },
     ],
     zones: [
       { type: 'checkout', x: 0.68, y: 0.20, w: 150, h: 90 },
@@ -771,6 +803,7 @@ const ARENA_THEMES = {
   food: {
     id: 'food', name: 'Food', ico: '🍔', tile: 'tile_wood', store: 'store_food',
     fenceStripe: '#e74c3c',
+    wallSigns: ['wall_burger', 'wall_sale', 'wall_exit', 'wall_nosmoke'],
     obstacles: [
       { x: 0.18, y: 0.22, sprite: 'fridge_front', cw: 86, ch: 32, dw: 108, dh: 92 },
       { x: 0.48, y: 0.20, sprite: 'food_case', cw: 86, ch: 30, dw: 105, dh: 84 },
@@ -781,7 +814,9 @@ const ARENA_THEMES = {
       { x: 0.88, y: 0.55, sprite: 'vending_hd', cw: 40, ch: 28, dw: 52, dh: 90 },
       { x: 0.28, y: 0.78, sprite: 'food_case', cw: 86, ch: 30, dw: 105, dh: 84 },
       { x: 0.55, y: 0.80, sprite: 'checkout_hd', cw: 64, ch: 30, dw: 78, dh: 90 },
-      { x: 0.80, y: 0.78, sprite: 'shelf_front', cw: 78, ch: 30, dw: 100, dh: 88 },
+      { x: 0.80, y: 0.78, sprite: 'cart', cw: 48, ch: 28, dw: 70, dh: 55 },
+      { x: 0.08, y: 0.34, sprite: 'plant', cw: 24, ch: 24, dw: 34, dh: 62 },
+      { x: 0.92, y: 0.72, sprite: 'trash', cw: 32, ch: 28, dw: 42, dh: 70 },
     ],
     zones: [
       { type: 'slippery', x: 0.40, y: 0.40, w: 220, h: 140 },
@@ -792,6 +827,7 @@ const ARENA_THEMES = {
   sport: {
     id: 'sport', name: 'Sport', ico: '⚽', tile: 'tile_speckle', store: 'store_sport',
     fenceStripe: '#2471a3',
+    wallSigns: ['wall_sale', 'wall_exit', 'wall_dir', 'wall_nosmoke'],
     obstacles: [
       { x: 0.18, y: 0.22, sprite: 'sport_shelf', cw: 78, ch: 30, dw: 100, dh: 90 },
       { x: 0.48, y: 0.18, sprite: 'shoe_shelf', cw: 84, ch: 30, dw: 105, dh: 88 },
@@ -800,9 +836,11 @@ const ARENA_THEMES = {
       { x: 0.40, y: 0.52, sprite: 'checkout_hd', cw: 64, ch: 30, dw: 78, dh: 90 },
       { x: 0.65, y: 0.50, sprite: 'sport_shelf', cw: 78, ch: 30, dw: 100, dh: 90 },
       { x: 0.88, y: 0.48, sprite: 'shoe_shelf', cw: 84, ch: 30, dw: 105, dh: 88 },
-      { x: 0.25, y: 0.80, sprite: 'vending_hd', cw: 40, ch: 28, dw: 52, dh: 90 },
-      { x: 0.55, y: 0.78, sprite: 'sport_shelf', cw: 78, ch: 30, dw: 100, dh: 90 },
-      { x: 0.80, y: 0.80, sprite: 'checkout_hd', cw: 64, ch: 30, dw: 78, dh: 90 },
+      { x: 0.25, y: 0.80, sprite: 'bench', cw: 64, ch: 26, dw: 78, dh: 48 },
+      { x: 0.55, y: 0.78, sprite: 'sport_shelf_n', cw: 36, ch: 28, dw: 48, dh: 88 },
+      { x: 0.80, y: 0.80, sprite: 'barrel_red', cw: 30, ch: 28, dw: 40, dh: 55 },
+      { x: 0.08, y: 0.72, sprite: 'plant_cone', cw: 22, ch: 22, dw: 30, dh: 70 },
+      { x: 0.92, y: 0.30, sprite: 'fire_box', cw: 22, ch: 24, dw: 28, dh: 62 },
     ],
     zones: [
       { type: 'checkout', x: 0.65, y: 0.18, w: 160, h: 90 },
@@ -2079,6 +2117,7 @@ class Game {
   prepareIdleWorld() {
     this.generateObstacles();
     this.generateStorefronts();
+    this.generateWallDecor();
     this.generateZones();
     const weapon = this.getWeapon();
     this.player = new Player(this.worldW / 2, this.worldH / 2, weapon);
@@ -2218,6 +2257,7 @@ class Game {
     this.applyMetaToPlayer();
     this.generateObstacles();
     this.generateStorefronts();
+    this.generateWallDecor();
     this.generateZones();
     this.camera.x = this.player.x - this.viewW() / 2;
     this.camera.y = this.player.y - this.viewH() / 2;
@@ -2271,9 +2311,12 @@ class Game {
     ctx.strokeRect(x + 9 + panelW, y + 10, panelW, h - 18);
     ctx.fillStyle = '#95a5a6';
     ctx.fillRect(x + w / 2 - 2, y + 8, 4, h - 14);
-    drawSprite(ctx, 'sign_exit', x + w / 2, y + 2, { scale: 0.72, anchorY: 1 });
-    drawSprite(ctx, 'plant', x - 16, y + h, { scale: 0.52, anchorY: 1 });
-    drawSprite(ctx, 'plant', x + w + 16, y + h, { scale: 0.52, anchorY: 1 });
+    drawWallDecor(ctx, 'wall_exit', x + w / 2, y + 4, { scale: 0.55, anchorY: 1 }) ||
+      drawSprite(ctx, 'sign_exit', x + w / 2, y + 2, { scale: 0.72, anchorY: 1 });
+    drawArenaProp(ctx, 'plant', x - 16, y + h, { scale: 0.55, anchorY: 1 }) ||
+      drawSprite(ctx, 'plant', x - 16, y + h, { scale: 0.52, anchorY: 1 });
+    drawArenaProp(ctx, 'plant', x + w + 16, y + h, { scale: 0.55, anchorY: 1 }) ||
+      drawSprite(ctx, 'plant', x + w + 16, y + h, { scale: 0.52, anchorY: 1 });
   }
 
   drawArenaFence(WW, WH) {
@@ -2310,8 +2353,10 @@ class Game {
     ctx.fillRect(0, playBot + botH - 2, sideW + 2, 4);
     ctx.fillRect(WW - sideW - 2, playBot + botH - 2, sideW + 2, 4);
 
-    drawSprite(ctx, 'sign_exit', sideW * 0.52, WH * 0.5, { scale: 0.82, anchorY: 0.5 });
-    drawSprite(ctx, 'sign_exit', WW - sideW * 0.52, WH * 0.5, { scale: 0.82, anchorY: 0.5, flip: true });
+    drawWallDecor(ctx, 'wall_exit', sideW * 0.52, WH * 0.42, { scale: 0.62, anchorY: 0.5 }) ||
+      drawSprite(ctx, 'sign_exit', sideW * 0.52, WH * 0.5, { scale: 0.82, anchorY: 0.5 });
+    drawWallDecor(ctx, 'wall_exit', WW - sideW * 0.52, WH * 0.42, { scale: 0.62, anchorY: 0.5, flip: true }) ||
+      drawSprite(ctx, 'sign_exit', WW - sideW * 0.52, WH * 0.5, { scale: 0.82, anchorY: 0.5, flip: true });
   }
 
   generateZones() {
@@ -2369,10 +2414,74 @@ class Game {
     top.forEach((fx, i) => {
       this.storefronts.push({
         x: this.worldW * fx, y,
-        w: 110, h: 88,
+        w: 118, h: 92,
         sprite: i % 2 === 0 ? primary : STORE_SPRITES[i % STORE_SPRITES.length],
       });
     });
+  }
+
+  generateWallDecor() {
+    this.wallDecor = [];
+    const th = this.getArenaTheme();
+    const signs = th.wallSigns || ['wall_sale', 'wall_dir', 'wall_exit', 'wall_nosmoke'];
+    const f = ARENA_FENCE;
+    const WW = this.worldW;
+    const WH = this.worldH;
+    // верхняя стена между витринами
+    const topYs = f.topShop - 8;
+    const topXs = [0.22, 0.42, 0.62, 0.82];
+    topXs.forEach((fx, i) => {
+      this.wallDecor.push({
+        sprite: signs[i % signs.length],
+        x: WW * fx,
+        y: topYs,
+        scale: 0.48,
+        wall: 'top',
+      });
+    });
+    // боковые стены
+    const sideY = [0.28, 0.48, 0.68];
+    sideY.forEach((fy, i) => {
+      this.wallDecor.push({
+        sprite: signs[(i + 1) % signs.length],
+        x: f.side * 0.55,
+        y: WH * fy,
+        scale: 0.42,
+        wall: 'left',
+      });
+      this.wallDecor.push({
+        sprite: signs[(i + 2) % signs.length],
+        x: WW - f.side * 0.55,
+        y: WH * fy,
+        scale: 0.42,
+        wall: 'right',
+        flip: true,
+      });
+    });
+  }
+
+  drawWallDecorations() {
+    for (const d of this.wallDecor || []) {
+      if (!drawWallDecor(ctx, d.sprite, d.x, d.y, {
+        scale: d.scale || 0.45,
+        flip: !!d.flip,
+        anchorY: d.wall === 'top' ? 1 : 0.5,
+      })) {
+        // fallback old atlas names
+        const legacy = {
+          wall_sale: 'sign_sale',
+          wall_burger: 'sign_burger',
+          wall_exit: 'sign_exit',
+          wall_dir: 'sign_dir',
+          wall_nosmoke: 'sign_nosmoke',
+        };
+        drawSprite(ctx, legacy[d.sprite] || d.sprite, d.x, d.y, {
+          scale: (d.scale || 0.45) * 1.2,
+          flip: !!d.flip,
+          anchorY: d.wall === 'top' ? 1 : 0.5,
+        });
+      }
+    }
   }
 
   collidesWithObstacle(cx, cy, r) {
@@ -3475,18 +3584,25 @@ class Game {
     // Мокрый пол — табличка
     for (const z of this.zones) {
       if (z.type === 'slippery') {
-        drawSprite(ctx, 'wet_floor', z.x + z.w / 2, z.y + z.h / 2 + 10, { scale: 1.1, anchorY: 0.5 });
+        if (!drawArenaProp(ctx, 'wet_floor', z.x + z.w / 2, z.y + z.h / 2 + 10, { scale: 0.95, anchorY: 0.5 })) {
+          drawSprite(ctx, 'wet_floor', z.x + z.w / 2, z.y + z.h / 2 + 10, { scale: 1.1, anchorY: 0.5 });
+        }
       } else if (z.type === 'foodcourt') {
-        drawSprite(ctx, 'sign_burger', z.x + 30, z.y + 20, { scale: 0.9, anchorY: 1 });
+        if (!drawWallDecor(ctx, 'wall_burger', z.x + 30, z.y + 20, { scale: 0.55, anchorY: 1 })) {
+          drawSprite(ctx, 'sign_burger', z.x + 30, z.y + 20, { scale: 0.9, anchorY: 1 });
+        }
       } else if (z.type === 'checkout') {
-        drawSprite(ctx, 'sign_sale', z.x + z.w - 20, z.y + 24, { scale: 0.85, anchorY: 1 });
+        if (!drawWallDecor(ctx, 'wall_sale', z.x + z.w - 20, z.y + 24, { scale: 0.5, anchorY: 1 })) {
+          drawSprite(ctx, 'sign_sale', z.x + z.w - 20, z.y + 24, { scale: 0.85, anchorY: 1 });
+        }
       }
     }
 
     this.drawArenaFence(WW, WH);
+    this.drawWallDecorations();
 
     for (const sf of this.storefronts) {
-      if (!drawSprite(ctx, sf.sprite, sf.x + sf.w / 2, sf.y + sf.h, { w: sf.w, h: sf.h, anchorY: 1 })) {
+      if (!drawStorefrontSprite(ctx, sf.sprite, sf.x + sf.w / 2, sf.y + sf.h, { w: sf.w, h: sf.h, anchorY: 1 })) {
         ctx.fillStyle = '#a8d8ea'; ctx.fillRect(sf.x, sf.y, sf.w, sf.h);
       }
     }
