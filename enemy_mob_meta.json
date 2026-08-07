@@ -1,0 +1,57 @@
+{
+  "frames": {
+    "mob_tank": {
+      "x": 15,
+      "y": 5,
+      "w": 112,
+      "h": 175
+    },
+    "mob_purple": {
+      "x": 142,
+      "y": 2,
+      "w": 138,
+      "h": 178
+    },
+    "mob_fast": {
+      "x": 282,
+      "y": 6,
+      "w": 138,
+      "h": 174
+    },
+    "mob_elder": {
+      "x": 422,
+      "y": 21,
+      "w": 138,
+      "h": 159
+    },
+    "mob_muscle": {
+      "x": 562,
+      "y": 9,
+      "w": 138,
+      "h": 171
+    },
+    "mob_pink": {
+      "x": 702,
+      "y": 11,
+      "w": 138,
+      "h": 169
+    },
+    "mob_cane": {
+      "x": 844,
+      "y": 25,
+      "w": 134,
+      "h": 155
+    }
+  },
+  "w": 982,
+  "h": 182,
+  "legacy": {
+    "enemy_tank": "mob_tank",
+    "enemy_woman_purple": "mob_purple",
+    "enemy_fast": "mob_fast",
+    "enemy_elder": "mob_elder",
+    "enemy_boss": "mob_muscle",
+    "enemy_manager": "mob_pink",
+    "enemy_cane": "mob_cane"
+  }
+}

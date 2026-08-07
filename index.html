@@ -471,6 +471,40 @@ let arenaPropReady = false;
 arenaPropImg.onload = () => { arenaPropReady = true; };
 arenaPropImg.src = 'arena_props_atlas.png';
 
+// ── Покупатели (новый спрайт-лист) ──
+const ENEMY_MOB_FRAMES = {"mob_tank":{"x":15,"y":5,"w":112,"h":175},"mob_purple":{"x":142,"y":2,"w":138,"h":178},"mob_fast":{"x":282,"y":6,"w":138,"h":174},"mob_elder":{"x":422,"y":21,"w":138,"h":159},"mob_muscle":{"x":562,"y":9,"w":138,"h":171},"mob_pink":{"x":702,"y":11,"w":138,"h":169},"mob_cane":{"x":844,"y":25,"w":134,"h":155}};
+const ENEMY_MOB_LEGACY = {"enemy_tank":"mob_tank","enemy_woman_purple":"mob_purple","enemy_fast":"mob_fast","enemy_elder":"mob_elder","enemy_boss":"mob_muscle","enemy_manager":"mob_pink","enemy_cane":"mob_cane"};
+const ENEMY_MOB_REF_H = 82;
+
+const enemyMobImg = new Image();
+let enemyMobReady = false;
+enemyMobImg.onload = () => { enemyMobReady = true; };
+enemyMobImg.src = 'enemy_mob_atlas.png';
+
+function resolveEnemyMobFrame(spriteName) {
+  if (ENEMY_MOB_FRAMES[spriteName]) return spriteName;
+  return ENEMY_MOB_LEGACY[spriteName] || null;
+}
+
+function drawEnemyMob(ctx, frameKey, x, y, opts = {}) {
+  if (!enemyMobReady) return false;
+  const f = ENEMY_MOB_FRAMES[frameKey];
+  if (!f) return false;
+  const typeScale = opts.scale ?? 0.52;
+  const scale = typeScale * (ENEMY_MOB_REF_H / f.h);
+  const dw = f.w * scale;
+  const dh = f.h * scale;
+  const ax = opts.anchorX ?? 0.5;
+  const ay = opts.anchorY ?? 1.0;
+  ctx.save();
+  ctx.translate(x, y);
+  if (opts.flip) ctx.scale(-1, 1);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(enemyMobImg, f.x, f.y, f.w, f.h, -dw * ax, -dh * ay, dw, dh);
+  ctx.restore();
+  return true;
+}
+
 function drawArenaProp(ctx, name, x, y, opts = {}) {
   if (!arenaPropReady) return false;
   const f = ARENA_PROP_FRAMES[name];
@@ -1019,7 +1053,7 @@ class Enemy {
     this.maxHp = this.hp;
     const pool = ENEMY_SKIN_POOLS[type] || ENEMY_SKIN_POOLS.normal;
     this.sprite = pick(pool);
-    this.hueRotate = type === 'boss' || type === 'director' ? 0 : randi(0, 340);
+    this.hueRotate = 0;
     this.angle = rand(0, Math.PI * 2);
     this.wanderTimer = rand(0.5, 2);
     this.wanderAngle = this.angle;
@@ -1319,7 +1353,9 @@ class Enemy {
     else if (isRush) { c.shadowColor = 'rgba(255,60,30,0.5)'; c.shadowBlur = 12; }
     else { c.shadowColor = 'rgba(100,160,255,0.35)'; c.shadowBlur = 8; }
     if (this.hueRotate) c.filter = `hue-rotate(${this.hueRotate}deg) saturate(1.2)`;
-    if (!drawSprite(c, spriteName, this.x, this.y + 4, { scale, flip, anchorY: 1 })) {
+    const mobFrame = resolveEnemyMobFrame(spriteName);
+    const drewMob = mobFrame && drawEnemyMob(c, mobFrame, this.x, this.y + 4, { scale, flip });
+    if (!drewMob && !drawSprite(c, spriteName, this.x, this.y + 4, { scale, flip, anchorY: 1 })) {
       c.filter = 'none';
       c.fillStyle = this.type === 'fatty' ? '#e67e22' : (isRush ? '#e74c3c' : '#5dade2');
       c.beginPath(); c.arc(this.x, this.y, this.r, 0, Math.PI * 2); c.fill();
