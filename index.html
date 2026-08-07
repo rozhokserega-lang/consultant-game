@@ -463,6 +463,31 @@ function drawPlayerAnimFrame(ctx, frameKey, x, y, opts = {}) {
   return true;
 }
 
+// ── Пропы арен (новый лист объектов) ──
+const ARENA_PROP_FRAMES = {"shelf_front":{"x":2,"y":2,"w":138,"h":117},"fridge_front":{"x":142,"y":2,"w":145,"h":117},"clothes_rack_hd":{"x":289,"y":2,"w":146,"h":96},"clothes_shelves":{"x":437,"y":2,"w":123,"h":98},"mannequin_hd":{"x":562,"y":2,"w":35,"h":91},"food_case":{"x":599,"y":2,"w":136,"h":104},"veggie_stand":{"x":737,"y":2,"w":126,"h":110},"sport_shelf":{"x":865,"y":2,"w":130,"h":113},"fitting_room":{"x":2,"y":121,"w":68,"h":111},"shoe_shelf":{"x":72,"y":121,"w":144,"h":113},"checkout_hd":{"x":218,"y":121,"w":98,"h":113},"vending_hd":{"x":318,"y":121,"w":66,"h":113}};
+
+const arenaPropImg = new Image();
+let arenaPropReady = false;
+arenaPropImg.onload = () => { arenaPropReady = true; };
+arenaPropImg.src = 'arena_props_atlas.png';
+
+function drawArenaProp(ctx, name, x, y, opts = {}) {
+  if (!arenaPropReady) return false;
+  const f = ARENA_PROP_FRAMES[name];
+  if (!f) return false;
+  const dw = opts.w ?? f.w * (opts.scale ?? 0.7);
+  const dh = opts.h ?? f.h * (opts.scale ?? 0.7);
+  const ax = opts.anchorX ?? 0.5;
+  const ay = opts.anchorY ?? 1.0;
+  ctx.save();
+  ctx.translate(x, y);
+  if (opts.flip) ctx.scale(-1, 1);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(arenaPropImg, f.x, f.y, f.w, f.h, -dw * ax, -dh * ay, dw, dh);
+  ctx.restore();
+  return true;
+}
+
 /** 8 направлений по углу (0 = вправо, π/2 = вниз). */
 function playerFacing8(ang) {
   const a = ((ang % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
@@ -623,16 +648,16 @@ const ARENA_THEMES = {
   tech: {
     id: 'tech', name: 'Tech', ico: '💻', tile: 'tile_dark', store: 'store_tech',
     obstacles: [
-      { x: 0.22, y: 0.25, sprite: 'vending', cw: 36, ch: 50 },
-      { x: 0.48, y: 0.20, sprite: 'atm', cw: 32, ch: 40 },
-      { x: 0.72, y: 0.28, sprite: 'fold_table', cw: 64, ch: 28 },
-      { x: 0.15, y: 0.55, sprite: 'box_stack', cw: 48, ch: 28 },
-      { x: 0.38, y: 0.50, sprite: 'sale_pillar', cw: 36, ch: 55 },
-      { x: 0.62, y: 0.58, sprite: 'vending', cw: 36, ch: 50 },
-      { x: 0.85, y: 0.48, sprite: 'atm', cw: 32, ch: 40 },
-      { x: 0.28, y: 0.78, sprite: 'box_stack', cw: 48, ch: 28 },
-      { x: 0.55, y: 0.80, sprite: 'fold_table', cw: 64, ch: 28 },
-      { x: 0.78, y: 0.75, sprite: 'trash', cw: 28, ch: 40 },
+      { x: 0.18, y: 0.22, sprite: 'vending_hd', cw: 40, ch: 28, dw: 52, dh: 90 },
+      { x: 0.42, y: 0.20, sprite: 'shelf_front', cw: 78, ch: 30, dw: 100, dh: 88 },
+      { x: 0.72, y: 0.24, sprite: 'checkout_hd', cw: 64, ch: 30, dw: 78, dh: 90 },
+      { x: 0.88, y: 0.48, sprite: 'vending_hd', cw: 40, ch: 28, dw: 52, dh: 90 },
+      { x: 0.14, y: 0.52, sprite: 'fridge_front', cw: 86, ch: 32, dw: 108, dh: 92 },
+      { x: 0.48, y: 0.55, sprite: 'shelf_front', cw: 78, ch: 30, dw: 100, dh: 88 },
+      { x: 0.72, y: 0.58, sprite: 'vending_hd', cw: 40, ch: 28, dw: 52, dh: 90 },
+      { x: 0.30, y: 0.80, sprite: 'checkout_hd', cw: 64, ch: 30, dw: 78, dh: 90 },
+      { x: 0.58, y: 0.78, sprite: 'shelf_front', cw: 78, ch: 30, dw: 100, dh: 88 },
+      { x: 0.82, y: 0.78, sprite: 'trash', cw: 28, ch: 40 },
     ],
     zones: [
       { type: 'checkout', x: 0.70, y: 0.18, w: 160, h: 90 },
@@ -642,17 +667,17 @@ const ARENA_THEMES = {
   clothes: {
     id: 'clothes', name: 'Clothes', ico: '👗', tile: 'tile_check', store: 'store_clothes',
     obstacles: [
-      { x: 0.18, y: 0.22, sprite: 'clothes_rack', cw: 90, ch: 30 },
-      { x: 0.45, y: 0.18, sprite: 'mannequin', cw: 28, ch: 50 },
-      { x: 0.70, y: 0.24, sprite: 'clothes_rack', cw: 90, ch: 30 },
-      { x: 0.88, y: 0.42, sprite: 'mirror', cw: 28, ch: 48 },
-      { x: 0.12, y: 0.48, sprite: 'mannequin', cw: 28, ch: 50 },
-      { x: 0.35, y: 0.55, sprite: 'clothes_rack', cw: 90, ch: 30 },
-      { x: 0.58, y: 0.48, sprite: 'bench', cw: 70, ch: 28 },
-      { x: 0.78, y: 0.60, sprite: 'mannequin', cw: 28, ch: 50 },
-      { x: 0.25, y: 0.78, sprite: 'clothes_rack', cw: 90, ch: 30 },
-      { x: 0.55, y: 0.80, sprite: 'plant', cw: 28, ch: 40 },
-      { x: 0.82, y: 0.78, sprite: 'mirror', cw: 28, ch: 48 },
+      { x: 0.18, y: 0.22, sprite: 'clothes_rack_hd', cw: 92, ch: 28, dw: 110, dh: 78 },
+      { x: 0.48, y: 0.18, sprite: 'mannequin_hd', cw: 24, ch: 24, dw: 34, dh: 88 },
+      { x: 0.72, y: 0.22, sprite: 'clothes_shelves', cw: 72, ch: 28, dw: 92, dh: 80 },
+      { x: 0.88, y: 0.45, sprite: 'fitting_room', cw: 46, ch: 30, dw: 58, dh: 95 },
+      { x: 0.14, y: 0.50, sprite: 'mannequin_hd', cw: 24, ch: 24, dw: 34, dh: 88 },
+      { x: 0.38, y: 0.52, sprite: 'clothes_rack_hd', cw: 92, ch: 28, dw: 110, dh: 78 },
+      { x: 0.62, y: 0.50, sprite: 'shoe_shelf', cw: 84, ch: 30, dw: 105, dh: 88 },
+      { x: 0.82, y: 0.62, sprite: 'mannequin_hd', cw: 24, ch: 24, dw: 34, dh: 88 },
+      { x: 0.28, y: 0.80, sprite: 'clothes_shelves', cw: 72, ch: 28, dw: 92, dh: 80 },
+      { x: 0.55, y: 0.78, sprite: 'checkout_hd', cw: 64, ch: 30, dw: 78, dh: 90 },
+      { x: 0.80, y: 0.80, sprite: 'fitting_room', cw: 46, ch: 30, dw: 58, dh: 95 },
     ],
     zones: [
       { type: 'checkout', x: 0.68, y: 0.20, w: 150, h: 90 },
@@ -662,16 +687,16 @@ const ARENA_THEMES = {
   food: {
     id: 'food', name: 'Food', ico: '🍔', tile: 'tile_wood', store: 'store_food',
     obstacles: [
-      { x: 0.20, y: 0.22, sprite: 'bench', cw: 70, ch: 28 },
-      { x: 0.45, y: 0.20, sprite: 'barrel_red', cw: 40, ch: 36 },
-      { x: 0.70, y: 0.25, sprite: 'trash', cw: 28, ch: 40 },
-      { x: 0.15, y: 0.48, sprite: 'cart', cw: 48, ch: 36 },
-      { x: 0.40, y: 0.52, sprite: 'bench', cw: 70, ch: 28 },
-      { x: 0.65, y: 0.48, sprite: 'barrel_red', cw: 40, ch: 36 },
-      { x: 0.85, y: 0.55, sprite: 'plant', cw: 28, ch: 40 },
-      { x: 0.28, y: 0.78, sprite: 'bench', cw: 70, ch: 28 },
-      { x: 0.55, y: 0.75, sprite: 'cart', cw: 48, ch: 36 },
-      { x: 0.80, y: 0.78, sprite: 'trash', cw: 28, ch: 40 },
+      { x: 0.18, y: 0.22, sprite: 'fridge_front', cw: 86, ch: 32, dw: 108, dh: 92 },
+      { x: 0.48, y: 0.20, sprite: 'food_case', cw: 86, ch: 30, dw: 105, dh: 84 },
+      { x: 0.75, y: 0.24, sprite: 'veggie_stand', cw: 78, ch: 30, dw: 98, dh: 88 },
+      { x: 0.12, y: 0.50, sprite: 'shelf_front', cw: 78, ch: 30, dw: 100, dh: 88 },
+      { x: 0.42, y: 0.52, sprite: 'veggie_stand', cw: 78, ch: 30, dw: 98, dh: 88 },
+      { x: 0.68, y: 0.50, sprite: 'fridge_front', cw: 86, ch: 32, dw: 108, dh: 92 },
+      { x: 0.88, y: 0.55, sprite: 'vending_hd', cw: 40, ch: 28, dw: 52, dh: 90 },
+      { x: 0.28, y: 0.78, sprite: 'food_case', cw: 86, ch: 30, dw: 105, dh: 84 },
+      { x: 0.55, y: 0.80, sprite: 'checkout_hd', cw: 64, ch: 30, dw: 78, dh: 90 },
+      { x: 0.80, y: 0.78, sprite: 'shelf_front', cw: 78, ch: 30, dw: 100, dh: 88 },
     ],
     zones: [
       { type: 'slippery', x: 0.40, y: 0.40, w: 220, h: 140 },
@@ -682,16 +707,16 @@ const ARENA_THEMES = {
   sport: {
     id: 'sport', name: 'Sport', ico: '⚽', tile: 'tile_speckle', store: 'store_sport',
     obstacles: [
-      { x: 0.18, y: 0.22, sprite: 'sale_pillar', cw: 36, ch: 55 },
-      { x: 0.48, y: 0.18, sprite: 'bench', cw: 70, ch: 28 },
-      { x: 0.75, y: 0.24, sprite: 'barrel_red', cw: 40, ch: 36 },
-      { x: 0.12, y: 0.50, sprite: 'cart', cw: 48, ch: 36 },
-      { x: 0.38, y: 0.48, sprite: 'plant_cone', cw: 24, ch: 40 },
-      { x: 0.62, y: 0.52, sprite: 'sale_pillar', cw: 36, ch: 55 },
-      { x: 0.85, y: 0.45, sprite: 'fire_box', cw: 28, ch: 40 },
-      { x: 0.25, y: 0.78, sprite: 'bench', cw: 70, ch: 28 },
-      { x: 0.55, y: 0.80, sprite: 'plant_cone', cw: 24, ch: 40 },
-      { x: 0.80, y: 0.75, sprite: 'cart', cw: 48, ch: 36 },
+      { x: 0.18, y: 0.22, sprite: 'sport_shelf', cw: 78, ch: 30, dw: 100, dh: 90 },
+      { x: 0.48, y: 0.18, sprite: 'shoe_shelf', cw: 84, ch: 30, dw: 105, dh: 88 },
+      { x: 0.75, y: 0.24, sprite: 'vending_hd', cw: 40, ch: 28, dw: 52, dh: 90 },
+      { x: 0.12, y: 0.50, sprite: 'sport_shelf', cw: 78, ch: 30, dw: 100, dh: 90 },
+      { x: 0.40, y: 0.52, sprite: 'checkout_hd', cw: 64, ch: 30, dw: 78, dh: 90 },
+      { x: 0.65, y: 0.50, sprite: 'sport_shelf', cw: 78, ch: 30, dw: 100, dh: 90 },
+      { x: 0.88, y: 0.48, sprite: 'shoe_shelf', cw: 84, ch: 30, dw: 105, dh: 88 },
+      { x: 0.25, y: 0.80, sprite: 'vending_hd', cw: 40, ch: 28, dw: 52, dh: 90 },
+      { x: 0.55, y: 0.78, sprite: 'sport_shelf', cw: 78, ch: 30, dw: 100, dh: 90 },
+      { x: 0.80, y: 0.80, sprite: 'checkout_hd', cw: 64, ch: 30, dw: 78, dh: 90 },
     ],
     zones: [
       { type: 'checkout', x: 0.65, y: 0.18, w: 160, h: 90 },
@@ -2150,6 +2175,8 @@ class Game {
         x: this.worldW * def.x - def.cw / 2,
         y: this.worldH * def.y - def.ch / 2,
         w: def.cw, h: def.ch,
+        dw: def.dw || null,
+        dh: def.dh || null,
         sprite: def.sprite, type: 'prop',
       });
     }
@@ -3295,7 +3322,10 @@ class Game {
     for (const ob of sorted) {
       const cx = ob.x + ob.w / 2;
       const by = ob.y + ob.h;
-      if (!drawSprite(ctx, ob.sprite, cx, by, { w: ob.w * 1.15, h: ob.h * 1.35, anchorY: 1 })) {
+      const dw = ob.dw || (ob.w * 1.15);
+      const dh = ob.dh || (ob.h * 1.35);
+      if (drawArenaProp(ctx, ob.sprite, cx, by, { w: dw, h: dh, anchorY: 1 })) continue;
+      if (!drawSprite(ctx, ob.sprite, cx, by, { w: dw, h: dh, anchorY: 1 })) {
         ctx.fillStyle = '#c4b99a';
         ctx.fillRect(ob.x, ob.y, ob.w, ob.h);
       }
@@ -3354,8 +3384,8 @@ class Game {
     this._renderCam = cam;
     ctx.save();
     ctx.imageSmoothingEnabled = false;
-    ctx.scale(cam.z, cam.z);
-    ctx.translate(-cam.x + sx / cam.z, -cam.y + sy / cam.z);
+    // setTransform: после зума камера и shake попадают в целые пиксели экрана
+    ctx.setTransform(cam.z, 0, 0, cam.z, -Math.round(cam.x * cam.z) + sx, -Math.round(cam.y * cam.z) + sy);
     this.drawBackground();
     this.drawObstacles();
     for (const p of this.particles) if (p.y < this.player.y - 30) p.draw(ctx);
