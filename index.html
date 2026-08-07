@@ -14,24 +14,61 @@
     display: flex; flex-direction: column;
   }
   #hud {
-    flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
-    padding: 6px 12px; background: linear-gradient(180deg, #1e1e30, #161625);
-    border-bottom: 2px solid #333; color: #fff; font-size: 13px; gap: 8px;
-    z-index: 20; min-height: 52px; flex-wrap: wrap;
+    flex-shrink: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    padding: 6px 10px;
+    background: linear-gradient(180deg, #1e1e30, #161625);
+    border-bottom: 2px solid #333; color: #fff; font-size: 13px; gap: 6px;
+    z-index: 20;
+    height: 72px;
+    max-height: 72px;
+    overflow: hidden;
   }
-  #hud > div { display: flex; align-items: center; gap: 10px; }
+  #hud > div { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  #hud > div:last-child { justify-content: flex-end; }
   .hud-hp-bar, .hud-xp-bar {
     height: 14px; background: #333; border-radius: 7px; overflow: hidden; border: 1px solid #555;
   }
-  .hud-hp-bar { width: 120px; }
-  .hud-xp-bar { width: 90px; height: 8px; border-radius: 4px; }
+  .hud-hp-bar { width: min(120px, 22vw); }
+  .hud-xp-bar { width: min(90px, 18vw); height: 8px; border-radius: 4px; }
   .hud-hp-fill { height: 100%; background: #2ecc71; transition: width 0.2s; border-radius: 7px; }
   .hud-xp-fill { height: 100%; background: #9b59b6; transition: width 0.2s; border-radius: 4px; }
-  .hud-label { color: #aaa; font-size: 11px; }
-  .hud-value { font-weight: 700; font-size: 14px; }
-  .hud-mode { font-weight: 700; font-size: 13px; padding: 3px 8px; border-radius: 12px; }
+  .hud-label { color: #aaa; font-size: 11px; white-space: nowrap; }
+  .hud-value { font-weight: 700; font-size: 14px; white-space: nowrap; }
+  .hud-mode {
+    font-weight: 700; font-size: 12px; padding: 3px 8px; border-radius: 12px;
+    min-width: 7.6em; text-align: center; white-space: nowrap;
+  }
   .hud-mode.chase { background: rgba(231,76,60,0.3); color: #e74c3c; }
   .hud-mode.flee { background: rgba(241,196,15,0.3); color: #f1c40f; }
+  .hud-combo-slot {
+    min-height: 14px; font-size: 11px; font-weight: 700; color: #f1c40f;
+    visibility: hidden; white-space: nowrap;
+  }
+  .hud-combo-slot.on { visibility: visible; }
+  .hud-mid {
+    flex-direction: column; align-items: center; gap: 3px;
+  }
+  .hud-mid-top {
+    display: flex; align-items: center; gap: 8px; white-space: nowrap;
+  }
+  .hud-mid-top #hud-score { font-size: 16px; font-weight: 800; }
+  .hud-meters {
+    display: flex; gap: 8px; align-items: center;
+    font-size: 10px; color: #aaa;
+  }
+  .hud-wave-col {
+    flex-direction: column; align-items: flex-end; gap: 2px;
+    max-width: 42vw;
+  }
+  .hud-wave-col .hud-value,
+  .hud-wave-col .hud-label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   .hud-btn {
     background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25);
     color: #fff; border-radius: 8px; padding: 4px 8px; font-size: 14px; cursor: pointer;
@@ -264,18 +301,20 @@
     </div>
   </div>
 
-  <div style="flex-direction:column;align-items:center;gap:0;">
-    <span style="font-size:20px;font-weight:800;" id="hud-score">🔨 0</span>
-    <span class="coin-pill" id="hud-coins">🪙 0</span>
-    <span class="hud-mode chase" id="hud-mode">🔴 ОХОТА 8.0с</span>
-    <span class="hud-label" id="hud-combo" style="display:none;color:#f1c40f;font-weight:700;"></span>
-    <div style="display:flex;flex-direction:column;gap:3px;align-items:center;margin-top:2px;">
-      <div style="font-size:10px;color:#aaa;">☕ <span class="meter skill"><i id="hud-skill-fill"></i></span></div>
-      <div style="font-size:10px;color:#aaa;">⚡ <span class="meter charge"><i id="hud-charge-fill"></i></span></div>
+  <div class="hud-mid">
+    <div class="hud-mid-top">
+      <span id="hud-score">🔨 0</span>
+      <span class="coin-pill" id="hud-coins">🪙 0</span>
+      <span class="hud-combo-slot" id="hud-combo">🔥 x0</span>
+    </div>
+    <span class="hud-mode chase" id="hud-mode">🔴 ПИК 8.0с</span>
+    <div class="hud-meters">
+      <span>☕ <span class="meter skill"><i id="hud-skill-fill"></i></span></span>
+      <span>⚡ <span class="meter charge"><i id="hud-charge-fill"></i></span></span>
     </div>
   </div>
 
-  <div style="flex-direction:column;align-items:flex-end;gap:2px;">
+  <div class="hud-wave-col">
     <span class="hud-value" id="hud-wave">🌊 Волна 1/10</span>
     <span class="hud-label" id="hud-enemies">Убито: 0/30</span>
     <div style="display:flex;gap:4px;margin-top:2px;">
@@ -805,6 +844,12 @@ const META_PERKS = [
   { id: 'tank', ico: '🛡️', name: 'Танк', desc: '+1 макс HP / ур.', max: 3, cost: [40, 70, 110] },
   { id: 'speed', ico: '💨', name: 'Скорость', desc: '+14 скорости / ур.', max: 3, cost: [35, 65, 100] },
   { id: 'crit', ico: '💥', name: 'Крит', desc: '+12% крит / ур.', max: 3, cost: [45, 80, 120] },
+  { id: 'life', ico: '💖', name: 'Вторая жизнь', desc: '1 раз за смену воскреснуть с пол-HP', max: 1, cost: [500] },
+  { id: 'wallet', ico: '🪙', name: 'Аванс', desc: '+6 стартовых монет / ур.', max: 3, cost: [50, 90, 140] },
+  { id: 'magnet', ico: '🧲', name: 'Магнит', desc: 'Монеты летят сильнее / ур.', max: 2, cost: [60, 110] },
+  { id: 'reach', ico: '📏', name: 'Длинная рука', desc: '+5 дальности удара / ур.', max: 2, cost: [55, 100] },
+  { id: 'dash', ico: '👟', name: 'Кроссовки', desc: '−0.3с КД рывка / ур.', max: 2, cost: [70, 130] },
+  { id: 'thick', ico: '📋', name: 'Толстокожий', desc: 'Жалобы короче на 30% / ур.', max: 2, cost: [80, 150] },
 ];
 
 const CHALLENGES = [
@@ -1113,9 +1158,10 @@ class Pickup {
   update(dt, player) {
     this.life -= dt;
     if (this.type === 'coin' && player) {
+      const range = player.coinMagnet || 90;
       const d = dist(this.x, this.y, player.x, player.y);
-      if (d < 90) {
-        const pull = (90 - d) * 4.5;
+      if (d < range) {
+        const pull = (range - d) * (4.5 + (player.coinMagnetBonus || 0));
         const a = angleTo(this.x, this.y, player.x, player.y);
         this.vx += Math.cos(a) * pull * dt;
         this.vy += Math.sin(a) * pull * dt;
@@ -1641,7 +1687,7 @@ class Enemy {
       this.knockback.y = Math.sin(a) * knock * 0.35;
       return false;
     }
-    this.hp -= damage;
+    this.hp -= Math.max(0, Math.round(damage));
     this.hitFlash = 0.15;
     const a = angleTo(fromX, fromY, this.x, this.y);
     this.knockback.x = Math.cos(a) * knock;
@@ -1681,6 +1727,11 @@ class Player {
     this.baseStickLength = 42;
     this.baseHitArc = Math.PI / 3;
     this.critChance = 0;
+    this.extraLives = 0;
+    this.coinMagnet = 90;
+    this.coinMagnetBonus = 0;
+    this.dashCdBase = 1.05;
+    this.complaintResist = 0;
     this.equippedWeaponId = (weapon && weapon.id) || 'hammer';
     this.tempWeapon = null;
     this.tempWeaponTimer = 0;
@@ -1849,7 +1900,7 @@ class Player {
     }
     this.dashDir = { x: dx, y: dy };
     this.dashTime = 0.16;
-    this.dashCd = 1.05;
+    this.dashCd = this.dashCdBase || 1.05;
     this.invincible = Math.max(this.invincible, 0.22);
     this.charging = false; this.charge = 0;
     return true;
@@ -1869,7 +1920,7 @@ class Player {
   }
 
   getAttackDamage() {
-    return this.damage * (1 + (this.chargePower || 0) * 0.75);
+    return Math.max(1, Math.round(this.damage * (1 + (this.chargePower || 0) * 0.75)));
   }
 
   getStickEnd() {
@@ -1909,13 +1960,21 @@ class Player {
     const a = angleTo(fromX, fromY, this.x, this.y);
     this.knockback.x = Math.cos(a) * 280;
     this.knockback.y = Math.sin(a) * 280;
+    if (this.hp <= 0 && (this.extraLives || 0) > 0) {
+      this.extraLives -= 1;
+      this.hp = Math.max(1, Math.ceil(this.maxHp * 0.5));
+      this.invincible = 2.2;
+      this._justRevived = true;
+      return false;
+    }
     return this.hp <= 0;
   }
 
   applyComplaint() {
-    // Не продлеваем бесконечно при спаме книг — иначе «Без удара» залипает
-    this.slowTimer = Math.max(this.slowTimer, 2.8);
-    if (this.muteAttack <= 0.15) this.muteAttack = 1.4;
+    const resist = Math.max(0, Math.min(0.7, this.complaintResist || 0));
+    const mul = 1 - resist;
+    this.slowTimer = Math.max(this.slowTimer, 2.8 * mul);
+    if (this.muteAttack <= 0.15) this.muteAttack = 1.4 * mul;
   }
 
   applyLunch() {
@@ -2064,7 +2123,9 @@ class Game {
     this.save = loadSave();
     this.highScore = this.save.highScore || 0;
     this.bankCoins = this.save.bankCoins || 0;
-    this.metaPerks = Object.assign({ tank: 0, speed: 0, crit: 0 }, this.save.metaPerks || {});
+    this.metaPerks = Object.assign({
+      tank: 0, speed: 0, crit: 0, life: 0, wallet: 0, magnet: 0, reach: 0, dash: 0, thick: 0,
+    }, this.save.metaPerks || {});
     this.killLog = Object.assign({}, this.save.killLog || {});
     this.hubTab = 'prep';
     this.selectedArena = this.save.selectedArena || 'food';
@@ -2498,9 +2559,23 @@ class Game {
     const tank = this.metaPerks.tank || 0;
     const spd = this.metaPerks.speed || 0;
     const crit = this.metaPerks.crit || 0;
+    const life = this.metaPerks.life || 0;
+    const magnet = this.metaPerks.magnet || 0;
+    const reach = this.metaPerks.reach || 0;
+    const dash = this.metaPerks.dash || 0;
+    const thick = this.metaPerks.thick || 0;
     if (tank > 0) { p.maxHp += tank; p.hp = p.maxHp; }
     if (spd > 0) { p.bonusSpeed = (p.bonusSpeed || 0) + spd * 14; p.recalcStats(); }
     p.critChance = crit * 0.12;
+    p.extraLives = life;
+    p.coinMagnet = 90 + magnet * 55;
+    p.coinMagnetBonus = magnet * 2.2;
+    if (reach > 0) {
+      p.stickLength += reach * 5;
+      p.baseStickLength += reach * 5;
+    }
+    p.dashCdBase = Math.max(0.35, 1.05 - dash * 0.3);
+    p.complaintResist = thick * 0.3;
   }
 
   startShiftFromHub() {
@@ -2523,7 +2598,7 @@ class Game {
     this.boomFx = [];
     this.bossLines = [];
     this.score = 0; this.wave = 1;
-    this.coins = 8;
+    this.coins = 8 + (this.metaPerks.wallet || 0) * 6;
     this.coinMult = this.selectedChallenge === 'x2' ? 2 : 1;
     this.shopBuysLeft = SHOP_BUYS_PER_VISIT;
     this.shopBoughtRun = new Set(); // oncePerRun ids
@@ -3679,21 +3754,24 @@ class Game {
       ? `🌊 Волна ${this.wave} · ${(bossAlive && bossAlive.nameTag) || 'БОСС'}`
       : (this.blackFriday ? `🖤 Волна ${this.wave}/${SHIFT_WAVES}` : `🌊 Волна ${this.wave}/${SHIFT_WAVES}`);
     this.$enemies.textContent = this.wavePhase === 'boss'
-      ? (bossAlive ? `${bossAlive.nameTag}: ${bossAlive.hp} HP` : 'Босс смены!')
+      ? (bossAlive ? `${bossAlive.nameTag}: ${Math.max(0, Math.ceil(bossAlive.hp))} HP` : 'Босс смены!')
       : `Убито: ${this.waveKills}/${this.killsPerWave}`;
     const rem = Math.max(0, this.MODE_DURATION - this.modeTimer).toFixed(1);
     if (this.isChaseMode) {
       // isChaseMode = час пик (rush)
-      this.$mode.textContent = '🔴 ЧАС ПИК ' + rem + 'с';
+      this.$mode.textContent = '🔴 ПИК ' + rem + 'с';
       this.$mode.className = 'hud-mode chase';
     } else {
       this.$mode.textContent = '🔵 СМЕНА ' + rem + 'с';
       this.$mode.className = 'hud-mode flee';
     }
     if (this.combo >= 2) {
-      this.$combo.style.display = 'inline';
+      this.$combo.classList.add('on');
       this.$combo.textContent = `🔥 x${this.combo}`;
-    } else this.$combo.style.display = 'none';
+    } else {
+      this.$combo.classList.remove('on');
+      this.$combo.textContent = '🔥 x0';
+    }
 
     const tags = [];
     if (p.lunchTimer > 0) tags.push(`<span class="buff-tag good">☕ Обед ${p.lunchTimer.toFixed(1)}с</span>`);
@@ -3703,6 +3781,7 @@ class Game {
     if (this.blackFriday) tags.push(`<span class="buff-tag good">🖤 Чёрная пятница ×2</span>`);
     if (this.comboShield > 0) tags.push(`<span class="buff-tag good">🔥 Комбо-щит ${this.comboShield.toFixed(0)}с</span>`);
     if (p.shieldCharges > 0) tags.push(`<span class="buff-tag good">🛡️ Блок ×${p.shieldCharges}</span>`);
+    if ((p.extraLives || 0) > 0) tags.push(`<span class="buff-tag good">💖 Жизнь ×${p.extraLives}</span>`);
     if ((this.coinMult || 1) > 1.01) tags.push(`<span class="buff-tag good">🎫 Монеты ×${this.coinMult.toFixed(2)}</span>`);
     const w = p.weapon; if (w) tags.push(`<span class="buff-tag good">${w.ico || '⚔'} ${w.name}</span>`);
     if (p.tempWeapon && p.tempWeaponTimer > 0) {
@@ -3986,6 +4065,17 @@ class Game {
       }
     }
     this.playerProjectiles = this.playerProjectiles.filter(pr => pr.life > 0);
+    this.flushReviveFx();
+  }
+
+  flushReviveFx() {
+    if (!this.player || !this.player._justRevived) return;
+    this.player._justRevived = false;
+    this.showEventBanner('💖 Вторая жизнь!', 2.2);
+    this.spawnParticles(this.player.x, this.player.y, 28, '#ff6b9d', 220, 0.55);
+    this.screenShake = Math.max(this.screenShake, 0.25);
+    sfx.level();
+    this.vibrate([20, 40, 20]);
   }
 
   handleEnemyDeath(enemy) {
