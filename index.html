@@ -3056,6 +3056,7 @@ class Game {
       const kinds = ['temp_mop', 'temp_stapler', 'temp_extinguisher'];
       this.pickups.push(new Pickup(enemy.x, enemy.y, pick(kinds)));
     }
+    if (enemy.type === 'fatty' || enemy.explodes) this.armFattyFuse(enemy);
     this.onEnemyKilled(enemy);
   }
 
