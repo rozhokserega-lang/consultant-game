@@ -2279,6 +2279,9 @@ class Game {
     this.wavePhase = 'boss';
     this.projectiles = [];
     this.fuseBombs = [];
+    // убрать обычных покупателей до спавна босса (иначе _clearMobsAfterKill снесёт и miniboss)
+    this.enemies = this.enemies.filter(e => e.type === 'boss' || e.type === 'miniboss' || e.type === 'director');
+    this._clearMobsAfterKill = false;
     if (this.wave >= SHIFT_WAVES) {
       this.spawnDirector();
       return;
@@ -2948,7 +2951,7 @@ class Game {
 
     this.enemies = this.enemies.filter(e => e.hp > 0);
     if (this._clearMobsAfterKill) {
-      this.enemies = this.enemies.filter(e => e.type === 'boss' || e.type === 'director');
+      this.enemies = this.enemies.filter(e => e.type === 'boss' || e.type === 'miniboss' || e.type === 'director');
       this._clearMobsAfterKill = false;
     }
 
