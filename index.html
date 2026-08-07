@@ -186,7 +186,16 @@
     display:flex; align-items:center; gap:10px; padding:8px 10px;
     background:rgba(255,255,255,0.06); border:1px solid #444; border-radius:10px;
   }
-  .book-row .ico { font-size:22px; width:28px; text-align:center; }
+  .book-row .ico {
+    width:48px; height:52px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .book-row .ico canvas {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    max-width:100%; max-height:100%;
+  }
+  .book-row.boss .ico { width:58px; height:64px; }
   .book-row .nm { flex:1; font-weight:700; font-size:13px; }
   .book-row .cnt { font-weight:800; color:#f1c40f; font-size:14px; }
   .book-row.zero { opacity:0.45; }
@@ -538,7 +547,12 @@ const ENEMY_MOB_REF_H = 82;
 
 const enemyMobImg = new Image();
 let enemyMobReady = false;
-enemyMobImg.onload = () => { enemyMobReady = true; };
+enemyMobImg.onload = () => {
+  enemyMobReady = true;
+  if (window.game && typeof window.game.renderComplaintBook === 'function' && window.game.inHub) {
+    window.game.renderComplaintBook();
+  }
+};
 enemyMobImg.src = 'enemy_mob_atlas.png';
 
 function resolveEnemyMobId(spriteName) {
@@ -796,20 +810,43 @@ const CHALLENGES = [
 
 /** Записи книги жалоб — статистика киллов по типам. */
 const COMPLAINT_BOOK = [
-  { id: 'normal', name: 'Покупатель', ico: '🧍' },
-  { id: 'fast', name: 'Торопыга', ico: '🏃' },
-  { id: 'tank', name: 'Танк', ico: '🛡️' },
-  { id: 'fatty', name: 'Жирный', ico: '💣' },
-  { id: 'queue', name: 'Очередь', ico: '🧍‍♂️' },
-  { id: 'returner', name: 'Возврат', ico: '📕' },
-  { id: 'manager', name: 'Менеджер', ico: '👔' },
-  { id: 'influencer', name: 'Инфлюенсер', ico: '📸' },
-  { id: 'blogger', name: 'Блогер', ico: '📱' },
-  { id: 'child', name: 'Ребёнок', ico: '🧒' },
-  { id: 'boss', name: 'Админ', ico: '📢' },
-  { id: 'miniboss', name: 'Мини-босс', ico: '👮' },
-  { id: 'director', name: 'Директор', ico: '💼' },
+  { id: 'normal', name: 'Покупатель', ico: '🧍', skin: 'mob_elder' },
+  { id: 'fast', name: 'Торопыга', ico: '🏃', skin: 'mob_fast' },
+  { id: 'tank', name: 'Танк', ico: '🛡️', skin: 'mob_tank' },
+  { id: 'fatty', name: 'Жирный', ico: '💣', skin: 'mob_tank' },
+  { id: 'queue', name: 'Очередь', ico: '🧍‍♂️', skin: 'mob_purple' },
+  { id: 'returner', name: 'Возврат', ico: '📕', skin: 'mob_cane' },
+  { id: 'manager', name: 'Менеджер', ico: '👔', skin: 'mob_pink' },
+  { id: 'influencer', name: 'Инфлюенсер', ico: '📸', skin: 'mob_purple' },
+  { id: 'blogger', name: 'Блогер', ico: '📱', skin: 'mob_pink' },
+  { id: 'child', name: 'Ребёнок', ico: '🧒', skin: 'mob_fast', scale: 0.78 },
+  { id: 'boss', name: 'Админ', ico: '📢', skin: 'mob_muscle', boss: true },
+  { id: 'miniboss', name: 'Мини-босс', ico: '👮', skin: 'mob_muscle', boss: true },
+  { id: 'director', name: 'Директор', ico: '💼', skin: 'mob_muscle', boss: true, scale: 1.15 },
 ];
+
+function paintComplaintPortrait(canvas, entry) {
+  if (!canvas || !enemyMobReady) return false;
+  const pack = ENEMY_MOB_ANIMS[entry.skin];
+  const frameKey = pack && pack.idle && pack.idle[0];
+  const f = frameKey && ENEMY_MOB_FRAMES[frameKey];
+  if (!f) return false;
+  const boss = !!entry.boss;
+  const box = boss ? 64 : 52;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.round(box * dpr);
+  canvas.height = Math.round(box * dpr);
+  canvas.style.width = box + 'px';
+  canvas.style.height = box + 'px';
+  const c = canvas.getContext('2d');
+  c.imageSmoothingEnabled = false;
+  c.clearRect(0, 0, canvas.width, canvas.height);
+  const fit = (entry.scale || (boss ? 1.08 : 1)) * (box * 0.92) / Math.max(f.w, f.h);
+  const dw = f.w * fit * dpr;
+  const dh = f.h * fit * dpr;
+  c.drawImage(enemyMobImg, f.x, f.y, f.w, f.h, (canvas.width - dw) / 2, canvas.height - dh, dw, dh);
+  return true;
+}
 
 
 const TEMP_WEAPONS = {
@@ -2249,10 +2286,25 @@ class Game {
       const n = (this.killLog && this.killLog[entry.id]) || 0;
       total += n;
       const el = document.createElement('div');
-      el.className = 'book-row' + (n <= 0 ? ' zero' : '');
-      el.innerHTML = `<div class="ico">${entry.ico}</div>
-        <div class="nm">${entry.name}</div>
-        <div class="cnt">${n}</div>`;
+      el.className = 'book-row' + (n <= 0 ? ' zero' : '') + (entry.boss ? ' boss' : '');
+      const ico = document.createElement('div');
+      ico.className = 'ico';
+      const cv = document.createElement('canvas');
+      if (!paintComplaintPortrait(cv, entry)) {
+        ico.textContent = entry.ico || '?';
+        ico.style.fontSize = entry.boss ? '28px' : '22px';
+      } else {
+        ico.appendChild(cv);
+      }
+      const nm = document.createElement('div');
+      nm.className = 'nm';
+      nm.textContent = entry.name;
+      const cnt = document.createElement('div');
+      cnt.className = 'cnt';
+      cnt.textContent = String(n);
+      el.appendChild(ico);
+      el.appendChild(nm);
+      el.appendChild(cnt);
       list.appendChild(el);
     }
     const tot = document.getElementById('book-total');
