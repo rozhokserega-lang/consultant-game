@@ -427,9 +427,45 @@ function drawSprite(ctx, name, x, y, opts = {}) {
   if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
   if (flip) ctx.scale(-1, 1);
   if (opts.rotation) ctx.rotate(opts.rotation);
+  ctx.imageSmoothingEnabled = false;
   ctx.drawImage(atlasImg, f.x, f.y, f.w, f.h, -dw * ax, -dh * ay, dw, dh);
   ctx.restore();
   return true;
+}
+
+// ── Анимации консультанта (новый спрайт-лист) ──
+const PLAYER_ANIM = {"frames":{"walk_up_0":{"x":2,"y":2,"w":40,"h":85},"walk_up_1":{"x":44,"y":2,"w":39,"h":85},"walk_up_2":{"x":85,"y":2,"w":39,"h":85},"walk_up_3":{"x":126,"y":2,"w":38,"h":85},"walk_up_4":{"x":166,"y":2,"w":39,"h":85},"walk_up_5":{"x":207,"y":2,"w":40,"h":85},"walk_down_0":{"x":249,"y":2,"w":41,"h":85},"walk_down_1":{"x":292,"y":2,"w":41,"h":85},"walk_down_2":{"x":335,"y":2,"w":40,"h":85},"walk_down_3":{"x":377,"y":2,"w":41,"h":85},"walk_down_4":{"x":420,"y":2,"w":41,"h":85},"walk_down_5":{"x":463,"y":2,"w":39,"h":85},"walk_left_0":{"x":504,"y":2,"w":34,"h":86},"walk_left_1":{"x":540,"y":2,"w":37,"h":85},"walk_left_2":{"x":579,"y":2,"w":39,"h":86},"walk_left_3":{"x":620,"y":2,"w":39,"h":85},"walk_left_4":{"x":661,"y":2,"w":38,"h":85},"walk_left_5":{"x":701,"y":2,"w":34,"h":86},"walk_right_0":{"x":737,"y":2,"w":35,"h":86},"walk_right_1":{"x":774,"y":2,"w":38,"h":85},"walk_right_2":{"x":814,"y":2,"w":39,"h":85},"walk_right_3":{"x":855,"y":2,"w":38,"h":85},"walk_right_4":{"x":895,"y":2,"w":38,"h":85},"walk_right_5":{"x":935,"y":2,"w":35,"h":85},"diag_ul_0":{"x":972,"y":2,"w":48,"h":86},"diag_ul_1":{"x":2,"y":90,"w":46,"h":85},"diag_ul_2":{"x":50,"y":90,"w":51,"h":85},"diag_ul_3":{"x":103,"y":90,"w":51,"h":84},"diag_ul_4":{"x":156,"y":90,"w":56,"h":84},"diag_ur_0":{"x":214,"y":90,"w":48,"h":84},"diag_ur_1":{"x":264,"y":90,"w":55,"h":84},"diag_ur_2":{"x":321,"y":90,"w":52,"h":85},"diag_ur_3":{"x":375,"y":90,"w":51,"h":84},"diag_ur_4":{"x":428,"y":90,"w":56,"h":83},"atk_punch_0":{"x":486,"y":90,"w":46,"h":79},"atk_punch_1":{"x":534,"y":90,"w":51,"h":79},"atk_punch_2":{"x":587,"y":90,"w":59,"h":79},"atk_punch_3":{"x":648,"y":90,"w":47,"h":79},"atk_radio_0":{"x":697,"y":90,"w":49,"h":79},"atk_radio_1":{"x":748,"y":90,"w":58,"h":79},"atk_radio_2":{"x":808,"y":90,"w":68,"h":79},"atk_radio_3":{"x":878,"y":90,"w":50,"h":79},"atk_radio_4":{"x":930,"y":90,"w":42,"h":79},"run_0":{"x":2,"y":177,"w":65,"h":71},"run_1":{"x":69,"y":177,"w":60,"h":72},"run_2":{"x":131,"y":177,"w":54,"h":73},"run_3":{"x":187,"y":177,"w":57,"h":73},"run_4":{"x":246,"y":177,"w":53,"h":73},"sprint_0":{"x":301,"y":177,"w":64,"h":70},"sprint_1":{"x":367,"y":177,"w":57,"h":72},"sprint_2":{"x":426,"y":177,"w":56,"h":71},"sprint_3":{"x":484,"y":177,"w":61,"h":71},"sprint_4":{"x":547,"y":177,"w":55,"h":70}},"anims":{"walk_up":["walk_up_0","walk_up_1","walk_up_2","walk_up_3","walk_up_4","walk_up_5"],"walk_down":["walk_down_0","walk_down_1","walk_down_2","walk_down_3","walk_down_4","walk_down_5"],"walk_left":["walk_left_0","walk_left_1","walk_left_2","walk_left_3","walk_left_4","walk_left_5"],"walk_right":["walk_right_0","walk_right_1","walk_right_2","walk_right_3","walk_right_4","walk_right_5"],"diag_ul":["diag_ul_0","diag_ul_1","diag_ul_2","diag_ul_3","diag_ul_4"],"diag_ur":["diag_ur_0","diag_ur_1","diag_ur_2","diag_ur_3","diag_ur_4"],"atk_punch":["atk_punch_0","atk_punch_1","atk_punch_2","atk_punch_3"],"atk_radio":["atk_radio_0","atk_radio_1","atk_radio_2","atk_radio_3","atk_radio_4"],"run":["run_0","run_1","run_2","run_3","run_4"],"sprint":["sprint_0","sprint_1","sprint_2","sprint_3","sprint_4"]}};
+
+const playerAnimImg = new Image();
+let playerAnimReady = false;
+playerAnimImg.onload = () => { playerAnimReady = true; };
+playerAnimImg.src = 'player_anim_atlas.png';
+
+function drawPlayerAnimFrame(ctx, frameKey, x, y, opts = {}) {
+  if (!playerAnimReady) return false;
+  const f = PLAYER_ANIM.frames[frameKey];
+  if (!f) return false;
+  const scale = opts.scale ?? 0.72;
+  const dw = f.w * scale;
+  const dh = f.h * scale;
+  const ax = opts.anchorX ?? 0.5;
+  const ay = opts.anchorY ?? 1.0;
+  ctx.save();
+  ctx.translate(x, y);
+  if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
+  if (opts.flip) ctx.scale(-1, 1);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(playerAnimImg, f.x, f.y, f.w, f.h, -dw * ax, -dh * ay, dw, dh);
+  ctx.restore();
+  return true;
+}
+
+/** 8 направлений по углу (0 = вправо, π/2 = вниз). */
+function playerFacing8(ang) {
+  const a = ((ang % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  const sector = Math.round(a / (Math.PI / 4)) % 8;
+  // 0:R 1:DR 2:D 3:DL 4:L 5:UL 6:U 7:UR
+  return sector;
 }
 
 const ENEMY_SKIN_POOLS = {
@@ -1296,6 +1332,11 @@ class Player {
     this.equippedWeaponId = (weapon && weapon.id) || 'hammer';
     this.tempWeapon = null;
     this.tempWeaponTimer = 0;
+    this._animPhase = 0;
+    this._wasMoving = false;
+    this._animName = 'walk_down';
+    this._animFrame = 0;
+    this._atkAnim = null;
     this.applyWeapon(this.weapon);
   }
 
@@ -1429,6 +1470,10 @@ class Player {
     this.hitEnemies.clear();
     this._justFiredRanged = !!(this.weapon && this.weapon.ranged);
     this._justAoe = !!(this.weapon && this.weapon.aoe);
+    const wid = (this.weapon && this.weapon.id) || '';
+    this._atkAnim = (wid === 'glove') ? 'atk_punch' : 'atk_radio';
+    this._animFrame = 0;
+    this._animPhase = 0;
     return true;
   }
 
@@ -1524,21 +1569,69 @@ class Player {
     c.fillStyle = 'rgba(0,0,0,0.28)';
     c.beginPath(); c.ellipse(this.x + 2, this.y + 4, 14, 6, 0, 0, Math.PI * 2); c.fill();
 
-    let name = 'player_front';
     const ang = this.angle;
-    if (this.attacking) name = 'player_attack';
-    else if (Math.abs(Math.cos(ang)) > Math.abs(Math.sin(ang))) {
-      name = (this._animPhase || 0) > 0.5 ? 'player_run1' : 'player_run2';
-      if (!this._wasMoving) name = 'player_side';
-    } else if (Math.sin(ang) < 0) name = 'player_back';
-    else name = 'player_front';
+    const face = playerFacing8(ang);
+    let flip = false;
+    let anim = this._animName || 'walk_down';
+    let frameIdx = this._animFrame || 0;
 
-    const flip = Math.cos(ang) < 0;
-    const scale = 0.55;
+    if (this.attacking && this._atkAnim) {
+      anim = this._atkAnim;
+      const keys = PLAYER_ANIM.anims[anim] || [];
+      const t = Math.min(0.999, this.attackTimer / Math.max(0.01, this.attackDuration));
+      frameIdx = Math.min(keys.length - 1, Math.floor(t * keys.length));
+      // атаки в листе смотрят вправо/вниз — зеркалим при взгляде влево
+      flip = Math.cos(ang) < -0.15;
+    } else if (this.dashTime > 0) {
+      anim = 'sprint';
+      flip = Math.cos(ang) < 0;
+    } else if (this._wasMoving) {
+      // бег по горизонтали / спринтовые циклы; иначе walk по 8 направлениям
+      const absC = Math.abs(Math.cos(ang));
+      const absS = Math.abs(Math.sin(ang));
+      if (absC > 0.55 && absS < 0.55) {
+        anim = 'run';
+        flip = Math.cos(ang) < 0;
+      } else {
+        const map = {
+          0: 'walk_right', 1: 'walk_right', 2: 'walk_down', 3: 'walk_left',
+          4: 'walk_left', 5: 'diag_ul', 6: 'walk_up', 7: 'diag_ur',
+        };
+        anim = map[face] || 'walk_down';
+        flip = false;
+        // если нет нижних диагоналей — боковой цикл
+        if (face === 1) { anim = 'walk_right'; }
+        if (face === 3) { anim = 'walk_left'; }
+      }
+      frameIdx = this._animFrame || 0;
+    } else {
+      // idle — первый кадр направления
+      const map = {
+        0: 'walk_right', 1: 'walk_right', 2: 'walk_down', 3: 'walk_left',
+        4: 'walk_left', 5: 'diag_ul', 6: 'walk_up', 7: 'diag_ur',
+      };
+      anim = map[face] || 'walk_down';
+      frameIdx = 0;
+      flip = false;
+    }
+
+    const keys = PLAYER_ANIM.anims[anim] || PLAYER_ANIM.anims.walk_down;
+    const frameKey = keys[Math.max(0, frameIdx % keys.length)];
     if (this.lunchTimer > 0) { c.shadowColor = '#f1c40f'; c.shadowBlur = 16; }
     if (this.slowTimer > 0) c.globalAlpha = 0.85;
-    if (!drawSprite(c, name, this.x, this.y + 4, { scale, flip, anchorY: 1 })) {
-      c.fillStyle = '#3498db'; c.beginPath(); c.arc(this.x, this.y, this.r, 0, Math.PI*2); c.fill();
+
+    const drawn = drawPlayerAnimFrame(c, frameKey, this.x, this.y + 4, { scale: 0.72, flip, anchorY: 1 });
+    if (!drawn) {
+      // fallback на старый атлас
+      let name = 'player_front';
+      if (this.attacking) name = 'player_attack';
+      else if (Math.abs(Math.cos(ang)) > Math.abs(Math.sin(ang))) {
+        name = (this._animPhase || 0) > 0.5 ? 'player_run1' : 'player_run2';
+        if (!this._wasMoving) name = 'player_side';
+      } else if (Math.sin(ang) < 0) name = 'player_back';
+      if (!drawSprite(c, name, this.x, this.y + 4, { scale: 0.55, flip: Math.cos(ang) < 0, anchorY: 1 })) {
+        c.fillStyle = '#3498db'; c.beginPath(); c.arc(this.x, this.y, this.r, 0, Math.PI * 2); c.fill();
+      }
     }
 
     if (this.shieldCharges > 0) {
@@ -1559,7 +1652,10 @@ class Player {
       c.stroke();
     }
 
-    if (this.attacking || this.attackCooldown > this.attackCooldownTime - 0.05) {
+    // Оружие в руках рисуем, кроме атаки рацией/кулаком (уже в спрайте)
+    const showStick = this.attacking || this.attackCooldown > this.attackCooldownTime - 0.05;
+    const hideWeaponSprite = this.attacking && (this._atkAnim === 'atk_punch' || this._atkAnim === 'atk_radio');
+    if (showStick && !hideWeaponSprite) {
       const stick = this.getStickEnd();
       const w = this.weapon || WEAPONS[0];
       c.strokeStyle = w.color || '#8B4513';
@@ -1576,13 +1672,57 @@ class Player {
         c.fillStyle = w.tip || '#95a5a6';
         c.beginPath(); c.arc(stick.x, stick.y, 6, 0, Math.PI * 2); c.fill();
       }
+    } else if (showStick && hideWeaponSprite) {
+      // всё равно рисуем иконку оружия у конца удара (кроме перчатки)
+      const w = this.weapon || WEAPONS[0];
+      if (w.id !== 'glove') {
+        const stick = this.getStickEnd();
+        if (w.icon) drawWeaponIcon(c, w.icon, stick.x, stick.y, { scale: 0.38, rotation: stick.angle + 0.5 });
+      }
     }
     c.restore();
   }
 
   tickAnim(dt, moving) {
     this._wasMoving = moving;
-    this._animPhase = ((this._animPhase || 0) + dt * (moving ? 8 : 0)) % 1;
+    const face = playerFacing8(this.angle);
+    let anim = 'walk_down';
+    if (this.dashTime > 0) anim = 'sprint';
+    else if (moving) {
+      const absC = Math.abs(Math.cos(this.angle));
+      const absS = Math.abs(Math.sin(this.angle));
+      if (absC > 0.55 && absS < 0.55) anim = 'run';
+      else {
+        const map = {
+          0: 'walk_right', 1: 'walk_right', 2: 'walk_down', 3: 'walk_left',
+          4: 'walk_left', 5: 'diag_ul', 6: 'walk_up', 7: 'diag_ur',
+        };
+        anim = map[face] || 'walk_down';
+      }
+    } else {
+      const map = {
+        0: 'walk_right', 1: 'walk_right', 2: 'walk_down', 3: 'walk_left',
+        4: 'walk_left', 5: 'diag_ul', 6: 'walk_up', 7: 'diag_ur',
+      };
+      anim = map[face] || 'walk_down';
+    }
+    if (anim !== this._animName) {
+      this._animName = anim;
+      this._animFrame = 0;
+      this._animPhase = 0;
+    }
+    const keys = PLAYER_ANIM.anims[anim] || [];
+    const fps = this.dashTime > 0 ? 14 : (moving ? 10 : 0);
+    if (fps > 0 && keys.length) {
+      this._animPhase = (this._animPhase || 0) + dt * fps;
+      while (this._animPhase >= 1) {
+        this._animPhase -= 1;
+        this._animFrame = ((this._animFrame || 0) + 1) % keys.length;
+      }
+    } else {
+      this._animFrame = 0;
+      this._animPhase = 0;
+    }
   }
 }
 
