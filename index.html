@@ -441,11 +441,14 @@ let playerAnimReady = false;
 playerAnimImg.onload = () => { playerAnimReady = true; };
 playerAnimImg.src = 'player_anim_atlas.png';
 
+/** Масштаб спрайта героя — подогнан под врагов (~0.55 в старом атласе). */
+const PLAYER_SPRITE_SCALE = 0.54;
+
 function drawPlayerAnimFrame(ctx, frameKey, x, y, opts = {}) {
   if (!playerAnimReady) return false;
   const f = PLAYER_ANIM.frames[frameKey];
   if (!f) return false;
-  const scale = opts.scale ?? 0.72;
+  const scale = opts.scale ?? PLAYER_SPRITE_SCALE;
   const dw = f.w * scale;
   const dh = f.h * scale;
   const ax = opts.anchorX ?? 0.5;
@@ -1471,10 +1474,21 @@ class Player {
     this._justFiredRanged = !!(this.weapon && this.weapon.ranged);
     this._justAoe = !!(this.weapon && this.weapon.aoe);
     const wid = (this.weapon && this.weapon.id) || '';
-    this._atkAnim = (wid === 'glove') ? 'atk_punch' : 'atk_radio';
+    if (wid === 'glove') this._atkAnim = 'atk_punch';
+    else if (wid === 'hammer') this._atkAnim = 'atk_radio';
+    else this._atkAnim = null;
     this._animFrame = 0;
     this._animPhase = 0;
     return true;
+  }
+
+  /** Удары из листа — только «в лицо» (вниз на экране). */
+  facingFrontForSpriteAttack() {
+    return Math.sin(this.angle) > 0.35;
+  }
+
+  useSpriteAttackDraw() {
+    return this.attacking && this._atkAnim && this.facingFrontForSpriteAttack();
   }
 
   tryDash(dirX, dirY) {
@@ -1564,10 +1578,10 @@ class Player {
 
   draw(c) {
     const blink = this.invincible > 0 && Math.floor(this.invincible * 20) % 2 === 0;
-    if (blink && this.lunchTimer <= 0) return;
     c.save();
+    if (blink && this.lunchTimer <= 0) c.globalAlpha = 0.35;
     c.fillStyle = 'rgba(0,0,0,0.28)';
-    c.beginPath(); c.ellipse(this.x + 2, this.y + 4, 14, 6, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(this.x + 2, this.y + 4, 12, 5, 0, 0, Math.PI * 2); c.fill();
 
     const ang = this.angle;
     const face = playerFacing8(ang);
@@ -1575,13 +1589,22 @@ class Player {
     let anim = this._animName || 'walk_down';
     let frameIdx = this._animFrame || 0;
 
-    if (this.attacking && this._atkAnim) {
+    if (this.useSpriteAttackDraw()) {
       anim = this._atkAnim;
       const keys = PLAYER_ANIM.anims[anim] || [];
       const t = Math.min(0.999, this.attackTimer / Math.max(0.01, this.attackDuration));
       frameIdx = Math.min(keys.length - 1, Math.floor(t * keys.length));
-      // атаки в листе смотрят вправо/вниз — зеркалим при взгляде влево
-      flip = Math.cos(ang) < -0.15;
+      flip = false;
+    } else if (this.attacking) {
+      // боковой/верхний удар — кадр направления + оружие в руке
+      const map = {
+        0: 'walk_right', 1: 'walk_right', 2: 'walk_down', 3: 'walk_left',
+        4: 'walk_left', 5: 'diag_ul', 6: 'walk_up', 7: 'diag_ur',
+      };
+      anim = map[face] || 'walk_right';
+      if (Math.abs(Math.cos(ang)) > 0.5) anim = Math.cos(ang) < 0 ? 'walk_left' : 'walk_right';
+      frameIdx = Math.min(2, this._animFrame || 0);
+      flip = false;
     } else if (this.dashTime > 0) {
       anim = 'sprint';
       flip = Math.cos(ang) < 0;
@@ -1620,7 +1643,7 @@ class Player {
     if (this.lunchTimer > 0) { c.shadowColor = '#f1c40f'; c.shadowBlur = 16; }
     if (this.slowTimer > 0) c.globalAlpha = 0.85;
 
-    const drawn = drawPlayerAnimFrame(c, frameKey, this.x, this.y + 4, { scale: 0.72, flip, anchorY: 1 });
+    const drawn = drawPlayerAnimFrame(c, frameKey, this.x, this.y + 4, { flip, anchorY: 1 });
     if (!drawn) {
       // fallback на старый атлас
       let name = 'player_front';
@@ -1654,7 +1677,7 @@ class Player {
 
     // Оружие в руках рисуем, кроме атаки рацией/кулаком (уже в спрайте)
     const showStick = this.attacking || this.attackCooldown > this.attackCooldownTime - 0.05;
-    const hideWeaponSprite = this.attacking && (this._atkAnim === 'atk_punch' || this._atkAnim === 'atk_radio');
+    const hideWeaponSprite = this.useSpriteAttackDraw();
     if (showStick && !hideWeaponSprite) {
       const stick = this.getStickEnd();
       const w = this.weapon || WEAPONS[0];
@@ -1685,6 +1708,7 @@ class Player {
 
   tickAnim(dt, moving) {
     this._wasMoving = moving;
+    if (this.attacking) return;
     const face = playerFacing8(this.angle);
     let anim = 'walk_down';
     if (this.dashTime > 0) anim = 'sprint';
