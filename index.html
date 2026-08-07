@@ -545,6 +545,27 @@ const SHIFT_WAVES = 10;
 const FATTY_EXPLODE_RADIUS = Math.round(110 * DIFFICULTY_EASE);
 const FATTY_FUSE_TIME = 1.35 / DIFFICULTY_EASE; // чуть больше времени убежать
 
+/** Ограждение арены (витрины сверху + стены по периметру). */
+const ARENA_FENCE = {
+  topShop: 102,
+  side: 42,
+  bottom: 54,
+  doorW: 116,
+  doorH: 54,
+};
+
+function clampEntityToArena(ent, worldW, worldH, game) {
+  const m = ent.r + 5;
+  if (game && typeof game.getArenaBounds === 'function') {
+    const b = game.getArenaBounds();
+    ent.x = Math.max(b.x0 + m, Math.min(b.x1 - m, ent.x));
+    ent.y = Math.max(b.y0 + m, Math.min(b.y1 - m, ent.y));
+  } else {
+    ent.x = Math.max(m, Math.min(worldW - m, ent.x));
+    ent.y = Math.max(m, Math.min(worldH - m, ent.y));
+  }
+}
+
 // ═══════════════════════════════════════
 //  КОНСУЛЬТАНТ — полная смена
 // ═══════════════════════════════════════
@@ -647,6 +668,7 @@ const TEMP_WEAPONS = {
 const ARENA_THEMES = {
   tech: {
     id: 'tech', name: 'Tech', ico: '💻', tile: 'tile_dark', store: 'store_tech',
+    fenceStripe: '#2980b9',
     obstacles: [
       { x: 0.18, y: 0.22, sprite: 'vending_hd', cw: 40, ch: 28, dw: 52, dh: 90 },
       { x: 0.42, y: 0.20, sprite: 'shelf_front', cw: 78, ch: 30, dw: 100, dh: 88 },
@@ -666,6 +688,7 @@ const ARENA_THEMES = {
   },
   clothes: {
     id: 'clothes', name: 'Clothes', ico: '👗', tile: 'tile_check', store: 'store_clothes',
+    fenceStripe: '#c0392b',
     obstacles: [
       { x: 0.18, y: 0.22, sprite: 'clothes_rack_hd', cw: 92, ch: 28, dw: 110, dh: 78 },
       { x: 0.48, y: 0.18, sprite: 'mannequin_hd', cw: 24, ch: 24, dw: 34, dh: 88 },
@@ -686,6 +709,7 @@ const ARENA_THEMES = {
   },
   food: {
     id: 'food', name: 'Food', ico: '🍔', tile: 'tile_wood', store: 'store_food',
+    fenceStripe: '#e74c3c',
     obstacles: [
       { x: 0.18, y: 0.22, sprite: 'fridge_front', cw: 86, ch: 32, dw: 108, dh: 92 },
       { x: 0.48, y: 0.20, sprite: 'food_case', cw: 86, ch: 30, dw: 105, dh: 84 },
@@ -706,6 +730,7 @@ const ARENA_THEMES = {
   },
   sport: {
     id: 'sport', name: 'Sport', ico: '⚽', tile: 'tile_speckle', store: 'store_sport',
+    fenceStripe: '#2471a3',
     obstacles: [
       { x: 0.18, y: 0.22, sprite: 'sport_shelf', cw: 78, ch: 30, dw: 100, dh: 90 },
       { x: 0.48, y: 0.18, sprite: 'shoe_shelf', cw: 84, ch: 30, dw: 105, dh: 88 },
@@ -1028,9 +1053,7 @@ class Enemy {
     if (this.stunTimer > 0) {
       this.stunTimer -= dt;
       this.speedBuff = 1;
-      const m = this.r + 5;
-      this.x = Math.max(m, Math.min(worldW - m, this.x));
-      this.y = Math.max(m, Math.min(worldH - m, this.y));
+      clampEntityToArena(this, worldW, worldH, game);
       return;
     }
 
@@ -1111,9 +1134,7 @@ class Enemy {
       this.x += Math.cos(this.angle) * spd * dt;
       this.y += Math.sin(this.angle) * spd * dt;
       this.speedBuff = 1;
-      const m = this.r + 5;
-      this.x = Math.max(m, Math.min(worldW - m, this.x));
-      this.y = Math.max(m, Math.min(worldH - m, this.y));
+      clampEntityToArena(this, worldW, worldH, game);
       return;
     }
 
@@ -1124,8 +1145,19 @@ class Enemy {
         this.teleportTimer = rand(2.8, 4.5);
         const a = rand(0, Math.PI * 2);
         const distR = rand(80, 160);
-        this.x = Math.max(40, Math.min(worldW - 40, player.x + Math.cos(a) * distR));
-        this.y = Math.max(40, Math.min(worldH - 40, player.y + Math.sin(a) * distR));
+        let nx = player.x + Math.cos(a) * distR;
+        let ny = player.y + Math.sin(a) * distR;
+        if (game && typeof game.getArenaBounds === 'function') {
+          const b = game.getArenaBounds();
+          const pad = 40;
+          nx = Math.max(b.x0 + pad, Math.min(b.x1 - pad, nx));
+          ny = Math.max(b.y0 + pad, Math.min(b.y1 - pad, ny));
+        } else {
+          nx = Math.max(40, Math.min(worldW - 40, nx));
+          ny = Math.max(40, Math.min(worldH - 40, ny));
+        }
+        this.x = nx;
+        this.y = ny;
         this.bubble = new SpeechBubble(this, 'Сторис! 📱');
         this.filmTimer = 1.4;
       }
@@ -1142,9 +1174,7 @@ class Enemy {
         this.y += Math.sin(this.angle) * spd * dt;
       }
       this.speedBuff = 1;
-      const m = this.r + 5;
-      this.x = Math.max(m, Math.min(worldW - m, this.x));
-      this.y = Math.max(m, Math.min(worldH - m, this.y));
+      clampEntityToArena(this, worldW, worldH, game);
       return;
     }
 
@@ -1189,9 +1219,7 @@ class Enemy {
       this.x += Math.cos(this.angle) * spd * dt;
       this.y += Math.sin(this.angle) * spd * dt;
       this.speedBuff = 1;
-      const m = this.r + 5;
-      this.x = Math.max(m, Math.min(worldW - m, this.x));
-      this.y = Math.max(m, Math.min(worldH - m, this.y));
+      clampEntityToArena(this, worldW, worldH, game);
       return;
     }
 
@@ -1235,12 +1263,7 @@ class Enemy {
     }
 
     this.speedBuff = 1;
-
-    const m = this.r + 5;
-    if (this.x < m) this.x = m;
-    if (this.x > worldW - m) this.x = worldW - m;
-    if (this.y < m) this.y = m;
-    if (this.y > worldH - m) this.y = worldH - m;
+    clampEntityToArena(this, worldW, worldH, game);
   }
 
   draw(c, isRush) {
@@ -1431,7 +1454,7 @@ class Player {
     return leveled;
   }
 
-  update(dt, worldW, worldH) {
+  update(dt, worldW, worldH, game) {
     if (this.invincible > 0) this.invincible -= dt;
     if (this.slowTimer > 0) this.slowTimer -= dt;
     if (this.muteAttack > 0) this.muteAttack -= dt;
@@ -1460,9 +1483,7 @@ class Player {
     this.knockback.x *= Math.exp(-10 * dt);
     this.knockback.y *= Math.exp(-10 * dt);
 
-    const m = this.r + 5;
-    this.x = Math.max(m, Math.min(worldW - m, this.x));
-    this.y = Math.max(m, Math.min(worldH - m, this.y));
+    clampEntityToArena(this, worldW, worldH, game);
 
     if (this.charging) {
       this.charge = Math.min(1, this.charge + dt / 0.75);
@@ -2136,6 +2157,91 @@ class Game {
     return ARENA_THEMES[this.selectedArena] || ARENA_THEMES.food;
   }
 
+  getArenaBounds() {
+    const WW = this.worldW;
+    const WH = this.worldH;
+    const f = ARENA_FENCE;
+    return {
+      x0: f.side,
+      y0: f.topShop,
+      x1: WW - f.side,
+      y1: WH - f.bottom,
+      doorCx: WW / 2,
+      doorW: f.doorW,
+    };
+  }
+
+  _drawFenceBar(x, y, w, h, stripe) {
+    ctx.fillStyle = '#8a9098';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#6d737a';
+    ctx.fillRect(x, y, w, 3);
+    ctx.fillStyle = '#a8adb4';
+    ctx.fillRect(x, y + h - 4, w, 4);
+    const stripeH = Math.min(14, Math.max(8, h * 0.26));
+    const sy = y + h * 0.44 - stripeH / 2;
+    ctx.fillStyle = stripe;
+    ctx.fillRect(x + 2, sy, Math.max(0, w - 4), stripeH);
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.fillRect(x + 2, sy, Math.max(0, w - 4), 3);
+  }
+
+  _drawArenaDoor(x, y, w, h) {
+    ctx.fillStyle = '#6d737a';
+    ctx.fillRect(x - 8, y, w + 16, h);
+    const panelW = (w - 14) / 2;
+    ctx.fillStyle = 'rgba(160,210,235,0.5)';
+    ctx.fillRect(x + 5, y + 10, panelW, h - 18);
+    ctx.fillRect(x + 9 + panelW, y + 10, panelW, h - 18);
+    ctx.strokeStyle = '#bdc3c7';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + 5, y + 10, panelW, h - 18);
+    ctx.strokeRect(x + 9 + panelW, y + 10, panelW, h - 18);
+    ctx.fillStyle = '#95a5a6';
+    ctx.fillRect(x + w / 2 - 2, y + 8, 4, h - 14);
+    drawSprite(ctx, 'sign_exit', x + w / 2, y + 2, { scale: 0.72, anchorY: 1 });
+    drawSprite(ctx, 'plant', x - 16, y + h, { scale: 0.52, anchorY: 1 });
+    drawSprite(ctx, 'plant', x + w + 16, y + h, { scale: 0.52, anchorY: 1 });
+  }
+
+  drawArenaFence(WW, WH) {
+    const f = ARENA_FENCE;
+    const th = this.getArenaTheme();
+    const stripe = th.fenceStripe || '#c0392b';
+    const topH = f.topShop;
+    const sideW = f.side;
+    const botH = f.bottom;
+    const doorW = f.doorW;
+    const doorX0 = WW / 2 - doorW / 2;
+    const playTop = topH;
+    const playBot = WH - botH;
+    const wallH = Math.max(0, playBot - playTop);
+
+    this._drawFenceBar(0, 0, WW, topH, stripe);
+    ctx.fillStyle = '#5c5348';
+    ctx.fillRect(0, topH - 5, WW, 5);
+
+    this._drawFenceBar(0, playTop, sideW, wallH, stripe);
+    this._drawFenceBar(WW - sideW, playTop, sideW, wallH, stripe);
+
+    const botLeftW = Math.max(0, doorX0 - sideW);
+    const botRightX = doorX0 + doorW;
+    const botRightW = Math.max(0, WW - sideW - botRightX);
+    if (botLeftW > 0) this._drawFenceBar(sideW, playBot, botLeftW, botH, stripe);
+    if (botRightW > 0) this._drawFenceBar(botRightX, playBot, botRightW, botH, stripe);
+
+    this._drawArenaDoor(doorX0, playBot, doorW, botH);
+
+    ctx.fillStyle = '#727880';
+    ctx.fillRect(0, playTop - 4, sideW + 2, 6);
+    ctx.fillRect(WW - sideW - 2, playTop - 4, sideW + 2, 6);
+    ctx.fillRect(0, playBot + botH - 2, sideW + 2, 4);
+    ctx.fillRect(WW - sideW - 2, playBot + botH - 2, sideW + 2, 4);
+
+    drawSprite(ctx, 'sign_exit', sideW * 0.52, WH * 0.5, { scale: 0.82, anchorY: 0.5 });
+    drawSprite(ctx, 'sign_exit', WW - sideW * 0.52, WH * 0.5, { scale: 0.82, anchorY: 0.5, flip: true });
+  }
+
   generateZones() {
     const th = this.getArenaTheme();
     this.zones = (th.zones || []).map(z => ({
@@ -2183,21 +2289,16 @@ class Game {
   }
 
   generateStorefronts() {
-    const wallW = 10;
     this.storefronts = [];
     const th = this.getArenaTheme();
     const primary = th.store || 'store_food';
+    const y = 6;
     const top = [0.12, 0.32, 0.52, 0.72];
     top.forEach((fx, i) => {
       this.storefronts.push({
-        x: this.worldW * fx, y: wallW,
-        w: 110, h: 95, sprite: i % 2 === 0 ? primary : STORE_SPRITES[i % STORE_SPRITES.length],
-      });
-    });
-    top.forEach((fx, i) => {
-      this.storefronts.push({
-        x: this.worldW * fx, y: this.worldH - wallW - 95,
-        w: 110, h: 95, sprite: i % 2 === 1 ? primary : STORE_SPRITES[(i + 2) % STORE_SPRITES.length],
+        x: this.worldW * fx, y,
+        w: 110, h: 88,
+        sprite: i % 2 === 0 ? primary : STORE_SPRITES[i % STORE_SPRITES.length],
       });
     });
   }
@@ -2511,14 +2612,24 @@ class Game {
   }
 
   spawnEnemy(forceType = null) {
-    const margin = 70;
+    const b = this.getArenaBounds();
+    const margin = 28;
     let x, y, tries = 0;
     do {
       const side = randi(0, 3);
-      if (side === 0) { x = rand(margin, this.worldW - margin); y = margin; }
-      else if (side === 1) { x = this.worldW - margin; y = rand(margin, this.worldH - margin); }
-      else if (side === 2) { x = rand(margin, this.worldW - margin); y = this.worldH - margin; }
-      else { x = margin; y = rand(margin, this.worldH - margin); }
+      if (side === 0) {
+        x = rand(b.x0 + margin, b.x1 - margin);
+        y = b.y0 + margin;
+      } else if (side === 1) {
+        x = b.x1 - margin;
+        y = rand(b.y0 + margin, b.y1 - margin);
+      } else if (side === 2) {
+        x = rand(b.x0 + margin, b.x1 - margin);
+        y = b.y1 - margin;
+      } else {
+        x = b.x0 + margin;
+        y = rand(b.y0 + margin, b.y1 - margin);
+      }
       tries++;
     } while (tries < 50 && this.collidesWithObstacle(x, y, 20));
 
@@ -2977,7 +3088,7 @@ class Game {
       this.player.y += dir.y * this.player.speed * slip * realDt;
     }
     if (dir.x || dir.y) this.player.angle = Math.atan2(dir.y, dir.x);
-    this.player.update(realDt, this.worldW, this.worldH);
+    this.player.update(realDt, this.worldW, this.worldH, this);
     this.player.tickAnim(realDt, !!(dir.x || dir.y));
     this.pushOutOfObstacles(this.player, this.player.r);
 
@@ -3300,20 +3411,13 @@ class Game {
       }
     }
 
-    const wallW = 12;
-    ctx.fillStyle = '#b8ad96';
-    ctx.fillRect(0, 0, WW, wallW); ctx.fillRect(0, WH - wallW, WW, wallW);
-    ctx.fillRect(0, 0, wallW, WH); ctx.fillRect(WW - wallW, 0, wallW, WH);
+    this.drawArenaFence(WW, WH);
 
     for (const sf of this.storefronts) {
       if (!drawSprite(ctx, sf.sprite, sf.x + sf.w / 2, sf.y + sf.h, { w: sf.w, h: sf.h, anchorY: 1 })) {
         ctx.fillStyle = '#a8d8ea'; ctx.fillRect(sf.x, sf.y, sf.w, sf.h);
       }
     }
-
-    // EXIT signs
-    drawSprite(ctx, 'sign_exit', 40, WH / 2, { scale: 0.9, anchorY: 0.5 });
-    drawSprite(ctx, 'sign_exit', WW - 40, WH / 2, { scale: 0.9, anchorY: 0.5, flip: true });
   }
 
   drawObstacles() {
