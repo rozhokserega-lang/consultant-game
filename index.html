@@ -1798,6 +1798,7 @@ class Game {
 
     this.worldW = 1800; this.worldH = 1200;
     this.camera = { x: 0, y: 0 };
+    this.viewZoom = 1;
     this.lastTime = performance.now();
 
     this.cacheHud();
@@ -1942,8 +1943,21 @@ class Game {
     canvas.style.width = cw + 'px'; canvas.style.height = ch + 'px';
     canvas.width = cw; canvas.height = ch;
     this.W = cw; this.H = ch;
-    this.worldW = Math.max(1200, Math.floor(this.W * 1.5));
-    this.worldH = Math.max(800, Math.floor(this.H * 1.5));
+    // мобильный / тач: камера дальше (−15%), чтобы влезало больше поля
+    const mobileView = window.matchMedia('(max-width: 900px), (pointer: coarse)').matches
+      || ('ontouchstart' in window && Math.min(cw, ch) < 900);
+    this.viewZoom = mobileView ? 0.85 : 1;
+    this.worldW = Math.max(1200, Math.floor(this.viewW() * 1.5));
+    this.worldH = Math.max(800, Math.floor(this.viewH() * 1.5));
+  }
+
+  /** Ширина/высота видимой области мира (с учётом зума камеры). */
+  viewW() { return this.W / (this.viewZoom || 1); }
+  viewH() { return this.H / (this.viewZoom || 1); }
+
+  screenToWorld(sx, sy) {
+    const z = this.viewZoom || 1;
+    return { x: sx / z + this.camera.x, y: sy / z + this.camera.y };
   }
 
   prepareIdleWorld() {
@@ -1955,8 +1969,8 @@ class Game {
     this.enemies = []; this.particles = []; this.projectiles = []; this.pickups = [];
     this.playerProjectiles = [];
     this.boomFx = []; this.fuseBombs = [];
-    this.camera.x = this.player.x - this.W / 2;
-    this.camera.y = this.player.y - this.H / 2;
+    this.camera.x = this.player.x - this.viewW() / 2;
+    this.camera.y = this.player.y - this.viewH() / 2;
     this.paused = true;
     this.inHub = true;
     this.gameOver = false; this.won = false;
@@ -2089,8 +2103,8 @@ class Game {
     this.generateObstacles();
     this.generateStorefronts();
     this.generateZones();
-    this.camera.x = this.player.x - this.W / 2;
-    this.camera.y = this.player.y - this.H / 2;
+    this.camera.x = this.player.x - this.viewW() / 2;
+    this.camera.y = this.player.y - this.viewH() / 2;
     this.startWave(1);
     sfx.click();
   }
@@ -2696,7 +2710,8 @@ class Game {
       if (this.gameOver || this.won) return;
       if (this.paused || this.choosingUpgrade || this.shopping) return;
       const rect = canvas.getBoundingClientRect();
-      this.player.angle = angleTo(this.player.x, this.player.y, e.clientX - rect.left + this.camera.x, e.clientY - rect.top + this.camera.y);
+      const wpt = this.screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+      this.player.angle = angleTo(this.player.x, this.player.y, wpt.x, wpt.y);
       this.mouseAttack = true;
       this.player.startCharge();
     });
@@ -2717,8 +2732,8 @@ class Game {
       if (this.paused || this.choosingUpgrade || this.shopping || this.gameOver) return;
       const rect = canvas.getBoundingClientRect();
       if (!this.player.attacking) {
-        this.player.angle = angleTo(this.player.x, this.player.y,
-          e.clientX - rect.left + this.camera.x, e.clientY - rect.top + this.camera.y);
+        const wpt = this.screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+        this.player.angle = angleTo(this.player.x, this.player.y, wpt.x, wpt.y);
       }
     });
 
@@ -2941,10 +2956,10 @@ class Game {
     this.player.tickAnim(realDt, !!(dir.x || dir.y));
     this.pushOutOfObstacles(this.player, this.player.r);
 
-    // Камера с lead
+    // Камера с lead (видимая область с учётом зума)
     const lead = 60;
-    const targetCX = this.player.x - this.W / 2 + Math.cos(this.player.angle) * lead * 0.35;
-    const targetCY = this.player.y - this.H / 2 + Math.sin(this.player.angle) * lead * 0.35;
+    const targetCX = this.player.x - this.viewW() / 2 + Math.cos(this.player.angle) * lead * 0.35;
+    const targetCY = this.player.y - this.viewH() / 2 + Math.sin(this.player.angle) * lead * 0.35;
     this.camera.x = this.camera.x + (targetCX - this.camera.x) * Math.min(1, realDt * 6);
     this.camera.y = this.camera.y + (targetCY - this.camera.y) * Math.min(1, realDt * 6);
 
@@ -3212,8 +3227,8 @@ class Game {
     const tileSize = 64;
     const vx1 = Math.floor(this.camera.x / tileSize) * tileSize;
     const vy1 = Math.floor(this.camera.y / tileSize) * tileSize;
-    const vx2 = this.camera.x + this.W + tileSize;
-    const vy2 = this.camera.y + this.H + tileSize;
+    const vx2 = this.camera.x + this.viewW() + tileSize;
+    const vy2 = this.camera.y + this.viewH() + tileSize;
     const tileName = atlasReady ? 'tile_beige' : null;
     const f = tileName ? spr(tileName) : null;
     for (let x = vx1; x < vx2; x += tileSize) {
@@ -3279,8 +3294,9 @@ class Game {
   /** Затемнение карты со световым пятном вокруг игрока */
   drawPlayerLight(shakeX = 0, shakeY = 0) {
     if (!this.player) return;
-    const px = this.player.x - this.camera.x + shakeX;
-    const py = this.player.y - this.camera.y + shakeY;
+    const z = this.viewZoom || 1;
+    const px = (this.player.x - this.camera.x) * z + shakeX;
+    const py = (this.player.y - this.camera.y) * z + shakeY;
 
     // Радиус света — чуть больше в обед / на боссе
     let radius = Math.min(this.W, this.H) * 0.28;
@@ -3323,7 +3339,9 @@ class Game {
       sy = (Math.random() - 0.5) * this.screenShake * 30;
     }
     ctx.save();
-    ctx.translate(-this.camera.x + sx, -this.camera.y + sy);
+    const z = this.viewZoom || 1;
+    ctx.scale(z, z);
+    ctx.translate(-this.camera.x + sx / z, -this.camera.y + sy / z);
     this.drawBackground();
     this.drawObstacles();
     for (const p of this.particles) if (p.y < this.player.y - 30) p.draw(ctx);
