@@ -813,7 +813,7 @@ const COMPLAINT_BOOK = [
   { id: 'normal', name: 'Покупатель', ico: '🧍', skin: 'mob_elder' },
   { id: 'fast', name: 'Торопыга', ico: '🏃', skin: 'mob_fast' },
   { id: 'tank', name: 'Танк', ico: '🛡️', skin: 'mob_tank' },
-  { id: 'fatty', name: 'Жирный', ico: '💣', skin: 'mob_tank' },
+  { id: 'fatty', name: 'Жирный', ico: '💣', skin: 'mob_muscle' },
   { id: 'queue', name: 'Очередь', ico: '🧍‍♂️', skin: 'mob_purple' },
   { id: 'returner', name: 'Возврат', ico: '📕', skin: 'mob_cane' },
   { id: 'manager', name: 'Менеджер', ico: '👔', skin: 'mob_pink' },
@@ -821,8 +821,8 @@ const COMPLAINT_BOOK = [
   { id: 'blogger', name: 'Блогер', ico: '📱', skin: 'mob_pink' },
   { id: 'child', name: 'Ребёнок', ico: '🧒', skin: 'mob_fast', scale: 0.78 },
   { id: 'boss', name: 'Админ', ico: '📢', skin: 'mob_muscle', boss: true },
-  { id: 'miniboss', name: 'Мини-босс', ico: '👮', skin: 'mob_muscle', boss: true },
-  { id: 'director', name: 'Директор', ico: '💼', skin: 'mob_muscle', boss: true, scale: 1.15 },
+  { id: 'miniboss', name: 'Мини-босс', ico: '👮', skin: 'mob_tank', boss: true },
+  { id: 'director', name: 'Директор', ico: '💼', skin: 'mob_muscle', boss: true, scale: 1.18 },
 ];
 
 function paintComplaintPortrait(canvas, entry) {
@@ -1160,6 +1160,16 @@ class Projectile {
   }
 }
 
+/** Расстояние от точки до отрезка (для линейных атак боссов). */
+function distToSegment(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len2 = dx * dx + dy * dy;
+  if (len2 < 0.001) return Math.hypot(px - x1, py - y1);
+  let t = ((px - x1) * dx + (py - y1) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+}
+
 class Enemy {
   constructor(x, y, type = 'normal', wave = 1) {
     this.x = x; this.y = y; this.type = type;
@@ -1180,7 +1190,8 @@ class Enemy {
         this.coinDrop = randi(2, 4); this.nameTag = 'Жирный'; this.explodes = true; break;
       case 'boss':
         this.r = rand(26, 32); this.hp = randi(12, 18); this.speed = rand(25, 45); this.xpReward = 10;
-        this.coinDrop = randi(6, 10); this.nameTag = 'Админ'; break;
+        this.coinDrop = randi(6, 10); this.nameTag = 'Админ';
+        this.slashTimer = rand(1.6, 2.4); this.bossPhase = 1; break;
       case 'queue':
         this.r = rand(12, 15); this.hp = randi(2, 3); this.speed = rand(55, 80); this.xpReward = 2;
         this.coinDrop = 1; this.nameTag = 'Очередь'; break;
@@ -1196,11 +1207,13 @@ class Enemy {
       case 'director':
         this.r = 36; this.hp = 55; this.speed = 52; this.xpReward = 30;
         this.coinDrop = 14; this.nameTag = 'Директор';
-        this.bossPhase = 1; this.patternTimer = 1.5; this.summonTimer = 4; break;
+        this.bossPhase = 1; this.patternTimer = 1.5; this.summonTimer = 4;
+        this.slashTimer = 2.2; break;
       case 'miniboss':
         this.r = rand(28, 34); this.hp = randi(22, 28); this.speed = rand(40, 55); this.xpReward = 16;
         this.coinDrop = randi(8, 12); this.nameTag = 'Мини-босс';
-        this.bossPhase = 1; this.patternTimer = 2; this.summonTimer = 5; break;
+        this.bossPhase = 1; this.patternTimer = 2; this.summonTimer = 5;
+        this.slashTimer = 2.0; break;
       case 'child':
         this.r = rand(8, 10); this.hp = 1; this.speed = rand(160, 210); this.xpReward = 1;
         this.coinDrop = 1; this.nameTag = 'Ребёнок'; this.noDamage = true; this.pushOnly = true; break;
@@ -1394,15 +1407,28 @@ class Enemy {
       return;
     }
 
-    // 8) Директор / мини-босс — паттерны
+    // 8) Директор / мини-босс — паттерны + линии-телеграфы
     if (this.type === 'director' || this.type === 'miniboss') {
       const hpRatio = this.hp / this.maxHp;
       if (this.type === 'director') {
         this.bossPhase = hpRatio > 0.66 ? 1 : hpRatio > 0.33 ? 2 : 3;
+      } else {
+        this.bossPhase = hpRatio > 0.5 ? 1 : 2;
       }
       this.patternTimer -= dt;
       this.summonTimer -= dt;
+      if (this.slashTimer == null) this.slashTimer = 2;
+      this.slashTimer -= dt;
       this.angle = angleTo(this.x, this.y, player.x, player.y);
+
+      // линейный удар с предупреждением
+      if (this.slashTimer <= 0 && game && typeof game.spawnBossLineAttack === 'function') {
+        const lines = this.type === 'director' ? (this.bossPhase >= 3 ? 3 : this.bossPhase >= 2 ? 2 : 1) : (this.bossPhase >= 2 ? 2 : 1);
+        game.spawnBossLineAttack(this, player, { lines, warn: this.type === 'director' ? 0.95 : 1.1 });
+        this.slashTimer = this.type === 'director' ? (3.1 - this.bossPhase * 0.35) : 3.4;
+        this.mobPose = 'attack';
+        this.bubble = new SpeechBubble(this, this.type === 'director' ? 'УВОЛЬНЕНИЕ ПО ЛИНИИ!' : 'Проход закрыт!');
+      }
 
       // документы / жалобы веером
       if (this.patternTimer <= 0) {
@@ -1412,7 +1438,7 @@ class Enemy {
           const spread = (i - (burst - 1) / 2) * 0.28;
           game.projectiles.push(new Projectile(this.x, this.y, base + spread, 210 + this.bossPhase * 20, this));
         }
-        this.patternTimer = this.type === 'director' ? (2.4 - this.bossPhase * 0.35) : 2.6;
+        this.patternTimer = this.type === 'director' ? (2.8 - this.bossPhase * 0.3) : 3.0;
         this.bubble = new SpeechBubble(this, pick(BOSS_PHRASES[this.type] || BOSS_PHRASES.miniboss));
       }
 
@@ -1438,6 +1464,19 @@ class Enemy {
       refreshEnemyMobPose(this, player, isRush, stepFromX, stepFromY);
       clampEntityToArena(this, worldW, worldH, game);
       return;
+    }
+
+    // 8b) Админ-босс волны — тоже линии
+    if (this.type === 'boss') {
+      if (this.slashTimer == null) this.slashTimer = 2;
+      this.slashTimer -= dt;
+      this.angle = angleTo(this.x, this.y, player.x, player.y);
+      if (this.slashTimer <= 0 && game && typeof game.spawnBossLineAttack === 'function') {
+        game.spawnBossLineAttack(this, player, { lines: 1, warn: 1.15, length: 460 });
+        this.slashTimer = rand(2.8, 3.6);
+        this.mobPose = 'attack';
+        this.bubble = new SpeechBubble(this, 'Нарушение регламента!');
+      }
     }
 
     if (this.aggroBoost > 0) this.aggroBoost -= dt;
@@ -2031,6 +2070,7 @@ class Game {
     this.projectiles = [];
     this.pickups = [];
     this.boomFx = [];
+    this.bossLines = [];
     this.fuseBombs = [];
     this.obstacles = [];
     this.storefronts = [];
@@ -2243,6 +2283,7 @@ class Game {
     this.enemies = []; this.particles = []; this.projectiles = []; this.pickups = [];
     this.playerProjectiles = [];
     this.boomFx = []; this.fuseBombs = [];
+    this.bossLines = [];
     this.camera.x = this.player.x - this.viewW() / 2;
     this.camera.y = this.player.y - this.viewH() / 2;
     this.paused = true;
@@ -2444,6 +2485,7 @@ class Game {
     this.player.equippedWeaponId = this.weaponId;
     this.enemies = []; this.particles = []; this.projectiles = []; this.pickups = [];
     this.boomFx = [];
+    this.bossLines = [];
     this.score = 0; this.wave = 1;
     this.coins = 8;
     this.coinMult = this.selectedChallenge === 'x2' ? 2 : 1;
@@ -2462,6 +2504,7 @@ class Game {
     this.directorSpawned = false; this.dayDone = false;
     this.fuseBombs = [];
     this.boomFx = [];
+    this.bossLines = [];
     this.playerProjectiles = [];
     this.lightsOut = 0;
     this.fireAlarm = 0;
@@ -2966,6 +3009,7 @@ class Game {
     this.fuseBombs = [];
     // убрать обычных покупателей до спавна босса (иначе _clearMobsAfterKill снесёт и miniboss)
     this.enemies = this.enemies.filter(e => e.type === 'boss' || e.type === 'miniboss' || e.type === 'director');
+    this.bossLines = [];
     this._clearMobsAfterKill = false;
     if (this.wave >= SHIFT_WAVES) {
       this.spawnDirector();
@@ -3079,6 +3123,136 @@ class Game {
       r: enemy.r,
     });
     sfx.mode();
+  }
+
+  /** Линейная атака босса: сначала телеграф, потом удар по линии. */
+  spawnBossLineAttack(boss, player, opts = {}) {
+    if (!boss || !player) return;
+    this.bossLines = this.bossLines || [];
+    const n = Math.max(1, opts.lines || 1);
+    const warn = opts.warn || 1.05;
+    const length = opts.length || (boss.type === 'director' ? 560 : 500);
+    const halfW = opts.halfW || (boss.type === 'director' ? 42 : 36);
+    const base = angleTo(boss.x, boss.y, player.x, player.y);
+    // чуть вперёд от текущей позиции игрока (lead)
+    const lead = 40 + (boss.bossPhase || 1) * 12;
+    const aimX = player.x + Math.cos(player.angle || 0) * lead * 0.25;
+    const aimY = player.y + Math.sin(player.angle || 0) * lead * 0.25;
+    const aim = angleTo(boss.x, boss.y, aimX, aimY);
+    for (let i = 0; i < n; i++) {
+      let ang = aim;
+      if (n === 2) ang = aim + (i === 0 ? -0.55 : 0.55);
+      else if (n === 3) ang = aim + (i - 1) * 0.7;
+      else if (n > 1) ang = aim + (i - (n - 1) / 2) * 0.5;
+      // линия через босса в обе стороны — длинный коридор
+      const x1 = boss.x - Math.cos(ang) * length * 0.25;
+      const y1 = boss.y - Math.sin(ang) * length * 0.25;
+      const x2 = boss.x + Math.cos(ang) * length * 0.75;
+      const y2 = boss.y + Math.sin(ang) * length * 0.75;
+      this.bossLines.push({
+        x1, y1, x2, y2, ang,
+        warn, warnMax: warn,
+        strike: 0.22,
+        halfW,
+        owner: boss,
+        hit: false,
+        dead: false,
+      });
+    }
+    sfx.mode();
+  }
+
+  updateBossLineAttacks(dt) {
+    if (!this.bossLines || !this.bossLines.length) return false;
+    let killed = false;
+    for (const line of this.bossLines) {
+      if (line.dead) continue;
+      if (line.warn > 0) {
+        line.warn -= dt;
+        continue;
+      }
+      if (!line.hit) {
+        line.hit = true;
+        // удар!
+        const d = distToSegment(this.player.x, this.player.y, line.x1, line.y1, line.x2, line.y2);
+        if (d < line.halfW + this.player.r) {
+          if (this.player.invincible <= 0 && this.player.lunchTimer <= 0 && this.player.dashTime <= 0) {
+            this.tookDamage = true;
+            if (this.selectedChallenge === 'no_damage') this.challengeFailed = true;
+            const midX = (line.x1 + line.x2) / 2;
+            const midY = (line.y1 + line.y2) / 2;
+            if (this.player.takeDamage(midX, midY)) {
+              this.spawnParticles(this.player.x, this.player.y, 36, '#e74c3c', 320, 0.75);
+              this.endGame(false, (line.owner && line.owner.nameTag) || 'Босс');
+              killed = true;
+            } else {
+              sfx.hurt();
+              this.vibrate(45);
+              this.spawnParticles(this.player.x, this.player.y, 12, '#ff6b6b', 160, 0.4);
+              this.screenShake = Math.max(this.screenShake, 0.22);
+            }
+          }
+        } else {
+          // промах — лёгкий FX на линии
+          this.spawnParticles((line.x1 + line.x2) / 2, (line.y1 + line.y2) / 2, 10, '#f1c40f', 120, 0.3);
+        }
+        this.screenShake = Math.max(this.screenShake, 0.16);
+        sfx.hit();
+      }
+      line.strike -= dt;
+      if (line.strike <= 0) line.dead = true;
+    }
+    this.bossLines = this.bossLines.filter(l => !l.dead);
+    return killed;
+  }
+
+  drawBossLineAttacks() {
+    if (!this.bossLines || !this.bossLines.length) return;
+    for (const line of this.bossLines) {
+      const warning = line.warn > 0;
+      const tWarn = warning ? (1 - line.warn / (line.warnMax || 1)) : 1;
+      const pulse = warning ? (0.45 + 0.55 * Math.abs(Math.sin(performance.now() / 90))) : 1;
+      ctx.save();
+      ctx.lineCap = 'round';
+      if (warning) {
+        ctx.globalAlpha = 0.35 + 0.45 * pulse;
+        ctx.strokeStyle = '#e74c3c';
+        ctx.lineWidth = line.halfW * 2 * (0.55 + 0.2 * tWarn);
+        ctx.setLineDash([18, 14]);
+        ctx.beginPath();
+        ctx.moveTo(line.x1, line.y1);
+        ctx.lineTo(line.x2, line.y2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        // тонкая яркая ось
+        ctx.globalAlpha = 0.7 * pulse;
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#ffecec';
+        ctx.beginPath();
+        ctx.moveTo(line.x1, line.y1);
+        ctx.lineTo(line.x2, line.y2);
+        ctx.stroke();
+      } else {
+        ctx.globalAlpha = Math.max(0.15, line.strike / 0.22);
+        ctx.strokeStyle = '#ff3b1f';
+        ctx.lineWidth = line.halfW * 2.2;
+        ctx.shadowColor = '#ff6b00';
+        ctx.shadowBlur = 18;
+        ctx.beginPath();
+        ctx.moveTo(line.x1, line.y1);
+        ctx.lineTo(line.x2, line.y2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 0.9;
+        ctx.strokeStyle = '#fff5e6';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(line.x1, line.y1);
+        ctx.lineTo(line.x2, line.y2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
   }
 
   /** Взрыв по координатам: урон игроку и соседям */
@@ -3669,6 +3843,8 @@ class Game {
     for (const b of this.boomFx) b.life -= realDt;
     this.boomFx = this.boomFx.filter(b => b.life > 0);
 
+    if (this.updateBossLineAttacks(realDt)) return;
+
     for (const pk of this.pickups) {
       pk.update(realDt, this.player);
       if (!pk.dead && dist(this.player.x, this.player.y, pk.x, pk.y) < this.player.r + pk.r + 4) {
@@ -3952,6 +4128,7 @@ class Game {
       ctx.stroke();
       ctx.restore();
     }
+    this.drawBossLineAttacks();
     ctx.restore();
 
     // Лёгкая темень + свет над персонажем
