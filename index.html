@@ -162,22 +162,59 @@
   }
   #skill-btn.ready { opacity: 1; box-shadow: 0 0 16px rgba(241,196,15,0.9); }
   #dash-btn.cd, #skill-btn.cd { opacity: 0.4; filter: grayscale(0.4); }
-  .hub-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; text-align:left; margin:8px 0; }
-  @media (max-width:520px){ .hub-grid { grid-template-columns:1fr; } }
+  .hub-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; text-align:left; margin:6px 0; }
   .hub-card {
-    background:rgba(255,255,255,0.06); border:2px solid #555; border-radius:12px;
-    padding:10px; cursor:pointer; color:#fff;
+    background:rgba(255,255,255,0.06); border:2px solid #555; border-radius:10px;
+    padding:8px; cursor:pointer; color:#fff; text-align:left;
   }
   .hub-card:hover { border-color:#f1c40f; }
   .hub-card.sel { border-color:#2ecc71; background:rgba(46,204,113,0.12); }
-  .hub-card .ttl { font-weight:700; font-size:13px; }
-  .hub-card .desc { font-size:11px; color:#aaa; margin-top:2px; }
-  .hub-card .meta { font-size:11px; color:#f1c40f; margin-top:4px; font-weight:700; }
-  .perk-row { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin:8px 0; }
+  .hub-card .ttl { font-weight:700; font-size:12px; line-height:1.25; }
+  .hub-card .desc { font-size:10px; color:#aaa; margin-top:2px; }
+  .hub-card .meta { font-size:10px; color:#f1c40f; margin-top:3px; font-weight:700; }
+  .perk-row { display:flex; gap:6px; flex-wrap:wrap; justify-content:stretch; margin:6px 0; }
+  .perk-row .hub-card { flex:1 1 90px; min-width:0; }
+  #hub-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    align-items: stretch; justify-content: center;
+    padding: max(8px, env(safe-area-inset-top, 0px)) 10px max(10px, env(safe-area-inset-bottom, 0px));
+    overflow: hidden;
+    touch-action: pan-y;
+    background: rgba(8,8,16,0.94);
+  }
+  #hub-overlay .hub-panel {
+    max-width: 640px; width: 100%; max-height: 100%;
+    display: flex; flex-direction: column;
+    padding: 12px; margin: 0 auto; overflow: hidden;
+  }
+  #hub-overlay .hub-panel h2 { font-size: 18px; margin-bottom: 4px; }
+  #hub-overlay .hub-panel > p { font-size: 12px; margin-bottom: 6px; }
+  #hub-overlay .hub-sec { font-size: 13px; margin: 6px 0 2px; font-weight: 700; text-align: left; }
+  .hub-scroll {
+    flex: 1 1 auto; min-height: 0;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+    touch-action: pan-y; overscroll-behavior: contain;
+  }
+  .hub-footer {
+    flex-shrink: 0; padding-top: 8px; margin-top: 4px;
+    border-top: 1px solid #444;
+  }
+  .hub-footer .btn {
+    width: 100%; padding: 14px 16px; font-size: 16px;
+  }
+  body.hub-mode #hud,
+  body.hub-mode #buff-bar,
+  body.hub-mode #desktop-hint,
+  body.hub-mode .mobile-only { display: none !important; }
+  body.hub-mode #game-container { padding-bottom: 0 !important; }
+  @media (max-height: 720px) {
+    .hub-card .desc { display: none; }
+    #hub-overlay .hub-panel { padding: 10px; }
+  }
   #dash-btn.pressed, #skill-btn.pressed { transform: scale(0.9); }
 </style>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script>if(window.Telegram&&Telegram.WebApp){Telegram.WebApp.ready();Telegram.WebApp.expand();}</script>
+<script>if(window.Telegram&&Telegram.WebApp){Telegram.WebApp.ready();Telegram.WebApp.expand();try{Telegram.WebApp.disableVerticalSwipes&&Telegram.WebApp.disableVerticalSwipes();}catch(e){}}</script>
 </head>
 <body>
 
@@ -298,24 +335,26 @@
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Хаб между сменами -->
+  <!-- Хаб между сменами (вне game-container — на весь экран) -->
   <div class="overlay" id="hub-overlay">
-    <div class="panel" style="max-width:640px;">
-      <h2>🏬 Хаб смены</h2>
-      <p>Банк: <b id="hub-bank">0</b> 🪙 · Рекорд: <b id="hub-record">0</b></p>
-      <h3 style="font-size:15px;margin:8px 0 4px;">Мета-перки</h3>
-      <div class="perk-row" id="hub-perks"></div>
-      <h3 style="font-size:15px;margin:8px 0 4px;">Зона ТЦ</h3>
-      <div class="hub-grid" id="hub-arenas"></div>
-      <h3 style="font-size:15px;margin:8px 0 4px;">Испытание</h3>
-      <div class="hub-grid" id="hub-challenges"></div>
-      <div class="row-btns">
+    <div class="panel hub-panel">
+      <div class="hub-scroll">
+        <h2>🏬 Хаб смены</h2>
+        <p>Банк: <b id="hub-bank">0</b> 🪙 · Рекорд: <b id="hub-record">0</b></p>
+        <div class="hub-sec">Мета-перки</div>
+        <div class="perk-row" id="hub-perks"></div>
+        <div class="hub-sec">Зона ТЦ</div>
+        <div class="hub-grid" id="hub-arenas"></div>
+        <div class="hub-sec">Испытание</div>
+        <div class="hub-grid" id="hub-challenges"></div>
+      </div>
+      <div class="hub-footer">
         <button class="btn" id="btn-hub-start" type="button">Начать смену ⚔</button>
       </div>
     </div>
   </div>
-</div>
 
 <script>
 window.WEAPON_ICONS = {
@@ -1790,6 +1829,7 @@ class Game {
     this.won = false;
     this.prepareIdleWorld();
     this.renderHub();
+    document.body.classList.add('hub-mode');
     document.getElementById('hub-overlay').classList.add('show');
     sfx.click();
   }
@@ -1805,7 +1845,6 @@ class Game {
       const el = document.createElement('button');
       el.type = 'button';
       el.className = 'hub-card' + (lv > 0 ? ' sel' : '');
-      el.style.minWidth = '120px';
       el.innerHTML = `<div class="ttl">${pk.ico} ${pk.name} · ${lv}/${pk.max}</div>
         <div class="desc">${pk.desc}</div>
         <div class="meta">${nextCost == null ? 'Макс' : 'Купить 🪙 ' + nextCost}</div>`;
@@ -1862,6 +1901,7 @@ class Game {
 
   startShiftFromHub() {
     document.getElementById('hub-overlay').classList.remove('show');
+    document.body.classList.remove('hub-mode');
     this.inHub = false;
     this.resetGame();
   }
