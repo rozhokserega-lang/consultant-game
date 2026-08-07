@@ -15,63 +15,81 @@
   }
   #hud {
     flex-shrink: 0;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    align-items: center;
-    padding: 6px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 5px 8px 4px;
     background: linear-gradient(180deg, #1e1e30, #161625);
-    border-bottom: 2px solid #333; color: #fff; font-size: 13px; gap: 6px;
+    border-bottom: 2px solid #333; color: #fff; font-size: 12px;
     z-index: 20;
-    height: 72px;
-    max-height: 72px;
+    height: 78px;
+    max-height: 78px;
     overflow: hidden;
+    box-sizing: border-box;
   }
-  #hud > div { display: flex; align-items: center; gap: 8px; min-width: 0; }
-  #hud > div:last-child { justify-content: flex-end; }
+  .hud-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 0.85fr);
+    align-items: center;
+    gap: 6px;
+    min-height: 0;
+    flex: 1;
+  }
+  .hud-main > div { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .hud-sub {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+    flex-shrink: 0;
+    padding-top: 2px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .hud-sub-left {
+    display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;
+  }
   .hud-hp-bar, .hud-xp-bar {
-    height: 14px; background: #333; border-radius: 7px; overflow: hidden; border: 1px solid #555;
+    height: 12px; background: #333; border-radius: 7px; overflow: hidden; border: 1px solid #555;
   }
-  .hud-hp-bar { width: min(120px, 22vw); }
-  .hud-xp-bar { width: min(90px, 18vw); height: 8px; border-radius: 4px; }
+  .hud-hp-bar { width: min(100px, 20vw); }
+  .hud-xp-bar { width: min(72px, 15vw); height: 7px; border-radius: 4px; }
   .hud-hp-fill { height: 100%; background: #2ecc71; transition: width 0.2s; border-radius: 7px; }
   .hud-xp-fill { height: 100%; background: #9b59b6; transition: width 0.2s; border-radius: 4px; }
-  .hud-label { color: #aaa; font-size: 11px; white-space: nowrap; }
-  .hud-value { font-weight: 700; font-size: 14px; white-space: nowrap; }
+  .hud-label { color: #aaa; font-size: 10px; white-space: nowrap; }
+  .hud-value { font-weight: 700; font-size: 12px; white-space: nowrap; }
   .hud-mode {
-    font-weight: 700; font-size: 12px; padding: 3px 8px; border-radius: 12px;
-    min-width: 7.6em; text-align: center; white-space: nowrap;
+    font-weight: 700; font-size: 11px; padding: 2px 6px; border-radius: 10px;
+    min-width: 6.8em; text-align: center; white-space: nowrap;
   }
   .hud-mode.chase { background: rgba(231,76,60,0.3); color: #e74c3c; }
   .hud-mode.flee { background: rgba(241,196,15,0.3); color: #f1c40f; }
   .hud-combo-slot {
-    min-height: 14px; font-size: 11px; font-weight: 700; color: #f1c40f;
+    min-height: 12px; font-size: 10px; font-weight: 700; color: #f1c40f;
     visibility: hidden; white-space: nowrap;
   }
   .hud-combo-slot.on { visibility: visible; }
   .hud-mid {
-    flex-direction: column; align-items: center; gap: 3px;
+    flex-direction: column; align-items: center; gap: 2px;
   }
   .hud-mid-top {
-    display: flex; align-items: center; gap: 8px; white-space: nowrap;
+    display: flex; align-items: center; gap: 6px; white-space: nowrap;
   }
-  .hud-mid-top #hud-score { font-size: 16px; font-weight: 800; }
+  .hud-mid-top #hud-score { font-size: 14px; font-weight: 800; }
   .hud-meters {
-    display: flex; gap: 8px; align-items: center;
-    font-size: 10px; color: #aaa;
+    display: flex; gap: 6px; align-items: center;
+    font-size: 9px; color: #aaa;
   }
-  .hud-wave-col {
-    flex-direction: column; align-items: flex-end; gap: 2px;
-    max-width: 42vw;
+  .hud-wave-line, .hud-enemies-line {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 46vw;
   }
-  .hud-wave-col .hud-value,
-  .hud-wave-col .hud-label {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
+  .hud-wave-line { font-weight: 700; font-size: 12px; }
+  .hud-enemies-line { color: #aaa; font-size: 11px; }
   .hud-btn {
     background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25);
-    color: #fff; border-radius: 8px; padding: 4px 8px; font-size: 14px; cursor: pointer;
+    color: #fff; border-radius: 8px; padding: 3px 7px; font-size: 13px; cursor: pointer;
+    flex-shrink: 0;
   }
   #game-container {
     position: relative; flex: 1; display: flex; align-items: center;
@@ -296,41 +314,45 @@
 <body>
 
 <header id="hud">
-  <div>
-    <span style="font-size:17px;">⭐<b id="hud-level">1</b></span>
+  <div class="hud-main">
     <div>
-      <div style="display:flex;align-items:center;gap:4px;">
-        <span style="font-size:12px;">❤️</span>
-        <div class="hud-hp-bar"><div class="hud-hp-fill" id="hud-hp-fill" style="width:100%"></div></div>
-        <span class="hud-value" id="hud-hp-text">5/5</span>
+      <span style="font-size:15px;">⭐<b id="hud-level">1</b></span>
+      <div>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <span style="font-size:11px;">❤️</span>
+          <div class="hud-hp-bar"><div class="hud-hp-fill" id="hud-hp-fill" style="width:100%"></div></div>
+          <span class="hud-value" id="hud-hp-text">5/5</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;margin-top:2px;">
+          <span class="hud-label">XP</span>
+          <div class="hud-xp-bar"><div class="hud-xp-fill" id="hud-xp-fill" style="width:0%"></div></div>
+          <span class="hud-label" id="hud-xp-text">0/10</span>
+        </div>
       </div>
-      <div style="display:flex;align-items:center;gap:4px;margin-top:2px;">
-        <span class="hud-label">XP</span>
-        <div class="hud-xp-bar"><div class="hud-xp-fill" id="hud-xp-fill" style="width:0%"></div></div>
-        <span class="hud-label" id="hud-xp-text">0/10</span>
+    </div>
+
+    <div class="hud-mid">
+      <div class="hud-mid-top">
+        <span id="hud-score">🔨 0</span>
+        <span class="coin-pill" id="hud-coins">🪙 0</span>
+        <span class="hud-combo-slot" id="hud-combo">🔥 x0</span>
+      </div>
+      <span class="hud-mode chase" id="hud-mode">🔴 ПИК 8.0с</span>
+      <div class="hud-meters">
+        <span>☕ <span class="meter skill"><i id="hud-skill-fill"></i></span></span>
+        <span>⚡ <span class="meter charge"><i id="hud-charge-fill"></i></span></span>
       </div>
     </div>
-  </div>
 
-  <div class="hud-mid">
-    <div class="hud-mid-top">
-      <span id="hud-score">🔨 0</span>
-      <span class="coin-pill" id="hud-coins">🪙 0</span>
-      <span class="hud-combo-slot" id="hud-combo">🔥 x0</span>
-    </div>
-    <span class="hud-mode chase" id="hud-mode">🔴 ПИК 8.0с</span>
-    <div class="hud-meters">
-      <span>☕ <span class="meter skill"><i id="hud-skill-fill"></i></span></span>
-      <span>⚡ <span class="meter charge"><i id="hud-charge-fill"></i></span></span>
-    </div>
-  </div>
-
-  <div class="hud-wave-col">
-    <span class="hud-value" id="hud-wave">🌊 Волна 1/10</span>
-    <span class="hud-label" id="hud-enemies">Убито: 0/30</span>
-    <div style="display:flex;gap:4px;margin-top:2px;">
+    <div style="justify-content:flex-end;">
       <button class="hud-btn" id="btn-pause" type="button" title="Пауза">⏸</button>
       <button class="hud-btn" id="btn-settings" type="button" title="Настройки">⚙️</button>
+    </div>
+  </div>
+  <div class="hud-sub">
+    <div class="hud-sub-left">
+      <span class="hud-wave-line" id="hud-wave">🌊 Волна 1/10</span>
+      <span class="hud-enemies-line" id="hud-enemies">Убито: 0/30</span>
     </div>
   </div>
 </header>
@@ -432,6 +454,9 @@
           <div class="hub-sec">Оружие на смену</div>
           <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Выбери из купленного. Прокачка до 10 ур. за монеты банка (по чуть-чуть).</p>
           <div class="wep-grid" id="hub-weapons"></div>
+          <div class="hub-sec">Способности</div>
+          <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 4px;">Дэш · Обед · Сильный удар — до 5 ур. за банк.</p>
+          <div class="perk-row" id="hub-abilities"></div>
           <div class="hub-sec">Мета-перки</div>
           <div class="perk-row" id="hub-perks"></div>
           <div class="hub-sec">Зона ТЦ</div>
@@ -900,6 +925,20 @@ const META_PERKS = [
   { id: 'dash', ico: '👟', name: 'Кроссовки', desc: '−0.3с КД рывка / ур.', max: 2, cost: [70, 130] },
   { id: 'thick', ico: '📋', name: 'Толстокожий', desc: 'Жалобы короче на 30% / ур.', max: 2, cost: [80, 150] },
 ];
+
+/** Прокачка кнопок: дэш / обед / сильный удар (макс 5). */
+const ABILITY_MAX_LEVEL = 5;
+const ABILITY_UPGRADE_COSTS = [40, 70, 110, 160, 250];
+const ABILITY_DEFS = [
+  { id: 'dash', ico: '💨', name: 'Дэш', desc: '1–4: −КД · 5: двойной дэш' },
+  { id: 'tea', ico: '☕', name: 'Обед', desc: '1–4: дольше · 5: +1 урон в обеде' },
+  { id: 'charge', ico: '⚔', name: 'Сильный удар', desc: '1–4: −КД заряда · 5: больше радиус' },
+];
+
+function abilityUpgradeCost(level) {
+  if (level < 0 || level >= ABILITY_MAX_LEVEL) return null;
+  return ABILITY_UPGRADE_COSTS[level];
+}
 
 const CHALLENGES = [
   { id: 'none', ico: '🙂', name: 'Обычная смена', desc: 'Без модификаторов', bonus: 0 },
@@ -1770,16 +1809,22 @@ class Player {
     this.slowTimer = 0; this.muteAttack = 0; this.lunchTimer = 0; this.shameTimer = 0;
     // дэш / заряд / скилл
     this.dashCd = 0; this.dashTime = 0; this.dashDir = { x: 1, y: 0 };
+    this.dashCdBase = 1.05;
+    this.dashChargesMax = 1;
+    this.dashCharges = 1;
     this.charging = false; this.charge = 0;
     this.skill = 0; this.skillMax = 100;
     this.chargePower = 0;
+    this.teaDurationBonus = 0;
+    this.teaDamageBonus = 0;
+    this.chargeCdMul = 1;
+    this.chargeRadiusMul = 1;
     this.baseStickLength = 42;
     this.baseHitArc = Math.PI / 3;
     this.critChance = 0;
     this.extraLives = 0;
     this.coinMagnet = 90;
     this.coinMagnetBonus = 0;
-    this.dashCdBase = 1.05;
     this.complaintResist = 0;
     this.equippedWeaponId = (weapon && weapon.id) || 'hammer';
     this.tempWeapon = null;
@@ -1807,7 +1852,8 @@ class Player {
   recalcStats() {
     const w = this.weapon || WEAPONS[0];
     this.baseSpeed = 220 + (w.speedBonus || 0) + (this.bonusSpeed || 0);
-    this.damage = (w.damage || 1) + (this.bonusDamage || 0);
+    const teaDmg = (this.lunchTimer > 0 && this.teaDamageBonus) ? this.teaDamageBonus : 0;
+    this.damage = (w.damage || 1) + (this.bonusDamage || 0) + teaDmg;
     this.speed = this.baseSpeed * (this.slowTimer > 0 ? 0.55 : 1) * (this.lunchTimer > 0 ? 1.25 : 1) * (this.shameTimer > 0 ? 0.85 : 1);
   }
 
@@ -1851,7 +1897,10 @@ class Player {
     if (this.muteAttack > 0) this.muteAttack -= dt;
     if (this.lunchTimer > 0) this.lunchTimer -= dt;
     if (this.shameTimer > 0) this.shameTimer -= dt;
-    if (this.dashCd > 0) this.dashCd -= dt;
+    if (this.dashCd > 0) {
+      this.dashCd -= dt;
+      if (this.dashCd <= 0) this.dashCharges = this.dashChargesMax || 1;
+    }
     if (this.tempWeaponTimer > 0) {
       this.tempWeaponTimer -= dt;
       if (this.tempWeaponTimer <= 0) this.clearTempWeapon();
@@ -1918,11 +1967,13 @@ class Player {
     this.charge = 0;
     const t = Math.max(0, Math.min(1, charge));
     this.chargePower = t;
-    this.stickLength = this.baseStickLength * (1 + t * 0.85);
-    this.hitArc = this.baseHitArc * (1 + t * 0.7);
+    const radiusMul = t >= 0.45 ? (this.chargeRadiusMul || 1) : 1;
+    this.stickLength = this.baseStickLength * (1 + t * 0.85) * radiusMul;
+    this.hitArc = this.baseHitArc * (1 + t * 0.7) * (radiusMul > 1 ? 1.08 : 1);
     this.attackDuration = 0.16 + t * 0.16;
     this.attacking = true; this.attackTimer = 0;
-    const cdMul = (1 + t * 1.05) * (this.lunchTimer > 0 ? 0.7 : 1) * (this.shameTimer > 0 ? 1.55 : 1);
+    let cdMul = (1 + t * 1.05) * (this.lunchTimer > 0 ? 0.7 : 1) * (this.shameTimer > 0 ? 1.55 : 1);
+    if (t >= 0.35) cdMul *= (this.chargeCdMul || 1);
     this.attackCooldown = this.attackCooldownTime * cdMul;
     this.hitEnemies.clear();
     this._justFiredRanged = !!(this.weapon && this.weapon.ranged);
@@ -1946,7 +1997,13 @@ class Player {
   }
 
   tryDash(dirX, dirY) {
-    if (this.dashCd > 0 || this.dashTime > 0 || this.attacking) return false;
+    if (this.dashTime > 0 || this.attacking) return false;
+    const maxCh = this.dashChargesMax || 1;
+    if (maxCh <= 1) {
+      if (this.dashCd > 0) return false;
+    } else if ((this.dashCharges || 0) <= 0) {
+      return false;
+    }
     let dx = dirX, dy = dirY;
     const len = Math.hypot(dx, dy);
     if (len < 0.1) {
@@ -1956,7 +2013,12 @@ class Player {
     }
     this.dashDir = { x: dx, y: dy };
     this.dashTime = 0.16;
-    this.dashCd = this.dashCdBase || 1.05;
+    if (maxCh <= 1) {
+      this.dashCd = this.dashCdBase || 1.05;
+    } else {
+      this.dashCharges = Math.max(0, (this.dashCharges || 0) - 1);
+      if (this.dashCharges <= 0) this.dashCd = this.dashCdBase || 1.05;
+    }
     this.invincible = Math.max(this.invincible, 0.22);
     this.charging = false; this.charge = 0;
     return true;
@@ -2034,8 +2096,9 @@ class Player {
   }
 
   applyLunch() {
-    this.lunchTimer = 4.5;
-    this.invincible = Math.max(this.invincible, 4.5);
+    const dur = 4.5 + (this.teaDurationBonus || 0);
+    this.lunchTimer = dur;
+    this.invincible = Math.max(this.invincible, dur);
     this.skill = 0;
   }
 
@@ -2183,6 +2246,7 @@ class Game {
       tank: 0, speed: 0, crit: 0, life: 0, wallet: 0, magnet: 0, reach: 0, dash: 0, thick: 0,
     }, this.save.metaPerks || {});
     this.weaponLevels = Object.assign({}, this.save.weaponLevels || {});
+    this.abilityLevels = Object.assign({ dash: 0, tea: 0, charge: 0 }, this.save.abilityLevels || {});
     this.killLog = Object.assign({}, this.save.killLog || {});
     this.hubTab = 'prep';
     this.selectedArena = this.save.selectedArena || 'food';
@@ -2357,6 +2421,7 @@ class Game {
       hammerId: this.weaponId,
       ownedWeapons: this.ownedWeapons,
       weaponLevels: this.weaponLevels,
+      abilityLevels: this.abilityLevels,
       bankCoins: this.bankCoins,
       metaPerks: this.metaPerks,
       selectedArena: this.selectedArena,
@@ -2613,6 +2678,23 @@ class Game {
       el.onclick = () => this.buyMetaPerk(pk.id);
       perkWrap.appendChild(el);
     }
+
+    const abWrap = document.getElementById('hub-abilities');
+    if (abWrap) {
+      abWrap.innerHTML = '';
+      for (const ab of ABILITY_DEFS) {
+        const lv = this.abilityLevels[ab.id] || 0;
+        const nextCost = abilityUpgradeCost(lv);
+        const el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'hub-card' + (lv > 0 ? ' sel' : '');
+        el.innerHTML = `<div class="ttl">${ab.ico} ${ab.name} · ${lv}/${ABILITY_MAX_LEVEL}</div>
+          <div class="desc">${ab.desc}</div>
+          <div class="meta">${nextCost == null ? 'Макс' : 'Прокачать 🪙 ' + nextCost}</div>`;
+        el.onclick = () => this.buyAbilityUpgrade(ab.id);
+        abWrap.appendChild(el);
+      }
+    }
     const ar = document.getElementById('hub-arenas');
     ar.innerHTML = '';
     for (const th of Object.values(ARENA_THEMES)) {
@@ -2665,6 +2747,19 @@ class Game {
     sfx.shop();
   }
 
+  buyAbilityUpgrade(id) {
+    if (!ABILITY_DEFS.some(a => a.id === id)) return;
+    const lv = this.abilityLevels[id] || 0;
+    const cost = abilityUpgradeCost(lv);
+    if (cost == null) return;
+    if (this.bankCoins < cost) { sfx.hurt(); return; }
+    this.bankCoins -= cost;
+    this.abilityLevels[id] = lv + 1;
+    this.persist();
+    this.renderHub();
+    sfx.shop();
+  }
+
   applyMetaToPlayer() {
     const p = this.player;
     const tank = this.metaPerks.tank || 0;
@@ -2672,8 +2767,11 @@ class Game {
     const crit = this.metaPerks.crit || 0;
     const life = this.metaPerks.life || 0;
     const magnet = this.metaPerks.magnet || 0;
-    const dash = this.metaPerks.dash || 0;
+    const metaDash = this.metaPerks.dash || 0;
     const thick = this.metaPerks.thick || 0;
+    const aDash = this.abilityLevels.dash || 0;
+    const aTea = this.abilityLevels.tea || 0;
+    const aCharge = this.abilityLevels.charge || 0;
     // оружие + reach через общий refresh (с учётом уровней)
     this.refreshPlayerLoadoutWeapon();
     if (tank > 0) { p.maxHp += tank; p.hp = p.maxHp; }
@@ -2682,7 +2780,18 @@ class Game {
     p.extraLives = life;
     p.coinMagnet = 90 + magnet * 55;
     p.coinMagnetBonus = magnet * 2.2;
-    p.dashCdBase = Math.max(0.35, 1.05 - dash * 0.3);
+    // дэш: мета + способность (1–4 −КД, 5 двойной)
+    const cdCut = metaDash * 0.3 + Math.min(4, aDash) * 0.08;
+    p.dashCdBase = Math.max(0.32, 1.05 - cdCut);
+    p.dashChargesMax = aDash >= 5 ? 2 : 1;
+    p.dashCharges = p.dashChargesMax;
+    p.dashCd = 0;
+    // обед
+    p.teaDurationBonus = Math.min(4, aTea) * 0.7;
+    p.teaDamageBonus = aTea >= 5 ? 1 : 0;
+    // сильный удар (заряд)
+    p.chargeCdMul = Math.max(0.65, 1 - Math.min(4, aCharge) * 0.07);
+    p.chargeRadiusMul = aCharge >= 5 ? 1.22 : 1;
     p.complaintResist = thick * 0.3;
   }
 
@@ -3852,18 +3961,23 @@ class Game {
     if (ch) ch.style.width = (100 * (p.charging ? p.charge : 0)) + '%';
     const dashBtn = document.getElementById('dash-btn');
     const skillBtn = document.getElementById('skill-btn');
-    if (dashBtn) dashBtn.classList.toggle('cd', p.dashCd > 0 || p.dashTime > 0);
+    if (dashBtn) {
+      const noDash = (p.dashChargesMax || 1) > 1
+        ? (p.dashCharges || 0) <= 0
+        : (p.dashCd > 0 || p.dashTime > 0);
+      dashBtn.classList.toggle('cd', noDash || p.dashTime > 0);
+    }
     if (skillBtn) {
       skillBtn.classList.toggle('ready', p.skill >= p.skillMax);
       skillBtn.classList.toggle('cd', p.skill < p.skillMax);
     }
     const bossAlive = this.enemies.find(e => e.hp > 0 && (e.type === 'boss' || e.type === 'miniboss' || e.type === 'director'));
     this.$wave.textContent = this.wavePhase === 'boss'
-      ? `🌊 Волна ${this.wave} · ${(bossAlive && bossAlive.nameTag) || 'БОСС'}`
-      : (this.blackFriday ? `🖤 Волна ${this.wave}/${SHIFT_WAVES}` : `🌊 Волна ${this.wave}/${SHIFT_WAVES}`);
+      ? `🌊 В${this.wave} · ${(bossAlive && bossAlive.nameTag) || 'БОСС'}`
+      : (this.blackFriday ? `🖤 В${this.wave}/${SHIFT_WAVES}` : `🌊 Волна ${this.wave}/${SHIFT_WAVES}`);
     this.$enemies.textContent = this.wavePhase === 'boss'
-      ? (bossAlive ? `${bossAlive.nameTag}: ${Math.max(0, Math.ceil(bossAlive.hp))} HP` : 'Босс смены!')
-      : `Убито: ${this.waveKills}/${this.killsPerWave}`;
+      ? (bossAlive ? `❤ ${Math.max(0, Math.ceil(bossAlive.hp))}` : 'Босс!')
+      : `Убито ${this.waveKills}/${this.killsPerWave}`;
     const rem = Math.max(0, this.MODE_DURATION - this.modeTimer).toFixed(1);
     if (this.isChaseMode) {
       // isChaseMode = час пик (rush)
@@ -3882,7 +3996,10 @@ class Game {
     }
 
     const tags = [];
-    if (p.lunchTimer > 0) tags.push(`<span class="buff-tag good">☕ Обед ${p.lunchTimer.toFixed(1)}с</span>`);
+    if (p.lunchTimer > 0) {
+      const teaNote = p.teaDamageBonus ? ' +урон' : '';
+      tags.push(`<span class="buff-tag good">☕ Обед ${p.lunchTimer.toFixed(1)}с${teaNote}</span>`);
+    }
     if (p.slowTimer > 0) tags.push(`<span class="buff-tag bad">📋 Жалоба ${p.slowTimer.toFixed(1)}с</span>`);
     if (p.muteAttack > 0) tags.push(`<span class="buff-tag bad">🤐 Без удара ${p.muteAttack.toFixed(1)}с</span>`);
     if (p.shameTimer > 0) tags.push(`<span class="buff-tag bad">📸 Стыд ${p.shameTimer.toFixed(1)}с</span>`);
@@ -3890,6 +4007,7 @@ class Game {
     if (this.comboShield > 0) tags.push(`<span class="buff-tag good">🔥 Комбо-щит ${this.comboShield.toFixed(0)}с</span>`);
     if (p.shieldCharges > 0) tags.push(`<span class="buff-tag good">🛡️ Блок ×${p.shieldCharges}</span>`);
     if ((p.extraLives || 0) > 0) tags.push(`<span class="buff-tag good">💖 Жизнь ×${p.extraLives}</span>`);
+    if ((p.dashChargesMax || 1) > 1) tags.push(`<span class="buff-tag good">💨 Дэш ${p.dashCharges}/${p.dashChargesMax}</span>`);
     if ((this.coinMult || 1) > 1.01) tags.push(`<span class="buff-tag good">🎫 Монеты ×${this.coinMult.toFixed(2)}</span>`);
     const w = p.weapon; if (w) tags.push(`<span class="buff-tag good">${w.ico || '⚔'} ${w.name}${w.level ? ' ·' + w.level : ''}</span>`);
     if (p.tempWeapon && p.tempWeaponTimer > 0) {
