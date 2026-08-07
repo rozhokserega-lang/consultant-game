@@ -693,6 +693,12 @@ const MAX_ENEMIES_ON_FIELD = Math.max(12, Math.round(18 * DIFFICULTY_EASE));
 const SHIFT_WAVES = 10;
 const FATTY_EXPLODE_RADIUS = Math.round(110 * DIFFICULTY_EASE);
 const FATTY_FUSE_TIME = 1.35 / DIFFICULTY_EASE; // чуть больше времени убежать
+/** Сколько облачков речи одновременно (measureText/текст на Android дорогой). */
+const MAX_SPEECH_BUBBLES = 3;
+/** Потолок частиц — на мобилках сотни fill-дуг в кадр. */
+const MAX_PARTICLES = 90;
+/** Android/мобилки: меньше дорогих оверлеев (свет, blur). Число мобов не трогаем. */
+const LOW_GFX = /Android|Mobile|iPhone|iPad/i.test(navigator.userAgent || '');
 
 /** Ограждение арены (витрины сверху + стены по периметру). */
 const ARENA_FENCE = {
@@ -1031,15 +1037,22 @@ class Particle {
   get alpha() { return Math.max(0, this.life / this.maxLife); }
   get dead() { return this.life <= 0; }
   draw(c) {
-    c.save(); c.globalAlpha = this.alpha; c.fillStyle = this.color;
+    c.globalAlpha = this.alpha;
+    c.fillStyle = this.color;
     c.beginPath(); c.arc(this.x, this.y, this.size * this.alpha, 0, Math.PI * 2); c.fill();
-    c.restore();
+    c.globalAlpha = 1;
   }
 }
 
 class SpeechBubble {
   constructor(owner, text) {
     this.owner = owner; this.text = text; this.life = 2.5; this.maxLife = 2.5; this.fadeIn = 0.2;
+    this._laid = false;
+    this._lines = null;
+    this._bw = 0;
+    this._bh = 0;
+    this._lineH = 0;
+    this._padY = 7;
   }
   update(dt) { this.life -= dt; }
   get dead() { return this.life <= 0; }
@@ -1048,9 +1061,9 @@ class SpeechBubble {
     if (this.life < 0.4) return this.life / 0.4;
     return 1;
   }
-  draw(c, ox, oy) {
-    const a = this.alpha; if (a <= 0.01) return;
-    const maxWidth = 180, fontSize = 12;
+  _layout(c) {
+    if (this._laid) return;
+    const maxWidth = 160, fontSize = 12;
     c.font = `500 ${fontSize}px "Segoe UI", system-ui, sans-serif`;
     const words = this.text.split(' ');
     const lines = []; let line = '';
@@ -1060,9 +1073,18 @@ class SpeechBubble {
       else line = test;
     }
     if (line) lines.push(line);
-    const lineH = fontSize * 1.4, padX = 10, padY = 7;
-    const bw = Math.min(maxWidth, Math.max(...lines.map(l => c.measureText(l).width))) + padX * 2;
-    const bh = lines.length * lineH + padY * 2;
+    const lineH = fontSize * 1.35, padX = 9, padY = 6;
+    this._lines = lines;
+    this._lineH = lineH;
+    this._padY = padY;
+    this._bw = Math.min(maxWidth, Math.max(...lines.map(l => c.measureText(l).width))) + padX * 2;
+    this._bh = lines.length * lineH + padY * 2;
+    this._laid = true;
+  }
+  draw(c, ox, oy) {
+    const a = this.alpha; if (a <= 0.01) return;
+    this._layout(c);
+    const bw = this._bw, bh = this._bh, lines = this._lines;
     const bx = ox - bw / 2, by = oy - bh - 12;
     c.save(); c.globalAlpha = a;
     c.fillStyle = '#fff';
@@ -1074,8 +1096,9 @@ class SpeechBubble {
     c.lineTo(bx + r, by + bh); c.quadraticCurveTo(bx, by + bh, bx, by + bh - r);
     c.lineTo(bx, by + r); c.quadraticCurveTo(bx, by, bx + r, by); c.closePath(); c.fill();
     c.fillStyle = '#222'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = '500 12px "Segoe UI", system-ui, sans-serif';
     for (let i = 0; i < lines.length; i++) {
-      c.fillText(lines[i], bx + bw / 2, by + padY + i * lineH + lineH / 2);
+      c.fillText(lines[i], bx + bw / 2, by + this._padY + i * this._lineH + this._lineH / 2);
     }
     c.restore();
   }
@@ -1262,8 +1285,12 @@ class Enemy {
     this.nextBubbleIn -= dt;
     if (!this.bubble || this.bubble.dead) {
       if (this.nextBubbleIn <= 0) {
-        this.bubble = new SpeechBubble(this, pick(PHRASES));
-        this.nextBubbleIn = rand(4, 8);
+        const live = game ? (game._liveBubbles || 0) : 0;
+        if (live < MAX_SPEECH_BUBBLES && Math.random() < 0.55) {
+          this.bubble = new SpeechBubble(this, pick(PHRASES));
+          if (game) game._liveBubbles = live + 1;
+        }
+        this.nextBubbleIn = rand(5, 11);
       }
     }
     if (this.bubble && !this.bubble.dead) this.bubble.update(dt);
@@ -1288,30 +1315,37 @@ class Enemy {
     const rushBase = (isRush ? 1.28 : 1) * (game && game.fireAlarm > 0 ? 1.35 : 1);
     const rushMul = (rushBase - 1) * DIFFICULTY_EASE + 1;
 
-    // 1) Аура менеджера — ускорение + лёгкий реген союзникам
+    // 1) Аура менеджера — ускорение + лёгкий реген (dist², без Math.hypot)
     if (this.type === 'manager') {
       this.buffPulse = (this.buffPulse || 0) + dt;
       this.regenAcc = (this.regenAcc || 0) + dt;
+      const doRegen = this.regenAcc >= 1.2;
+      const R2 = 150 * 150;
       for (const e of game.enemies) {
         if (e === this || e.hp <= 0) continue;
-        if (dist(this.x, this.y, e.x, e.y) < 150) {
+        const dx = e.x - this.x, dy = e.y - this.y;
+        if (dx * dx + dy * dy < R2) {
           e.speedBuff = Math.max(e.speedBuff || 1, 1.4);
-          if (this.regenAcc >= 1.2 && e.hp < e.maxHp && e.type !== 'boss' && e.type !== 'director') {
+          if (doRegen && e.hp < e.maxHp && e.type !== 'boss' && e.type !== 'director') {
             e.hp = Math.min(e.maxHp, e.hp + 1);
           }
         }
       }
-      if (this.regenAcc >= 1.2) this.regenAcc = 0;
+      if (doRegen) this.regenAcc = 0;
     }
 
     // 2) Жалобщик — кидает книгу с дистанции (всегда, не только в «охоте»)
     if (this.type === 'returner') {
       this.throwTimer -= dt;
-      if (this.throwTimer <= 0 && d < 340 && d > 50) {
-        this.throwTimer = rand(2.2, 3.8) / rushMul;
+      const books = game ? game.projectiles.length : 0;
+      if (this.throwTimer <= 0 && d < 340 && d > 50 && books < 4) {
+        this.throwTimer = rand(2.8, 4.5) / rushMul;
         const a = angleTo(this.x, this.y, player.x, player.y);
         game.projectiles.push(new Projectile(this.x, this.y, a, 250 * rushMul, this));
-        this.bubble = new SpeechBubble(this, 'Книга жалоб!!!');
+        if ((game._liveBubbles || 0) < MAX_SPEECH_BUBBLES) {
+          this.bubble = new SpeechBubble(this, 'Книга жалоб!!!');
+          game._liveBubbles = (game._liveBubbles || 0) + 1;
+        }
       }
     }
 
@@ -1322,7 +1356,10 @@ class Enemy {
       this.callTimer -= dt;
       if (this.callTimer <= 0) {
         this.callTimer = rand(5.5, 8.5);
-        this.bubble = new SpeechBubble(this, 'Срочно все сюда! 📱');
+        if ((game._liveBubbles || 0) < MAX_SPEECH_BUBBLES) {
+          this.bubble = new SpeechBubble(this, 'Срочно все сюда! 📱');
+          game._liveBubbles = (game._liveBubbles || 0) + 1;
+        }
         for (const e of game.enemies) {
           if (e === this || e.hp <= 0) continue;
           if (dist(this.x, this.y, e.x, e.y) < 280) {
@@ -1526,41 +1563,34 @@ class Enemy {
   draw(c, isRush) {
     c.save();
     const flash = Math.max(0, this.hitFlash / 0.15);
-    c.fillStyle = 'rgba(0,0,0,0.25)';
-    c.beginPath(); c.ellipse(this.x + 2, this.y + 3, 12, 5, 0, 0, Math.PI * 2); c.fill();
+    // Простая тень без shadowBlur — blur на Android убивает FPS при толпе
+    c.fillStyle = 'rgba(0,0,0,0.22)';
+    c.beginPath(); c.ellipse(this.x + 2, this.y + 3, 11, 4.5, 0, 0, Math.PI * 2); c.fill();
 
     if (this.type === 'manager') {
-      c.strokeStyle = 'rgba(155,89,186,0.35)'; c.lineWidth = 2;
+      c.strokeStyle = 'rgba(155,89,186,0.28)'; c.lineWidth = 2;
       c.beginPath(); c.arc(this.x, this.y, 150, 0, Math.PI * 2); c.stroke();
     }
     if (this.type === 'fatty') {
       const pulse = 0.55 + Math.sin(performance.now() / 180) * 0.15;
       c.strokeStyle = `rgba(255,80,30,${pulse})`;
-      c.lineWidth = 3;
+      c.lineWidth = 2;
       c.beginPath(); c.arc(this.x, this.y, this.r + 14, 0, Math.PI * 2); c.stroke();
-      c.fillStyle = 'rgba(255,60,20,0.12)';
-      c.beginPath(); c.arc(this.x, this.y, this.r + 14, 0, Math.PI * 2); c.fill();
     }
     if (this.type === 'influencer') {
-      c.strokeStyle = 'rgba(241,196,15,0.35)'; c.lineWidth = 2;
+      c.strokeStyle = 'rgba(241,196,15,0.28)'; c.lineWidth = 2;
       c.beginPath(); c.arc(this.x, this.y, 90, 0, Math.PI * 2); c.stroke();
     }
     if (this.type === 'blogger' && this.filmTimer > 0) {
-      c.strokeStyle = 'rgba(255,80,180,0.7)'; c.lineWidth = 2;
+      c.strokeStyle = 'rgba(255,80,180,0.65)'; c.lineWidth = 2;
       c.strokeRect(this.x - 40, this.y - 50, 80, 70);
-      c.fillStyle = 'rgba(255,80,180,0.15)';
-      c.fillRect(this.x - 40, this.y - 50, 80, 70);
-    }
-    if (this.type === 'child') {
-      c.fillStyle = '#fff'; c.font = 'bold 10px sans-serif'; c.textAlign = 'center';
-      c.fillText('🧒', this.x, this.y - this.r - 10);
     }
     if (this.type === 'director' || this.type === 'miniboss') {
-      c.strokeStyle = 'rgba(231,76,60,0.55)'; c.lineWidth = 3;
+      c.strokeStyle = 'rgba(231,76,60,0.5)'; c.lineWidth = 2;
       c.beginPath(); c.arc(this.x, this.y, this.r + 16, 0, Math.PI * 2); c.stroke();
     }
     if (this.type === 'tank' && (this.armorHits || 0) > 0) {
-      c.strokeStyle = 'rgba(149,165,166,0.8)'; c.lineWidth = 3;
+      c.strokeStyle = 'rgba(149,165,166,0.75)'; c.lineWidth = 2;
       c.beginPath(); c.arc(this.x, this.y, this.r + 6, 0, Math.PI * 2); c.stroke();
     }
 
@@ -1571,21 +1601,14 @@ class Enemy {
       : this.type === 'fatty' ? 0.78
       : this.type === 'tank' ? 0.62
       : 0.52;
-    if (flash > 0) c.globalCompositeOperation = 'lighter';
-    if (this.type === 'fatty') { c.shadowColor = 'rgba(255,80,20,0.7)'; c.shadowBlur = 16; }
-    else if (isRush) { c.shadowColor = 'rgba(255,60,30,0.5)'; c.shadowBlur = 12; }
-    else { c.shadowColor = 'rgba(100,160,255,0.35)'; c.shadowBlur = 8; }
-    if (this.hueRotate) c.filter = `hue-rotate(${this.hueRotate}deg) saturate(1.2)`;
+    if (flash > 0) c.globalAlpha = 0.55 + flash * 0.45;
     const frameKey = enemyMobFrameKey(this);
     const drewMob = frameKey && drawEnemyMob(c, frameKey, this.x, this.y + 4, { scale, flip });
     if (!drewMob && !drawSprite(c, spriteName, this.x, this.y + 4, { scale, flip, anchorY: 1 })) {
-      c.filter = 'none';
       c.fillStyle = this.type === 'fatty' ? '#e67e22' : (isRush ? '#e74c3c' : '#5dade2');
       c.beginPath(); c.arc(this.x, this.y, this.r, 0, Math.PI * 2); c.fill();
     }
-    c.filter = 'none';
-    c.globalCompositeOperation = 'source-over';
-    c.shadowBlur = 0;
+    c.globalAlpha = 1;
 
     if (this.type === 'fatty') {
       c.fillStyle = '#fff';
@@ -1594,13 +1617,15 @@ class Enemy {
       c.fillText('💣', this.x, this.y - this.r - 22);
     }
 
+    // Одна полоска HP вместо десятка кружков
     if (this.hp < this.maxHp) {
-      for (let i = 0; i < Math.min(this.maxHp, 12); i++) {
-        c.fillStyle = i < this.hp ? '#2ecc71' : '#555';
-        c.beginPath();
-        c.arc(this.x - (Math.min(this.maxHp,12)-1)*3.5 + i*7, this.y - this.r - 18, 2.2, 0, Math.PI*2);
-        c.fill();
-      }
+      const bw = Math.min(36, 10 + this.maxHp * 2);
+      const bx = this.x - bw / 2;
+      const by = this.y - this.r - 14;
+      c.fillStyle = 'rgba(0,0,0,0.45)';
+      c.fillRect(bx - 1, by - 1, bw + 2, 5);
+      c.fillStyle = '#2ecc71';
+      c.fillRect(bx, by, bw * Math.max(0, this.hp / this.maxHp), 3);
     }
     c.restore();
     if (this.bubble && !this.bubble.dead) this.bubble.draw(c, this.x, this.y - this.r - 22);
@@ -1888,8 +1913,9 @@ class Player {
   }
 
   applyComplaint() {
-    this.slowTimer = 5;
-    this.muteAttack = 2.5;
+    // Не продлеваем бесконечно при спаме книг — иначе «Без удара» залипает
+    this.slowTimer = Math.max(this.slowTimer, 2.8);
+    if (this.muteAttack <= 0.15) this.muteAttack = 1.4;
   }
 
   applyLunch() {
@@ -1938,7 +1964,11 @@ class Player {
 
     const keys = PLAYER_ANIM.anims[anim] || PLAYER_ANIM.anims.walk_down;
     const frameKey = keys[Math.max(0, frameIdx % keys.length)];
-    if (this.lunchTimer > 0) { c.shadowColor = '#f1c40f'; c.shadowBlur = 16; }
+    if (this.lunchTimer > 0) {
+      c.strokeStyle = 'rgba(241,196,15,0.75)';
+      c.lineWidth = 3;
+      c.beginPath(); c.arc(this.x, this.y, this.r + 10, 0, Math.PI * 2); c.stroke();
+    }
     if (this.slowTimer > 0) c.globalAlpha = 0.85;
 
     const drawn = drawPlayerAnimFrame(c, frameKey, this.x, this.y + 4, { flip, anchorY: 1 });
@@ -3103,7 +3133,10 @@ class Game {
   }
 
   spawnParticles(x, y, count, color, spread = 200, life = 0.6) {
-    for (let i = 0; i < count; i++) {
+    const room = MAX_PARTICLES - this.particles.length;
+    if (room <= 0) return;
+    const n = Math.min(count, room, LOW_GFX ? Math.ceil(count * 0.45) : count);
+    for (let i = 0; i < n; i++) {
       const a = rand(0, Math.PI * 2), s = rand(spread * 0.3, spread);
       this.particles.push(new Particle(x, y, Math.cos(a) * s, Math.sin(a) * s, color, rand(life * 0.5, life), rand(2, 6)));
     }
@@ -3236,13 +3269,10 @@ class Game {
         ctx.globalAlpha = Math.max(0.15, line.strike / 0.22);
         ctx.strokeStyle = '#ff3b1f';
         ctx.lineWidth = line.halfW * 2.2;
-        ctx.shadowColor = '#ff6b00';
-        ctx.shadowBlur = 18;
         ctx.beginPath();
         ctx.moveTo(line.x1, line.y1);
         ctx.lineTo(line.x2, line.y2);
         ctx.stroke();
-        ctx.shadowBlur = 0;
         ctx.globalAlpha = 0.9;
         ctx.strokeStyle = '#fff5e6';
         ctx.lineWidth = 5;
@@ -3677,6 +3707,13 @@ class Game {
       sfx.mode();
     }
 
+    // Считаем живые баблы один раз за кадр (не на каждом мобе)
+    let liveBubbles = 0;
+    for (const e of this.enemies) {
+      if (e.bubble && !e.bubble.dead) liveBubbles++;
+    }
+    this._liveBubbles = liveBubbles;
+
     for (const enemy of this.enemies) {
       enemy.update(realDt, this.player, this.worldW, this.worldH, this.isChaseMode, this);
       this.pushOutOfObstacles(enemy, enemy.r);
@@ -3944,17 +3981,21 @@ class Game {
     const vx2 = cam.x + vw + tileSize;
     const vy2 = cam.y + vh + tileSize;
     ctx.imageSmoothingEnabled = false;
+    const themeTile = (this.getArenaTheme() && this.getArenaTheme().tile) || 'tile_beige';
+    const zones = this.zones;
+    const hasZones = zones && zones.length > 0;
     for (let x = vx1; x < vx2; x += tileSize) {
       for (let y = vy1; y < vy2; y += tileSize) {
-        // зоны — другие тайлы
-        const themeTile = (this.getArenaTheme() && this.getArenaTheme().tile) || 'tile_beige';
         let name = themeTile;
-        for (const z of this.zones) {
-          if (x + tileSize / 2 >= z.x && x + tileSize / 2 <= z.x + z.w &&
-              y + tileSize / 2 >= z.y && y + tileSize / 2 <= z.y + z.h) {
-            if (z.type === 'slippery') name = 'tile_gloss';
-            else if (z.type === 'foodcourt') name = 'tile_wood';
-            else if (z.type === 'checkout') name = 'tile_check';
+        if (hasZones) {
+          const cx = x + tileSize / 2, cy = y + tileSize / 2;
+          for (const z of zones) {
+            if (cx >= z.x && cx <= z.x + z.w && cy >= z.y && cy <= z.y + z.h) {
+              if (z.type === 'slippery') name = 'tile_gloss';
+              else if (z.type === 'foodcourt') name = 'tile_wood';
+              else if (z.type === 'checkout') name = 'tile_check';
+              break;
+            }
           }
         }
         // ровно tileSize — без +2, иначе при зуме швы рябят
@@ -4011,11 +4052,14 @@ class Game {
   /** Затемнение карты со световым пятном вокруг игрока */
   drawPlayerLight(shakeX = 0, shakeY = 0) {
     if (!this.player) return;
+    // На толпе мобов полный экранный градиент жрёт GPU Android — упрощаем / пропускаем
+    const crowded = this.enemies.length >= 10;
+    if (LOW_GFX && crowded && this.lightsOut <= 0 && !this.isChaseMode) return;
+
     const cam = this._renderCam || this.renderCamera();
     const px = (this.player.x - cam.x) * cam.z + shakeX;
     const py = (this.player.y - cam.y) * cam.z + shakeY;
 
-    // Радиус света — чуть больше в обед / на боссе
     let radius = Math.min(this.W, this.H) * 0.28;
     radius = Math.max(140, Math.min(260, radius));
     if (this.player.lunchTimer > 0) radius *= 1.25;
@@ -4028,22 +4072,20 @@ class Game {
     }
 
     ctx.save();
-    // Тёмный оверлей с прозрачным центром
-    const g = ctx.createRadialGradient(px, py, radius * 0.22, px, py, radius);
+    const g = ctx.createRadialGradient(px, py, radius * 0.25, px, py, radius);
     g.addColorStop(0, 'rgba(8, 10, 20, 0)');
-    g.addColorStop(0.45, `rgba(8, 10, 20, ${darkness * 0.35})`);
-    g.addColorStop(0.75, `rgba(8, 10, 20, ${darkness * 0.75})`);
+    g.addColorStop(0.7, `rgba(8, 10, 20, ${darkness * 0.7})`);
     g.addColorStop(1, `rgba(8, 10, 20, ${darkness})`);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, this.W, this.H);
-
-    // Мягкое тёплое свечение у персонажа
-    const glow = ctx.createRadialGradient(px, py - 8, 4, px, py - 8, radius * 0.55);
-    glow.addColorStop(0, 'rgba(255, 236, 180, 0.14)');
-    glow.addColorStop(0.5, 'rgba(255, 220, 140, 0.05)');
-    glow.addColorStop(1, 'rgba(255, 220, 140, 0)');
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 0, this.W, this.H);
+    // Второе свечение — только на десктопе / при lightsOut
+    if (!LOW_GFX || this.lightsOut > 0) {
+      const glow = ctx.createRadialGradient(px, py - 8, 4, px, py - 8, radius * 0.55);
+      glow.addColorStop(0, 'rgba(255, 236, 180, 0.12)');
+      glow.addColorStop(1, 'rgba(255, 220, 140, 0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, this.W, this.H);
+    }
     ctx.restore();
   }
 
@@ -4064,10 +4106,20 @@ class Game {
     ctx.setTransform(cam.z, 0, 0, cam.z, -Math.round(cam.x * cam.z) + sx, -Math.round(cam.y * cam.z) + sy);
     this.drawBackground();
     this.drawObstacles();
-    for (const p of this.particles) if (p.y < this.player.y - 30) p.draw(ctx);
-    for (const enemy of this.enemies) enemy.draw(ctx, this.isChaseMode);
+    const viewPad = 80;
+    const vx0 = cam.x - viewPad, vy0 = cam.y - viewPad;
+    const vx1 = cam.x + this.viewW() + viewPad, vy1 = cam.y + this.viewH() + viewPad;
+    for (const p of this.particles) {
+      if (p.y < this.player.y - 30 && p.x >= vx0 && p.x <= vx1 && p.y >= vy0 && p.y <= vy1) p.draw(ctx);
+    }
+    for (const enemy of this.enemies) {
+      if (enemy.x < vx0 || enemy.x > vx1 || enemy.y < vy0 || enemy.y > vy1) continue;
+      enemy.draw(ctx, this.isChaseMode);
+    }
     this.player.draw(ctx);
-    for (const p of this.particles) if (p.y >= this.player.y - 30) p.draw(ctx);
+    for (const p of this.particles) {
+      if (p.y >= this.player.y - 30 && p.x >= vx0 && p.x <= vx1 && p.y >= vy0 && p.y <= vy1) p.draw(ctx);
+    }
     for (const pk of this.pickups) pk.draw(ctx);
     for (const pr of this.projectiles) pr.draw(ctx);
     for (const pr of this.playerProjectiles) {
@@ -4098,9 +4150,9 @@ class Game {
       ctx.stroke();
       ctx.setLineDash([]);
       // тело «трупа» / бомбы
-      if (bomb.hueRotate) ctx.filter = `hue-rotate(${bomb.hueRotate}deg)`;
+      if (bomb.hueRotate && !LOW_GFX) ctx.filter = `hue-rotate(${bomb.hueRotate}deg)`;
       drawSprite(ctx, bomb.sprite, bomb.x, bomb.y + 4, { scale: bomb.scale, anchorY: 1, alpha: 0.85 });
-      ctx.filter = 'none';
+      if (bomb.hueRotate && !LOW_GFX) ctx.filter = 'none';
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 18px sans-serif';
       ctx.textAlign = 'center';
