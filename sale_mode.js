@@ -6,10 +6,11 @@
   'use strict';
 
   const SALE_DURATION = 20 * 60; // 20 минут
-  const SALE_MAX_ENEMIES = 72; // +30% к базовым 55
+  const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
   const SALE_WORLD_MUL = 2.75;
   const SALE_MAX_WEAPONS = 6;
   const SALE_MAX_PASSIVES = 6;
+  const SALE_LIFESTEAL_CD = 2.2; // сек между хилами от вампиризма
 
   /**
    * Оружия Распродажи — вещи из ТЦ + вампирская ветка.
@@ -123,9 +124,9 @@
     },
     bloody_price: {
       id: 'bloody_price', name: 'Кровавый прайс', ico: '🩸', max: 5,
-      desc: 'Красные листки воруют HP',
+      desc: 'Красные листки; шанс хила только с убийства',
       type: 'projectile', evolve: 'black_friday',
-      baseCd: 0.95, dmg: [1, 1, 2, 2, 3], speed: 360, count: [2, 2, 3, 4, 5], lifesteal: 0.15,
+      baseCd: 0.95, dmg: [1, 1, 2, 2, 3], speed: 360, count: [2, 2, 3, 4, 5], lifesteal: 0.18,
       visual: 'bloody_price', impact: 'sp_bleed2',
     },
     bats: {
@@ -144,9 +145,9 @@
     },
     bloody_aura: {
       id: 'bloody_aura', name: 'Кровавая скидка', ico: '🔴', max: 5,
-      desc: 'Круг урона + вампиризм',
+      desc: 'Круг урона; редкий хил только с убийства',
       type: 'aura', evolve: 'black_friday',
-      baseCd: 0.4, dmg: [1, 1, 1, 2, 2], radius: [70, 82, 95, 110, 130], lifesteal: 0.2,
+      baseCd: 0.45, dmg: [1, 1, 1, 2, 2], radius: [70, 82, 95, 110, 130], lifesteal: 0.1,
       visual: 'bloody_aura', impact: 'sp_curse2',
     },
     // Эволюции (не в пуле новых, только через evolve)
@@ -200,9 +201,9 @@
     },
     black_friday: {
       id: 'black_friday', name: 'Чёрная пятница', ico: '💀', max: 1,
-      desc: 'Убитые взрываются кровавой лужей',
+      desc: 'Убитые взрываются; слабый хил с убийств',
       type: 'aura', evolved: true,
-      baseCd: 0.3, dmg: [3], radius: [120], lifesteal: 0.35, visual: 'bloody_aura', explodeOnKill: true,
+      baseCd: 0.35, dmg: [3], radius: [120], lifesteal: 0.16, visual: 'bloody_aura', explodeOnKill: true,
     },
   };
 
@@ -316,8 +317,18 @@
 
   function saleSpawnInterval(t) {
     const f = saleTimeFactor(t);
-    // на ~30% чаще спавн
-    return Math.max(0.14, (1.15 - f * 0.95) / 1.3);
+    // VS-плотность: быстро выходим на орду
+    return Math.max(0.07, 0.48 - f * 0.4);
+  }
+
+  /** Сколько мобов за один тик спавна */
+  function saleSpawnBurst(t) {
+    const f = saleTimeFactor(t);
+    if (f > 0.75) return 5;
+    if (f > 0.5) return 4;
+    if (f > 0.3) return 3;
+    if (f > 0.12) return 2;
+    return 1;
   }
 
   function saleEnemyType(t) {
@@ -581,8 +592,9 @@
     this.camera.x = this.player.x - this.viewW() / 2;
     this.camera.y = this.player.y - this.viewH() / 2;
 
-    // стартовый наплыв
-    for (let i = 0; i < 16; i++) this.spawnSaleEnemy();
+    // стартовый наплыв — сразу как мини-орда
+    for (let i = 0; i < 28; i++) this.spawnSaleEnemy();
+    this._saleLsCd = 0;
 
     this.refreshMusicState();
     sfx.click();
@@ -871,10 +883,12 @@
     if (opts.confuse && !died) {
       e._saleConfuse = Math.max(e._saleConfuse || 0, opts.confuse);
     }
-    if (opts.lifesteal && this.player.hp < this.player.maxHp) {
-      if (Math.random() < opts.lifesteal) {
+    if (opts.lifesteal && died && this.player.hp < this.player.maxHp) {
+      // вампиризм только с убийства + общий КД — нельзя AFK-хилиться с ауры
+      if ((this._saleLsCd || 0) <= 0 && Math.random() < opts.lifesteal) {
         this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);
-        this.spawnSpriteFx('sp_heal1', this.player.x, this.player.y - 18, { scale: 0.7, life: 0.25, vy: -25 });
+        this._saleLsCd = SALE_LIFESTEAL_CD;
+        this.spawnSpriteFx('sp_heal1', this.player.x, this.player.y - 18, { scale: 0.45, life: 0.25, vy: -25 });
       }
     }
     if (died) {
@@ -1605,6 +1619,7 @@
     music.setIntensity(this.saleTime > SALE_DURATION * 0.75 ? 'boss' : 'rush');
 
     this.saleTime += realDt;
+    if (this._saleLsCd > 0) this._saleLsCd -= realDt;
     if (this.saleTime >= SALE_DURATION) {
       this.endSaleGame(true);
       return;
@@ -1668,13 +1683,13 @@
     this.camera.x += (targetCX - this.camera.x) * Math.min(1, realDt * 5);
     this.camera.y += (targetCY - this.camera.y) * Math.min(1, realDt * 5);
 
-    // spawn
+    // spawn — пачками, как в Vampire Survivors
     this.saleSpawnAcc += realDt;
     const interval = saleSpawnInterval(this.saleTime) * (this.saleSpawnMul || 1);
     while (this.saleSpawnAcc >= interval) {
       this.saleSpawnAcc -= interval;
-      this.spawnSaleEnemy();
-      if (saleTimeFactor(this.saleTime) > 0.5) this.spawnSaleEnemy();
+      const burst = saleSpawnBurst(this.saleTime);
+      for (let i = 0; i < burst; i++) this.spawnSaleEnemy();
     }
 
     // enemies always chase in sale
