@@ -2202,6 +2202,75 @@ class Player {
     };
   }
 
+  /** Превью зоны удара (как isEnemyInHitZone), с учётом заряда */
+  getAimPreview() {
+    const charge = this.charging ? this.charge : (this.attacking ? (this.chargePower || 0) : 0);
+    const t = Math.max(0, Math.min(1, charge));
+    const radiusMul = t >= 0.45 ? (this.chargeRadiusMul || 1) : 1;
+    const baseLen = this.baseStickLength || this.stickLength || 42;
+    const baseArc = this.baseHitArc || this.hitArc || Math.PI / 3;
+    const reach = this.attacking
+      ? this.stickLength
+      : baseLen * (1 + t * 0.85) * radiusMul;
+    const arc = this.attacking
+      ? this.hitArc
+      : baseArc * (1 + t * 0.7) * (radiusMul > 1 ? 1.08 : 1);
+    return { angle: this.angle, reach, arc, charge: t };
+  }
+
+  drawAimMarker(c) {
+    if (this.dashTime > 0) return;
+    const aim = this.getAimPreview();
+    const ang = aim.angle;
+    const half = (aim.arc || Math.PI / 3) * 0.5;
+    const outer = this.r + aim.reach;
+    const charging = this.charging && aim.charge > 0.02;
+    const swinging = this.attacking;
+
+    c.save();
+    // сектор на полу — куда реально бьёт хитбокс
+    c.globalAlpha = swinging ? 0.28 : (charging ? 0.18 + aim.charge * 0.2 : 0.12);
+    c.fillStyle = swinging ? '#f1c40f' : (charging ? '#9b59b6' : '#5dade2');
+    c.beginPath();
+    c.moveTo(this.x, this.y);
+    c.arc(this.x, this.y, outer, ang - half, ang + half);
+    c.closePath();
+    c.fill();
+
+    c.globalAlpha = swinging ? 0.65 : (charging ? 0.5 + aim.charge * 0.35 : 0.38);
+    c.strokeStyle = swinging ? '#ffeaa7' : (charging ? '#d2b4de' : '#aed6f1');
+    c.lineWidth = 2;
+    c.beginPath();
+    c.arc(this.x, this.y, outer, ang - half, ang + half);
+    c.stroke();
+    // боковые лучи
+    c.beginPath();
+    c.moveTo(this.x, this.y);
+    c.lineTo(this.x + Math.cos(ang - half) * outer, this.y + Math.sin(ang - half) * outer);
+    c.moveTo(this.x, this.y);
+    c.lineTo(this.x + Math.cos(ang + half) * outer, this.y + Math.sin(ang + half) * outer);
+    c.stroke();
+
+    // маркер «куда бьёт» на краю сектора
+    const tipX = this.x + Math.cos(ang) * outer;
+    const tipY = this.y + Math.sin(ang) * outer;
+    const px = Math.cos(ang + Math.PI / 2);
+    const py = Math.sin(ang + Math.PI / 2);
+    const back = 8;
+    c.globalAlpha = swinging ? 0.9 : 0.75;
+    c.strokeStyle = '#ffffff';
+    c.fillStyle = swinging ? 'rgba(241,196,15,0.85)' : (charging ? 'rgba(155,89,186,0.8)' : 'rgba(93,173,226,0.75)');
+    c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(tipX, tipY);
+    c.lineTo(tipX - Math.cos(ang) * back + px * 6, tipY - Math.sin(ang) * back + py * 6);
+    c.lineTo(tipX - Math.cos(ang) * back - px * 6, tipY - Math.sin(ang) * back - py * 6);
+    c.closePath();
+    c.fill();
+    c.stroke();
+    c.restore();
+  }
+
   isEnemyInHitZone(enemy) {
     if (!this.attacking) return false;
     if (this.hitEnemies.has(enemy)) return false;
@@ -2258,6 +2327,12 @@ class Player {
     if (blink && this.lunchTimer <= 0) c.globalAlpha = 0.35;
     c.fillStyle = 'rgba(0,0,0,0.28)';
     c.beginPath(); c.ellipse(this.x + 2, this.y + 4, 12, 5, 0, 0, Math.PI * 2); c.fill();
+
+    // маркер удара под спрайтом — куда смотрит / куда попадёт
+    c.restore();
+    this.drawAimMarker(c);
+    c.save();
+    if (blink && this.lunchTimer <= 0) c.globalAlpha = 0.35;
 
     const ang = this.angle;
     let flip = false;
