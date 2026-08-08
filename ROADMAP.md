@@ -12,7 +12,7 @@
 - [x] Выбор героя: Лена / Игорь / Маша
 - [x] Эволюции/пассы из атласа (иконки + новые эво; фикс hunter/black_friday)
 - [x] Вычистить мёртвый код shift (хаб/магазин/волны/spawn) из `index.html`
-- [ ] PWA (manifest + sw) по желанию
+- [x] PWA: `manifest.webmanifest` + `sw.js` + иконки
 - [ ] (опц.) вырезать неиспользуемое тело `Game.update` / melee UI
 
 ## Принцип
