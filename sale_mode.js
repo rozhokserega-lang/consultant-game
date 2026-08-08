@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const SALE_VERSION = '0.3.2-sale';
+  const SALE_VERSION = '0.3.3-sale';
   const SALE_DURATION = 20 * 60; // 20 минут
   const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
   const SALE_WORLD_MUL = 2.75;
@@ -558,46 +558,32 @@
     }
   };
 
-  const _update = Game.prototype.update;
   Game.prototype.update = function (dt) {
-    if (this.gameMode === 'sale') return this.updateSale(dt);
-    return _update.call(this, dt);
+    return this.updateSale(dt);
   };
 
-  const _updateHUD = Game.prototype.updateHUD;
   Game.prototype.updateHUD = function () {
-    if (this.gameMode === 'sale') return this.updateSaleHUD();
-    return _updateHUD.call(this);
+    return this.updateSaleHUD();
   };
 
-  const _endGame = Game.prototype.endGame;
   Game.prototype.endGame = function (won, killer) {
-    if (this.gameMode === 'sale') return this.endSaleGame(won, killer);
-    return _endGame.call(this, won, killer);
+    return this.endSaleGame(won, killer);
   };
 
-  const _onEnemyKilled = Game.prototype.onEnemyKilled;
   Game.prototype.onEnemyKilled = function (enemy) {
-    if (this.gameMode === 'sale') return this.onSaleEnemyKilled(enemy);
-    return _onEnemyKilled.call(this, enemy);
+    return this.onSaleEnemyKilled(enemy);
   };
 
-  const _openUpgradeUI = Game.prototype.openUpgradeUI;
   Game.prototype.openUpgradeUI = function () {
-    if (this.gameMode === 'sale') return this.openSaleUpgradeUI();
-    return _openUpgradeUI.call(this);
+    return this.openSaleUpgradeUI();
   };
 
-  const _pickUpgrade = Game.prototype.pickUpgrade;
   Game.prototype.pickUpgrade = function (i) {
-    if (this.gameMode === 'sale') return this.pickSaleUpgrade(i);
-    return _pickUpgrade.call(this, i);
+    return this.pickSaleUpgrade(i);
   };
 
-  const _resetGame = Game.prototype.resetGame;
   Game.prototype.resetGame = function () {
-    if (this.gameMode === 'sale') return this.resetSaleGame();
-    return _resetGame.call(this);
+    return this.resetSaleGame();
   };
 
   const _explodeAt = Game.prototype.explodeAt;

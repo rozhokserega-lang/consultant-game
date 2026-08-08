@@ -419,19 +419,6 @@
   @media (hover: none) and (pointer: coarse) {
     body.sale-mode #game-container { padding-bottom: 0 !important; }
   }
-  .hub-mode-pick {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 4px;
-  }
-  @media (max-width: 560px) {
-    .hub-mode-pick { grid-template-columns: 1fr; }
-  }
-  .hub-mode-card {
-    text-align: left; padding: 14px 12px; border-radius: 12px; cursor: pointer;
-    border: 2px solid #555; background: rgba(255,255,255,0.04); color: #eee;
-  }
-  .hub-mode-card:hover { border-color: #f1c40f; }
-  .hub-mode-card .big { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
-  .hub-mode-card .sub { font-size: 12px; color: #aaa; line-height: 1.35; }
   .hub-back {
     background: transparent; border: 1px solid #555; color: #ccc;
     border-radius: 8px; padding: 4px 10px; font-size: 12px; cursor: pointer; margin-bottom: 6px;
@@ -518,26 +505,11 @@
     </div>
   </div>
 
-  <!-- Магазин между волнами -->
-  <div class="overlay" id="shop-overlay">
-    <div class="panel" style="max-width:640px;">
-      <div class="shop-head">
-        <h2 style="margin:0;">🛒 Магазин смены</h2>
-        <span class="coin-pill" id="shop-coins">🪙 0</span>
-      </div>
-      <p id="shop-sub">Перед волной закупись. Лимит покупок: 2. Оружие только купить — взять в руки можно перед сменой.</p>
-      <div class="shop-grid" id="shop-grid"></div>
-      <div class="row-btns">
-        <button class="btn" id="btn-shop-go" type="button">В бой! ⚔</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Пауза -->
   <div class="overlay" id="pause-overlay">
     <div class="panel" style="max-width:520px;">
       <h2>⏸ Пауза</h2>
-      <p id="pause-sub">Смена на паузе. Покупатели ждут…</p>
+      <p id="pause-sub">Распродажа на паузе.</p>
       <div class="pause-loadout" id="pause-loadout"></div>
       <div class="row-btns">
         <button class="btn" id="btn-resume" type="button">Продолжить</button>
@@ -555,11 +527,9 @@
         <button class="btn ghost" id="tog-sound" type="button">🔊 Звук: ВКЛ</button>
         <button class="btn ghost" id="tog-music" type="button">🎵 Музыка: ВКЛ</button>
         <button class="btn ghost" id="tog-vibro" type="button">📳 Вибрация: ВКЛ</button>
-        <button class="btn ghost" id="tog-hammer" type="button">⚔ Оружие: Молоток</button>
-        <p style="font-size:11px;color:#aaa;margin-top:4px;">Смена оружия — только в подготовке к смене</p>
         <button class="btn" id="btn-settings-close" type="button">Закрыть</button>
       </div>
-      <p style="margin-top:12px;font-size:12px;">Рекорд: <b id="set-record">0</b> · Оружие: <b id="set-hammers">1</b> · Банк: <b id="set-bank">0</b></p>
+      <p style="margin-top:12px;font-size:12px;">Рекорд: <b id="set-record">0</b> · Банк: <b id="set-bank">0</b></p>
     </div>
   </div>
 
@@ -586,16 +556,11 @@
         <h2>🛒 Распродажа</h2>
         <p>Банк: <b id="hub-bank">0</b> 🪙 · Рекорд: <b id="hub-record">0</b> · <span id="hub-version" title="Дев-панель">v?</span></p>
 
-        <!-- Режим «Смена» отключён: только Распродажа (механика VS / LONG NIGHT). -->
-        <div class="hub-pane" id="hub-pane-modes" style="display:none;"></div>
-
         <div class="hub-pane on" id="hub-pane-prep">
           <div class="hub-tabs">
             <button type="button" class="hub-tab on" data-hub-tab="prep" id="hub-tab-prep">Подготовка · Распродажа</button>
             <button type="button" class="hub-tab" data-hub-tab="book" id="hub-tab-book">📖 Книга жалоб</button>
           </div>
-
-          <div id="hub-shift-loadout" style="display:none;"></div>
 
           <div id="hub-sale-loadout">
             <div class="hub-sec">Консультант</div>
@@ -2908,21 +2873,6 @@ class Game {
     document.getElementById('tog-vibro').onclick = () => {
       this.vibro = !this.vibro; this.persist(); this.refreshSettingsUI();
     };
-    document.getElementById('tog-hammer').onclick = () => {
-      if (!this.inHub) {
-        sfx.hurt();
-        return;
-      }
-      const list = this.unlockedWeapons();
-      const idx = list.findIndex(h => h.id === this.weaponId);
-      this.weaponId = list[(idx + 1) % list.length].id;
-      this.hammerId = this.weaponId;
-      if (this.player) this.refreshPlayerLoadoutWeapon();
-      this.persist();
-      this.refreshSettingsUI();
-      sfx.click();
-    };
-    document.getElementById('btn-shop-go').onclick = () => this.closeShopAndFight();
   }
 
   persist() {
@@ -2967,7 +2917,7 @@ class Game {
   }
 
   hideOverlays() {
-    ['upgrade-overlay','pause-overlay','settings-overlay','end-overlay','shop-overlay','hub-overlay'].forEach(id => {
+    ['upgrade-overlay','pause-overlay','settings-overlay','end-overlay','hub-overlay'].forEach(id => {
       document.getElementById(id).classList.remove('show');
     });
     this.choosingUpgrade = false;
@@ -3006,9 +2956,7 @@ class Game {
     const togMusic = document.getElementById('tog-music');
     if (togMusic) togMusic.textContent = music.enabled ? '🎵 Музыка: ВКЛ' : '🔕 Музыка: ВЫКЛ';
     document.getElementById('tog-vibro').textContent = this.vibro ? '📳 Вибрация: ВКЛ' : '📳 Вибрация: ВЫКЛ';
-    document.getElementById('tog-hammer').textContent = '⚔ Оружие: ' + this.getWeapon().name;
     document.getElementById('set-record').textContent = this.highScore;
-    document.getElementById('set-hammers').textContent = this.unlockedWeapons().length + '/' + WEAPONS.length;
     const bankEl = document.getElementById('set-bank');
     if (bankEl) bankEl.textContent = this.bankCoins;
   }
@@ -3028,43 +2976,25 @@ class Game {
     const box = document.getElementById('pause-loadout');
     const sub = document.getElementById('pause-sub');
     if (!box) return;
-    if (this.gameMode === 'sale') {
-      if (sub) sub.textContent = 'Распродажа на паузе. Твой текущий билд:';
-      const weps = Object.entries(this.saleWeapons || {})
-        .filter(([, lv]) => lv > 0)
-        .map(([id, lv]) => {
-          const def = (typeof SALE_WEAPONS !== 'undefined' && SALE_WEAPONS[id]) || { ico: '⚔', name: id, max: 5 };
-          return `<span class="pause-chip"><span>${def.ico || '⚔'}</span><span class="nm">${def.name || id}</span><span class="lv">Lv${lv}${def.max ? '/' + def.max : ''}</span></span>`;
-        });
-      const pass = Object.entries(this.salePassives || {})
-        .filter(([, lv]) => lv > 0)
-        .map(([id, lv]) => {
-          const def = (typeof SALE_PASSIVES !== 'undefined' && SALE_PASSIVES[id]) || { ico: '◆', name: id, max: 5 };
-          return `<span class="pause-chip"><span>${def.ico || '◆'}</span><span class="nm">${def.name || id}</span><span class="lv">Lv${lv}</span></span>`;
-        });
-      box.innerHTML = `
-        <div class="sec">Оружие · ${weps.length}/6</div>
-        <div class="pause-chips">${weps.length ? weps.join('') : '<span class="pause-empty">Пока только кулаки…</span>'}</div>
-        <div class="sec">Пассивки · ${pass.length}/6</div>
-        <div class="pause-chips">${pass.length ? pass.join('') : '<span class="pause-empty">Пассивок ещё нет</span>'}</div>
-      `;
-    } else {
-      if (sub) sub.textContent = 'Смена на паузе. Покупатели ждут…';
-      const w = this.getWeapon ? this.getWeapon() : null;
-      const ab = this.abilityLevels || {};
-      const abChips = [];
-      if ((ab.dash || 0) > 0) abChips.push(`<span class="pause-chip"><span>💨</span><span class="nm">Дэш</span><span class="lv">Lv${ab.dash}</span></span>`);
-      if ((ab.tea || 0) > 0) abChips.push(`<span class="pause-chip"><span>☕</span><span class="nm">Обед</span><span class="lv">Lv${ab.tea}</span></span>`);
-      if ((ab.charge || 0) > 0) abChips.push(`<span class="pause-chip"><span>💥</span><span class="nm">Сильный удар</span><span class="lv">Lv${ab.charge}</span></span>`);
-      box.innerHTML = `
-        <div class="sec">Оружие в руках</div>
-        <div class="pause-chips">${w
-          ? `<span class="pause-chip"><span>${w.ico || '⚔'}</span><span class="nm">${w.name}</span><span class="lv">Lv${this.getWeaponLevel ? this.getWeaponLevel(w.id) : 1}</span></span>`
-          : '<span class="pause-empty">—</span>'}</div>
-        <div class="sec">Способности</div>
-        <div class="pause-chips">${abChips.length ? abChips.join('') : '<span class="pause-empty">Базовый набор</span>'}</div>
-      `;
-    }
+    if (sub) sub.textContent = 'Распродажа на паузе. Твой текущий билд:';
+    const weps = Object.entries(this.saleWeapons || {})
+      .filter(([, lv]) => lv > 0)
+      .map(([id, lv]) => {
+        const def = (typeof SALE_WEAPONS !== 'undefined' && SALE_WEAPONS[id]) || { ico: '⚔', name: id, max: 5 };
+        return `<span class="pause-chip"><span>${def.ico || '⚔'}</span><span class="nm">${def.name || id}</span><span class="lv">Lv${lv}${def.max ? '/' + def.max : ''}</span></span>`;
+      });
+    const pass = Object.entries(this.salePassives || {})
+      .filter(([, lv]) => lv > 0)
+      .map(([id, lv]) => {
+        const def = (typeof SALE_PASSIVES !== 'undefined' && SALE_PASSIVES[id]) || { ico: '◆', name: id, max: 5 };
+        return `<span class="pause-chip"><span>${def.ico || '◆'}</span><span class="nm">${def.name || id}</span><span class="lv">Lv${lv}</span></span>`;
+      });
+    box.innerHTML = `
+      <div class="sec">Оружие · ${weps.length}/6</div>
+      <div class="pause-chips">${weps.length ? weps.join('') : '<span class="pause-empty">Пока только кулаки…</span>'}</div>
+      <div class="sec">Пассивки · ${pass.length}/6</div>
+      <div class="pause-chips">${pass.length ? pass.join('') : '<span class="pause-empty">Пассивок ещё нет</span>'}</div>
+    `;
   }
 
   updateUpgradeRerollBtn() {
@@ -3174,23 +3104,7 @@ class Game {
     sfx.click();
   }
 
-  pickHubMode(_mode) {
-    // Только Распродажа
-    this.gameMode = 'sale';
-    this.hubScreen = 'prep';
-    this.hubTab = 'prep';
-    this.persist();
-    this.renderHub();
-    sfx.click();
-  }
 
-  showHubModes() {
-    // Выбор режима убран — всегда подготовка Распродажи
-    this.hubScreen = 'prep';
-    this.hubTab = 'prep';
-    this.renderHub();
-    sfx.click();
-  }
 
   recordKill(type) {
     if (!type) return;
@@ -3232,68 +3146,7 @@ class Game {
     if (tot) tot.textContent = 'Всего выписано жалоб: ' + total;
   }
 
-  renderHubWeapons() {
-    const wrap = document.getElementById('hub-weapons');
-    if (!wrap) return;
-    wrap.innerHTML = '';
-    const hammerOnly = this.selectedChallenge === 'hammer_only';
-    for (const base of WEAPONS) {
-      const owned = this.ownedWeapons.includes(base.id);
-      const locked = !owned || (hammerOnly && base.id !== 'hammer');
-      const lv = this.getWeaponLevel(base.id);
-      const w = scaleWeaponStats(base, lv);
-      const el = document.createElement('div');
-      el.className = 'hub-card wep-card' + (this.weaponId === base.id && !locked ? ' sel' : '') + (locked ? ' locked' : '');
-      const meta = !owned ? 'Не куплено' : (hammerOnly && base.id !== 'hammer' ? 'Испытание' : (this.weaponId === base.id ? 'Выбрано' : 'Нажми — взять'));
-      const nextCost = owned ? weaponUpgradeCost(lv) : null;
-      el.innerHTML = `<div class="ttl">${base.ico} ${base.name} · ${lv}/${WEAPON_MAX_LEVEL}</div>
-        <div class="desc">Урон ${w.damage} · КД ${w.cooldown.toFixed(2)}с</div>
-        <div class="meta">${meta}</div>`;
-      if (!locked) {
-        el.onclick = (ev) => {
-          if (ev.target && ev.target.closest && ev.target.closest('.wep-up')) return;
-          this.weaponId = base.id;
-          this.hammerId = base.id;
-          if (this.player) this.refreshPlayerLoadoutWeapon();
-          this.persist();
-          this.renderHub();
-          sfx.click();
-        };
-      }
-      if (owned) {
-        const up = document.createElement('button');
-        up.type = 'button';
-        up.className = 'wep-up';
-        if (nextCost == null) {
-          up.textContent = 'Макс. уровень';
-          up.disabled = true;
-        } else {
-          up.textContent = `Прокачать 🪙 ${nextCost}`;
-          up.disabled = this.bankCoins < nextCost;
-          up.onclick = (ev) => {
-            ev.stopPropagation();
-            this.buyWeaponUpgrade(base.id);
-          };
-        }
-        el.appendChild(up);
-      }
-      wrap.appendChild(el);
-    }
-  }
 
-  buyWeaponUpgrade(id) {
-    if (!this.ownedWeapons.includes(id)) return;
-    const lv = this.getWeaponLevel(id);
-    const cost = weaponUpgradeCost(lv);
-    if (cost == null) return;
-    if (this.bankCoins < cost) { sfx.hurt(); return; }
-    this.bankCoins -= cost;
-    this.weaponLevels[id] = lv + 1;
-    if (this.weaponId === id && this.player) this.refreshPlayerLoadoutWeapon();
-    this.persist();
-    this.renderHub();
-    sfx.shop();
-  }
 
   renderHub() {
     document.getElementById('hub-bank').textContent = this.bankCoins;
@@ -3307,8 +3160,6 @@ class Game {
     const onPrep = this.hubScreen === 'prep';
     const onBook = this.hubScreen === 'book';
 
-    const modesPane = document.getElementById('hub-pane-modes');
-    if (modesPane) modesPane.classList.remove('on');
     document.getElementById('hub-pane-prep').classList.toggle('on', onPrep);
     document.getElementById('hub-pane-book').classList.toggle('on', onBook);
 
@@ -3326,120 +3177,16 @@ class Game {
       startBtn.textContent = 'Начать распродажу 🛒';
     }
 
-    const shiftBox = document.getElementById('hub-shift-loadout');
     const saleBox = document.getElementById('hub-sale-loadout');
-    if (shiftBox) shiftBox.style.display = 'none';
     if (saleBox) saleBox.style.display = '';
 
     if (onPrep || onBook) this.renderComplaintBook();
     if (!onPrep) return;
 
-    if (this.gameMode === 'sale') {
-      this.renderSaleHubLoadout();
-      return;
-    }
-
-    this.renderHubWeapons();
-    const hint = document.getElementById('hub-weapon-hint');
-    if (hint) {
-      hint.textContent = 'Выбери из купленного. Прокачка до 10 ур. за монеты банка (по чуть-чуть).';
-    }
-
-    const perkWrap = document.getElementById('hub-perks');
-    perkWrap.innerHTML = '';
-    for (const pk of META_PERKS) {
-      const lv = this.metaPerks[pk.id] || 0;
-      const nextCost = lv >= pk.max ? null : pk.cost[lv];
-      const el = document.createElement('button');
-      el.type = 'button';
-      el.className = 'hub-card' + (lv > 0 ? ' sel' : '');
-      el.innerHTML = `<div class="ttl">${pk.ico} ${pk.name} · ${lv}/${pk.max}</div>
-        <div class="desc">${pk.desc}</div>
-        <div class="meta">${nextCost == null ? 'Макс' : 'Купить 🪙 ' + nextCost}</div>`;
-      el.onclick = () => this.buyMetaPerk(pk.id);
-      perkWrap.appendChild(el);
-    }
-
-    const abWrap = document.getElementById('hub-abilities');
-    if (abWrap) {
-      abWrap.innerHTML = '';
-      for (const ab of ABILITY_DEFS) {
-        const lv = this.abilityLevels[ab.id] || 0;
-        const nextCost = abilityUpgradeCost(lv);
-        const el = document.createElement('button');
-        el.type = 'button';
-        el.className = 'hub-card' + (lv > 0 ? ' sel' : '');
-        el.innerHTML = `<div class="ttl">${ab.ico} ${ab.name} · ${lv}/${ABILITY_MAX_LEVEL}</div>
-          <div class="desc">${ab.desc}</div>
-          <div class="meta">${nextCost == null ? 'Макс' : 'Прокачать 🪙 ' + nextCost}</div>`;
-        el.onclick = () => this.buyAbilityUpgrade(ab.id);
-        abWrap.appendChild(el);
-      }
-    }
-    const ar = document.getElementById('hub-arenas');
-    ar.innerHTML = '';
-    for (const th of Object.values(ARENA_THEMES)) {
-      const el = document.createElement('button');
-      el.type = 'button';
-      el.className = 'hub-card' + (this.selectedArena === th.id ? ' sel' : '');
-      el.innerHTML = `<div class="ttl">${th.ico} ${th.name}</div><div class="desc">Тематическая арена</div>`;
-      el.onclick = () => {
-        this.selectedArena = th.id;
-        this.persist();
-        this.prepareIdleWorld();
-        this.renderHub();
-        sfx.click();
-      };
-      ar.appendChild(el);
-    }
-    const ch = document.getElementById('hub-challenges');
-    ch.innerHTML = '';
-    for (const c of CHALLENGES) {
-      const el = document.createElement('button');
-      el.type = 'button';
-      el.className = 'hub-card' + (this.selectedChallenge === c.id ? ' sel' : '');
-      el.innerHTML = `<div class="ttl">${c.ico} ${c.name}</div>
-        <div class="desc">${c.desc}</div>
-        <div class="meta">${c.bonus ? 'Бонус +' + c.bonus + '🪙' : '—'}</div>`;
-      el.onclick = () => {
-        this.selectedChallenge = c.id;
-        if (c.id === 'hammer_only') {
-          this.weaponId = 'hammer';
-          this.hammerId = 'hammer';
-        }
-        this.renderHub();
-        sfx.click();
-      };
-      ch.appendChild(el);
-    }
+    this.renderSaleHubLoadout();
   }
 
-  buyMetaPerk(id) {
-    const pk = META_PERKS.find(p => p.id === id);
-    if (!pk) return;
-    const lv = this.metaPerks[id] || 0;
-    if (lv >= pk.max) return;
-    const cost = pk.cost[lv];
-    if (this.bankCoins < cost) { sfx.hurt(); return; }
-    this.bankCoins -= cost;
-    this.metaPerks[id] = lv + 1;
-    this.persist();
-    this.renderHub();
-    sfx.shop();
-  }
 
-  buyAbilityUpgrade(id) {
-    if (!ABILITY_DEFS.some(a => a.id === id)) return;
-    const lv = this.abilityLevels[id] || 0;
-    const cost = abilityUpgradeCost(lv);
-    if (cost == null) return;
-    if (this.bankCoins < cost) { sfx.hurt(); return; }
-    this.bankCoins -= cost;
-    this.abilityLevels[id] = lv + 1;
-    this.persist();
-    this.renderHub();
-    sfx.shop();
-  }
 
   applyMetaToPlayer() {
     const p = this.player;
@@ -3537,7 +3284,8 @@ class Game {
     this.generateZones();
     this.camera.x = this.player.x - this.viewW() / 2;
     this.camera.y = this.player.y - this.viewH() / 2;
-    this.startWave(1);
+    this.wave = 1;
+    this.wavePhase = 'sale';
     this.refreshMusicState();
     sfx.click();
   }
@@ -3833,189 +3581,19 @@ class Game {
     }
   }
 
-  startWave(n) {
-    this.wave = n;
-    this.waveKills = 0;
-    this.waveSpawned = 0;
-    this.directorSpawned = false;
-    this.enemies = [];
-    this.projectiles = [];
-    this.fuseBombs = [];
-    this.blackFriday = (n === 4 || n === 8);
-    // Магазин со 2-й волны; первая — сразу в бой
-    if (n <= 1) {
-      this.beginWaveCombat();
-    } else {
-      this.wavePhase = 'shop';
-      this.openShop();
-    }
-  }
 
-  beginWaveCombat() {
-    this.wavePhase = 'mobs';
-    this.waveKills = 0;
-    this.waveSpawned = 0;
-    let kills = this.blackFriday
-      ? Math.round(KILLS_PER_WAVE * (1 + 0.55 * DIFFICULTY_EASE))
-      : KILLS_PER_WAVE;
-    if (this.selectedChallenge === 'x2') kills = Math.round(kills * 2);
-    this.killsPerWave = kills;
-    this.waveCoinBonus = this.blackFriday ? 2 : 1;
-    let cap = this.blackFriday ? Math.min(MAX_ENEMIES_ON_FIELD + 4, 24) : MAX_ENEMIES_ON_FIELD;
-    if (this.selectedChallenge === 'x2') cap = Math.min(cap + 4, 26);
-    this._fieldCap = cap;
-    const initial = Math.min(cap, this.killsPerWave);
-    for (let i = 0; i < initial; i++) this.spawnWaveMob();
-    this.modeFlash = 0.55;
-    if (this.blackFriday) {
-      this.modeFlash = 0.85;
-      this._bfBanner = 2.2;
-    }
-    if (this.wave >= 2) this.maybeTriggerMapEvent();
-    this.refreshMusicState();
-    sfx.mode();
-  }
 
-  maybeTriggerMapEvent() {
-    if (this.wave < 2) return;
-    if (this.eventCooldown > 0) return;
-    if (Math.random() > 0.55) { this.eventCooldown = 6; return; }
-    const roll = Math.random();
-    if (roll < 0.34) this.triggerFireAlarm();
-    else if (roll < 0.67) this.triggerLightsOut();
-    else this.triggerSaleRush();
-    this.eventCooldown = 14;
-  }
 
   showEventBanner(text, dur = 2.2) {
     this._eventBanner = { text, t: dur };
   }
 
-  triggerFireAlarm() {
-    this.fireAlarm = 9;
-    this.showEventBanner('🚨 ПОЖАРНАЯ ТРЕВОГА! Покупатели ускорились');
-    sfx.mode();
-  }
 
-  triggerLightsOut() {
-    this.lightsOut = 8;
-    this.showEventBanner('💡 СВЕТ ВЫКЛЮЧИЛИ! Видимость упала');
-    sfx.hurt();
-  }
 
-  triggerSaleRush() {
-    this.showEventBanner('🏷️ РАСПРОДАЖА! Толпа у витрины');
-    const sx = this.worldW * rand(0.25, 0.75);
-    const sy = this.worldH * rand(0.25, 0.75);
-    const n = Math.max(3, Math.round((5 + randi(0, 3)) * DIFFICULTY_EASE));
-    for (let i = 0; i < n; i++) {
-      if (this.enemies.filter(e => e.hp > 0).length >= (this._fieldCap || MAX_ENEMIES_ON_FIELD)) break;
-      const e = new Enemy(sx + rand(-40, 40), sy + rand(-40, 40), Math.random() < 0.4 ? 'fast' : 'normal', this.wave);
-      e.nameTag = 'Распродажа';
-      this.enemies.push(e);
-      if (this.wavePhase === 'mobs') this.waveSpawned = Math.min(this.killsPerWave, this.waveSpawned + 1);
-    }
-    sfx.shop();
-  }
 
-  openShop() {
-    this.shopping = true;
-    this.paused = true;
-    this.shopBuysLeft = SHOP_BUYS_PER_VISIT;
-    this.shopWaveStock = {}; // id -> bought count this visit
-    document.getElementById('shop-sub').textContent =
-      `Волна ${this.wave}: осталось покупок ${this.shopBuysLeft}. Оружие только покупается — смена в подготовке к смене.`;
-    this.renderShop();
-    document.getElementById('shop-overlay').classList.add('show');
-    this.refreshMusicState();
-    sfx.shop();
-  }
 
-  renderShop() {
-    document.getElementById('shop-coins').textContent = '🪙 ' + this.coins + ' · покупок: ' + this.shopBuysLeft;
-    const grid = document.getElementById('shop-grid');
-    grid.innerHTML = '';
-    for (const item of SHOP_ITEMS) {
-      const isWeapon = !!item.weaponId;
-      const owned = isWeapon && this.ownedWeapons.includes(item.weaponId);
-      const equipped = isWeapon && this.weaponId === item.weaponId;
-      const runBought = this.shopBoughtRun && this.shopBoughtRun.has(item.id);
-      const waveBought = (this.shopWaveStock && this.shopWaveStock[item.id]) || 0;
-      const waveLimit = item.perWave || 0;
-      const soldOut = (item.oncePerRun && runBought) || (waveLimit && waveBought >= waveLimit);
-      const needsBuySlot = true;
-      const canAfford = this.coins >= item.price;
-      const canBuy = !owned && !soldOut && canAfford && this.shopBuysLeft > 0;
-      const el = document.createElement('button');
-      el.type = 'button';
-      el.className = 'shop-item' + (owned ? ' owned' : '') + ((!canBuy && !owned) || soldOut || owned ? ' locked' : '');
-      let priceTxt;
-      if (owned) priceTxt = 'Куплено';
-      else if (soldOut) priceTxt = 'Распродано';
-      else if (this.shopBuysLeft <= 0) priceTxt = 'Лимит покупок';
-      else priceTxt = '🪙 ' + item.price;
-      const wpn = isWeapon ? WEAPONS.find(w => w.id === item.weaponId) : null;
-      const ico = (wpn && wpn.icon) ? '' : (item.ico || '');
-      el.innerHTML = `<div class="ttl">${ico} ${item.ttl}</div><div class="desc">${item.desc}</div><div class="price">${priceTxt}</div>`;
-      // preview icon
-      if (wpn && wpn.icon && weaponIconImgs[wpn.icon]) {
-        const img = weaponIconImgs[wpn.icon];
-        if (img.complete) {
-          // add small img via HTML
-        }
-        el.innerHTML = `<div style="height:36px;display:flex;align-items:center;justify-content:center;"><img src="${(window.WEAPON_ICONS||{})[wpn.icon]||''}" style="height:34px;image-rendering:pixelated;"></div>` + el.innerHTML;
-      }
-      el.onclick = () => this.buyShopItem(item);
-      grid.appendChild(el);
-    }
-  }
 
-  buyShopItem(item) {
-    if (item.weaponId && this.selectedChallenge === 'hammer_only' && item.weaponId !== 'hammer') {
-      sfx.hurt(); return;
-    }
-    if (item.weaponId) {
-      if (this.ownedWeapons.includes(item.weaponId)) {
-        sfx.hurt();
-        return;
-      }
-      if (this.shopBuysLeft <= 0) { sfx.hurt(); return; }
-      if (this.coins < item.price) { sfx.hurt(); return; }
-      this.coins -= item.price;
-      this.shopBuysLeft--;
-      this.ownedWeapons.push(item.weaponId);
-      // Не меняем экипировку во время смены — только покупка в коллекцию
-      this.persist();
-      sfx.coin();
-      this.renderShop();
-      document.getElementById('shop-sub').textContent =
-        `Волна ${this.wave}: куплено «${item.ttl}». Взять в руки — перед следующей сменой. Покупок: ${this.shopBuysLeft}.`;
-      return;
-    }
-    if (item.oncePerRun && this.shopBoughtRun.has(item.id)) { sfx.hurt(); return; }
-    const waveBought = this.shopWaveStock[item.id] || 0;
-    if (item.perWave && waveBought >= item.perWave) { sfx.hurt(); return; }
-    if (this.shopBuysLeft <= 0) { sfx.hurt(); return; }
-    if (this.coins < item.price) { sfx.hurt(); return; }
-    this.coins -= item.price;
-    this.shopBuysLeft--;
-    this.shopWaveStock[item.id] = waveBought + 1;
-    if (item.oncePerRun) this.shopBoughtRun.add(item.id);
-    item.apply(this.player, this);
-    sfx.pickup();
-    this.renderShop();
-    this.updateHUD();
-    document.getElementById('shop-sub').textContent = `Волна ${this.wave}: осталось покупок ${this.shopBuysLeft}.`;
-  }
 
-  closeShopAndFight() {
-    document.getElementById('shop-overlay').classList.remove('show');
-    this.shopping = false;
-    this.paused = false;
-    this.beginWaveCombat();
-    this.refreshMusicState();
-    sfx.click();
-  }
 
   dropCoins(enemy) {
     let amount = enemy.coinDrop || 1;
@@ -4025,153 +3603,10 @@ class Game {
     this.pickups.push(new Pickup(enemy.x + rand(-10, 10), enemy.y + rand(-10, 10), 'coin', amount));
   }
 
-  spawnWaveMob() {
-    if (this.wavePhase !== 'mobs') return;
-    if (this.waveSpawned >= this.killsPerWave) return;
-    const living = this.enemies.filter(e => e.hp > 0).length;
-    const cap = this._fieldCap || MAX_ENEMIES_ON_FIELD;
-    if (living >= cap) return;
-    const before = this.enemies.length;
-    this.spawnEnemy();
-    const added = this.enemies.length - before;
-    this.waveSpawned += Math.max(1, added);
-    if (this.waveSpawned > this.killsPerWave) this.waveSpawned = this.killsPerWave;
-  }
 
   onEnemyKilled(enemy) {
-    this.recordKill(enemy.type);
-    if (enemy.type === 'director') {
-      this.endGame(true);
-      return;
-    }
-    if (enemy.type === 'boss' || enemy.type === 'miniboss') {
-      if (this.wave >= SHIFT_WAVES) this.endGame(true);
-      else this.startWave(this.wave + 1);
-      return;
-    }
-
-    if (this.wavePhase === 'mobs') {
-      this.waveKills++;
-      if (this.waveKills >= this.killsPerWave) {
-        this.wavePhase = 'boss';
-        this._clearMobsAfterKill = true;
-        this.spawnWaveBoss();
-      } else if (this.waveSpawned < this.killsPerWave) {
-        this.spawnWaveMob();
-      }
-    }
-  }
-
-  /** Если квота спавна исчерпана, а живых нет и киллов не хватает — доспавнить (антисофтлок). */
-  ensureWaveMobProgress() {
-    if (this.wavePhase !== 'mobs') return;
-    if (this.paused || this.choosingUpgrade || this.shopping || this.gameOver || this.won) return;
-    const living = this.enemies.filter(e => e.hp > 0).length;
-    if (living > 0) return;
-    if (this.waveKills >= this.killsPerWave) return;
-    if (this.waveSpawned >= this.killsPerWave) {
-      this.waveSpawned = this.waveKills;
-    }
-    this.spawnWaveMob();
-  }
-
-  spawnWaveBoss() {
-    this.wavePhase = 'boss';
-    this.projectiles = [];
-    this.fuseBombs = [];
-    // убрать обычных покупателей до спавна босса (иначе _clearMobsAfterKill снесёт и miniboss)
-    this.enemies = this.enemies.filter(e => e.type === 'boss' || e.type === 'miniboss' || e.type === 'director');
-    this.bossLines = [];
-    this._clearMobsAfterKill = false;
-    if (this.wave >= SHIFT_WAVES) {
-      this.spawnDirector();
-      return;
-    }
-    if (this.wave % 3 === 0) {
-      // мини-боссы на 3 / 6 / 9
-      const e = new Enemy(this.worldW * 0.5, this.worldH * 0.35, 'miniboss', this.wave);
-      if (this.wave === 3) { e.nameTag = 'Старший кассир'; e.hp = e.maxHp = Math.max(1, Math.round(24 * DIFFICULTY_EASE)); }
-      else if (this.wave === 6) { e.nameTag = 'Охрана ТЦ'; e.hp = e.maxHp = Math.max(1, Math.round(30 * DIFFICULTY_EASE)); e.speed *= 1.15; }
-      else { e.nameTag = 'Маркетолог'; e.hp = e.maxHp = Math.max(1, Math.round(34 * DIFFICULTY_EASE)); e.summonTimer = 4; }
-      this.enemies.push(e);
-      this.modeFlash = 0.7;
-      this._bossBanner = e.nameTag;
-      sfx.mode();
-      return;
-    }
-    this.spawnEnemy('boss');
-    this.modeFlash = 0.6;
-    sfx.mode();
-  }
-
-  spawnDirector() {
-    if (this.directorSpawned) return;
-    this.directorSpawned = true;
-    this.wavePhase = 'boss';
-    this.enemies = [];
-    this.projectiles = [];
-    this.spawnEnemy('director');
-    this.modeFlash = 0.8;
-    this.isChaseMode = true;
-    sfx.mode();
-  }
-
-  spawnEnemy(forceType = null) {
-    const b = this.getArenaBounds();
-    const margin = 28;
-    let x, y, tries = 0;
-    do {
-      const side = randi(0, 3);
-      if (side === 0) {
-        x = rand(b.x0 + margin, b.x1 - margin);
-        y = b.y0 + margin;
-      } else if (side === 1) {
-        x = b.x1 - margin;
-        y = rand(b.y0 + margin, b.y1 - margin);
-      } else if (side === 2) {
-        x = rand(b.x0 + margin, b.x1 - margin);
-        y = b.y1 - margin;
-      } else {
-        x = b.x0 + margin;
-        y = rand(b.y0 + margin, b.y1 - margin);
-      }
-      tries++;
-    } while (tries < 50 && this.collidesWithObstacle(x, y, 20));
-
-    let type = forceType;
-    if (!type) {
-      const r = Math.random();
-      const bf = this.blackFriday ? 0.08 : 0;
-      if (this.wave >= 2 && r < 0.10 + bf) type = 'fatty';
-      else if (this.wave >= 3 && r < 0.18 + bf) type = 'child';
-      else if (this.wave >= 4 && r < 0.26 + bf) type = 'blogger';
-      else if (this.wave >= 8 && r < 0.32) type = 'influencer';
-      else if (this.wave >= 6 && r < 0.38) type = 'manager';
-      else if (this.wave >= 4 && r < 0.44) type = 'returner';
-      else if (this.wave >= 3 && r < 0.50) type = 'queue';
-      else if (this.wave >= 5 && r < 0.60) type = 'tank';
-      else if (this.wave >= 2 && r < 0.72) type = 'fast';
-      else type = 'normal';
-    }
-
-    if (type === 'queue') {
-      // Очередь = до 3, но не больше остатка квоты волны
-      const slotsLeft = this.wavePhase === 'mobs'
-        ? Math.max(1, this.killsPerWave - this.waveSpawned)
-        : 3;
-      const count = Math.min(3, slotsLeft);
-      const leader = new Enemy(x, y, 'queue', this.wave);
-      this.enemies.push(leader);
-      for (let i = 1; i < count; i++) {
-        const follower = new Enemy(x - i * 20, y, 'queue', this.wave);
-        follower.queueLeader = leader;
-        follower.queueIndex = i;
-        this.enemies.push(follower);
-      }
-      return;
-    }
-
-    this.enemies.push(new Enemy(x, y, type, this.wave));
+    // Shift-волны удалены; Sale перехватывает через onSaleEnemyKilled.
+    if (enemy) this.recordKill(enemy.type);
   }
 
   spawnParticles(x, y, count, color, spread = 200, life = 0.6) {
@@ -5055,7 +4490,7 @@ class Game {
           this.player.fillSkill(5);
           this.spawnParticles(enemy.x, enemy.y, 6, '#bdc3c7', 140, 0.3);
           pr.life = 0;
-          if (died) this.handleEnemyDeath(enemy);
+          if (died) this.onEnemyKilled(enemy);
           break;
         }
       }
@@ -5074,30 +4509,6 @@ class Game {
     this.vibrate([20, 40, 20]);
   }
 
-  handleEnemyDeath(enemy) {
-    this.combo++;
-    this.comboTimer = 3.2;
-    this.maxCombo = Math.max(this.maxCombo, this.combo);
-    this.player.fillSkill(12 + Math.min(20, this.combo * 2));
-    const mult = 1 + Math.floor(this.combo / 3);
-    this.score += mult;
-    const leveled = this.player.gainXP(enemy.xpReward);
-    if (leveled) {
-      this.pendingUpgrades += leveled;
-      this.openUpgradeUI();
-    }
-    sfx.kill();
-    this.spawnParticles(enemy.x, enemy.y, 16, '#e74c3c', 220, 0.55);
-    this.spawnSpriteFx('fx_blood', enemy.x, enemy.y, { scale: 0.6, scaleEnd: 0.95, life: 0.3, vy: -8 });
-    this.dropCoins(enemy);
-    if (Math.random() < 0.22) this.pickups.push(new Pickup(enemy.x, enemy.y, Math.random() < 0.3 ? 'lunch' : 'heal'));
-    if (this.selectedChallenge !== 'hammer_only' && Math.random() < 0.08) {
-      const kinds = ['temp_mop', 'temp_stapler', 'temp_extinguisher'];
-      this.pickups.push(new Pickup(enemy.x, enemy.y, pick(kinds)));
-    }
-    if (enemy.type === 'fatty' || enemy.explodes) this.armFattyFuse(enemy);
-    this.onEnemyKilled(enemy);
-  }
 
   /** Камера для отрисовки: привязка к пикселям экрана (убирает рябь тайлов при зуме). */
   renderCamera() {
