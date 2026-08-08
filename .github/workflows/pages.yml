@@ -1,0 +1,88 @@
+name: Deploy Pages (prod + dev)
+
+on:
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main (prod)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main-src
+
+      - name: Checkout dev
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          path: dev-src
+
+      - name: Assemble site (root=main, /dev/=dev)
+        run: |
+          set -euo pipefail
+          mkdir -p site
+          # Prod at site root
+          rsync -a \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude 'site' \
+            --exclude 'reference' \
+            --exclude '.drawthings-models' \
+            --exclude '.next-tiktok' \
+            --exclude '.tmp-*' \
+            --exclude 'start-factory.command' \
+            --exclude '*копия*' \
+            main-src/ site/
+          # Dev under /dev/
+          mkdir -p site/dev
+          rsync -a \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude 'site' \
+            --exclude 'reference' \
+            --exclude '.drawthings-models' \
+            --exclude '.next-tiktok' \
+            --exclude '.tmp-*' \
+            --exclude 'start-factory.command' \
+            --exclude '*копия*' \
+            dev-src/ site/dev/
+          # Help relative assets when opened without trailing slash
+          if grep -q '<base ' site/dev/index.html; then
+            echo "base already present in dev index"
+          else
+            sed -i 's|<head>|<head>\n<base href="/consultant-game/dev/">|' site/dev/index.html
+          fi
+          # Marker for sanity checks
+          printf '%s\n' "prod=$(git -C main-src rev-parse --short HEAD)" "dev=$(git -C dev-src rev-parse --short HEAD)" > site/DEPLOY.txt
+          printf '%s\n' "dev=$(git -C dev-src rev-parse --short HEAD)" > site/dev/DEPLOY.txt
+          ls -la site | head
+          ls -la site/dev | head
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

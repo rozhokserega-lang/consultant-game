@@ -1,35 +1,36 @@
-# Telegram Mini App (dev)
+# Telegram Mini App
 
-Дев-сборка Sale крутится на GitHub Pages с ветки **`dev`**.
+Два URL — два бота. Токены в репозиторий не кладём.
 
-## URL
+| Бот | Ветка | URL |
+|-----|-------|-----|
+| **Прод** (старый) | `main` | https://rozhokserega-lang.github.io/consultant-game/ |
+| **Дев** (новый) | `dev` | https://rozhokserega-lang.github.io/consultant-game/dev/ |
 
-https://rozhokserega-lang.github.io/consultant-game/
+После `git push` в `main` или `dev` GitHub Actions пересобирает оба пути (1–3 минуты). Смотри вкладку Actions → **Deploy Pages**.
 
-Открой в браузере или встроь в бота — после каждого `git push` в `dev` Pages обновляется (обычно 1–2 минуты).
+## Новый дев-бот (BotFather)
 
-## BotFather
+1. [@BotFather](https://t.me/BotFather) → `/newbot` → имя и username (например `ConsultantSaleDevBot`).
+2. `/mybots` → этот бот → **Bot Settings → Menu Button** (или Configure Mini App).
+3. URL: `https://rozhokserega-lang.github.io/consultant-game/dev/`
+4. Открывай кнопкой меню или `https://t.me/<dev_bot>?startapp`.
 
-Токен бота в репозиторий не кладём. Настройку делает владелец бота:
+## Старый (прод) бот
 
-1. Открой [@BotFather](https://t.me/BotFather) → `/mybots` → свой бот.
-2. **Bot Settings → Menu Button** (или **Configure Mini App** / Web App).
-3. Вставь URL: `https://rozhokserega-lang.github.io/consultant-game/`
-4. Сохрани. В чате с ботом появится кнопка меню / Mini App.
+Оставь Menu Button / Mini App на:
 
-Альтернатива: команда `/newapp` у BotFather → привязать тот же URL как Mini App.
+`https://rozhokserega-lang.github.io/consultant-game/`
 
-Открытие: кнопка меню бота или ссылка вида `https://t.me/<bot_username>?startapp`.
+(без `/dev/`).
 
-## Что уже в коде
+## Проверка в браузере
 
-- `telegram-web-app.js` + `ready` / `expand` / цвета шапки под тёмный UI.
-- Относительные пути и SW учитывают базу `/consultant-game/`.
+- Прод: https://rozhokserega-lang.github.io/consultant-game/
+- Дев: https://rozhokserega-lang.github.io/consultant-game/dev/  
+  На деве в хабе версия должна быть свежая (`v0.3.x-sale`), файл `DEPLOY.txt` показывает короткий SHA.
 
-## Вернуть прод на `main`
+## Что в коде
 
-```bash
-gh api repos/rozhokserega-lang/consultant-game/pages -X PUT --input - <<'EOF'
-{"build_type":"legacy","source":{"branch":"main","path":"/"}}
-EOF
-```
+- WebApp bootstrap в `index.html` (`ready` / `expand` / цвета).
+- Workflow: [`.github/workflows/pages.yml`](.github/workflows/pages.yml) — root из `main`, `/dev/` из `dev`.

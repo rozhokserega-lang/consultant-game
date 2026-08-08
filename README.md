@@ -2,4 +2,7 @@
 
 HTML-игра для браузера и Telegram Mini App.
 
-Дев-сборка: ветка `dev` → GitHub Pages. См. [TELEGRAM.md](TELEGRAM.md).
+- **Прод** (`main`): https://rozhokserega-lang.github.io/consultant-game/
+- **Дев** (`dev`): https://rozhokserega-lang.github.io/consultant-game/dev/
+
+Подробнее: [TELEGRAM.md](TELEGRAM.md).
