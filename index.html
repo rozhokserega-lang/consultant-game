@@ -598,6 +598,9 @@
           <div id="hub-shift-loadout" style="display:none;"></div>
 
           <div id="hub-sale-loadout">
+            <div class="hub-sec">Консультант</div>
+            <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Выбери героя — у каждого свой старт.</p>
+            <div class="hub-grid" id="hub-sale-heroes"></div>
             <div class="hub-sec">Стартовые авто-оружия</div>
             <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Разблокируй стартовые оружия. Чек всегда с тобой. Эволюции открываются в забеге.</p>
             <div class="hub-grid" id="hub-sale-weapons"></div>
@@ -2607,7 +2610,11 @@ class Player {
     }
     if (this.slowTimer > 0) c.globalAlpha = 0.85;
 
+    if (this._saleHeroHue && (typeof LOW_GFX === 'undefined' || !LOW_GFX)) {
+      c.filter = `hue-rotate(${this._saleHeroHue}deg)`;
+    }
     const drawn = drawPlayerAnimFrame(c, frameKey, this.x, this.y + 4, { flip, anchorY: 1 });
+    if (this._saleHeroHue) c.filter = 'none';
     if (!drawn) {
       // fallback на старый атлас
       let name = 'player_front';
@@ -2744,6 +2751,7 @@ class Game {
     const migratedSale = saleWeps.map((id) => (id === 'hammer' || id === 'tags' || id === 'scanner' ? 'receipt' : id));
     this.saleUnlockedWeapons = Array.from(new Set(['receipt', ...migratedSale]));
     this.saleStartPassives = Object.assign({}, this.save.saleStartPassives || {});
+    this.selectedHeroId = this.save.selectedHeroId || 'lena';
     this.challengeFailed = false;
     this.tookDamage = false;
     this.playerProjectiles = [];
@@ -2934,6 +2942,7 @@ class Game {
       gameMode: this.gameMode,
       saleUnlockedWeapons: this.saleUnlockedWeapons,
       saleStartPassives: this.saleStartPassives,
+      selectedHeroId: this.selectedHeroId || 'lena',
       killLog: this.killLog,
     });
   }

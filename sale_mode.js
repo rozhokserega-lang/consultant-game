@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const SALE_VERSION = '0.3.0-sale';
+  const SALE_VERSION = '0.3.1-sale';
   const SALE_DURATION = 20 * 60; // 20 минут
   const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
   const SALE_WORLD_MUL = 2.75;
@@ -15,6 +15,50 @@
   const SALE_LIFESTEAL_CD = 2.2; // сек между хилами от вампиризма
   /** LN-style: враги слабее в начале, к 6:00 выходят на baseline */
   const SALE_WARM_MINUTES = 6;
+
+  /** Герои-консультанты (выбор в хабе) */
+  const SALE_HEROES = {
+    lena: {
+      id: 'lena',
+      name: 'Лена',
+      ico: '👩‍💼',
+      desc: 'Старший консультант. Баланс и +1 HP.',
+      hue: 0,
+      maxHpBonus: 1,
+      dmgMul: 1.06,
+      speedMul: 1,
+      xpMul: 1,
+      magnetBonus: 0,
+    },
+    igor: {
+      id: 'igor',
+      name: 'Игорь',
+      ico: '🧔',
+      desc: 'Охрана зала. Толще, чуть медленнее.',
+      hue: 195,
+      maxHpBonus: 2,
+      dmgMul: 0.95,
+      speedMul: 0.9,
+      xpMul: 1,
+      magnetBonus: 0,
+    },
+    masha: {
+      id: 'masha',
+      name: 'Маша',
+      ico: '💁‍♀️',
+      desc: 'Касса экспресс. Быстрее и больше XP.',
+      hue: 310,
+      maxHpBonus: 0,
+      dmgMul: 1,
+      speedMul: 1.14,
+      xpMul: 1.22,
+      magnetBonus: 35,
+    },
+  };
+
+  function getSaleHero(id) {
+    return SALE_HEROES[id] || SALE_HEROES.lena;
+  }
 
   /** Уникальные боссы ТЦ — расписание 5 / 10 / 15 мин */
   const SALE_BOSS_DEFS = {
@@ -642,10 +686,17 @@
 
     this.applyMetaToPlayer();
     this.applySalePassivesToPlayer();
+    this.applySaleHeroToPlayer();
     // стартовая vitality из хаба
     const vit = this.salePassives.vitality || 0;
     if (vit > 0) {
       this.player.maxHp += vit;
+      this.player.hp = this.player.maxHp;
+    }
+    // HP героя после vitality
+    const hero = getSaleHero(this.selectedHeroId);
+    if (hero.maxHpBonus) {
+      this.player.maxHp += hero.maxHpBonus;
       this.player.hp = this.player.maxHp;
     }
     this.generateObstacles();
@@ -668,12 +719,25 @@
     if (!p) return;
     const spd = (this.salePassives.speed || 0) + (this.salePassives.shoes || 0) + (this.salePassives.key || 0);
     const caff = this.saleWeapons.caffeine ? 0.25 : 0;
-    p._saleSpeedMul = 1 + spd * 0.08 + caff;
+    const hero = getSaleHero(this.selectedHeroId);
+    p._saleSpeedMul = (1 + spd * 0.08 + caff) * (hero.speedMul || 1);
+  };
+
+  Game.prototype.applySaleHeroToPlayer = function () {
+    const p = this.player;
+    if (!p) return;
+    const hero = getSaleHero(this.selectedHeroId);
+    this.saleHeroId = hero.id;
+    p._saleHeroId = hero.id;
+    p._saleHeroHue = hero.hue || 0;
+    p._saleHeroName = hero.name;
   };
 
   Game.prototype.saleDmgMul = function () {
+    const hero = getSaleHero(this.saleHeroId || this.selectedHeroId);
     return (1 + (this.salePassives.might || 0) * 0.12 + (this.salePassives.discount || 0) * 0.1)
-      * (this.saleWeaponDmgMul || 1);
+      * (this.saleWeaponDmgMul || 1)
+      * (hero.dmgMul || 1);
   };
   Game.prototype.saleCdMul = function () {
     const haste = (this.salePassives.haste || 0) + (this.salePassives.charger || 0) + (this.salePassives.energy || 0);
@@ -684,10 +748,12 @@
   };
   Game.prototype.saleMagnetRange = function () {
     const mag = (this.salePassives.magnet || 0) + (this.salePassives.radio || 0);
-    return 70 + mag * 36 + (this.metaPerks.magnet || 0) * 20;
+    const hero = getSaleHero(this.saleHeroId || this.selectedHeroId);
+    return 70 + mag * 36 + (this.metaPerks.magnet || 0) * 20 + (hero.magnetBonus || 0);
   };
   Game.prototype.saleXpMul = function () {
-    return 1 + (this.salePassives.badge || 0) * 0.12;
+    const hero = getSaleHero(this.saleHeroId || this.selectedHeroId);
+    return (1 + (this.salePassives.badge || 0) * 0.12) * (hero.xpMul || 1);
   };
   Game.prototype.saleAuraDmgMul = function () {
     return 1 + (this.salePassives.headphones || 0) * 0.15;
@@ -2489,12 +2555,34 @@
   // expose for debugging / hub
   window.SALE_WEAPONS = SALE_WEAPONS;
   window.SALE_PASSIVES = SALE_PASSIVES;
+  window.SALE_HEROES = SALE_HEROES;
   window.SALE_DURATION = SALE_DURATION;
   window.SALE_HUB_WEAPON_COST = SALE_HUB_WEAPON_COST;
   window.SALE_EVENT_POOLS = SALE_EVENT_POOLS;
   window.SALE_HUB_PASSIVES = SALE_HUB_PASSIVES;
 
   Game.prototype.renderSaleHubLoadout = function () {
+    const heroBox = document.getElementById('hub-sale-heroes');
+    if (heroBox) {
+      heroBox.innerHTML = '';
+      if (!this.selectedHeroId || !SALE_HEROES[this.selectedHeroId]) this.selectedHeroId = 'lena';
+      for (const hero of Object.values(SALE_HEROES)) {
+        const el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'hub-card' + (this.selectedHeroId === hero.id ? ' sel' : '');
+        el.innerHTML = `<div class="ttl">${hero.ico} ${hero.name}</div>
+          <div class="desc">${hero.desc}</div>
+          <div class="meta">${this.selectedHeroId === hero.id ? 'Выбран' : 'Выбрать'}</div>`;
+        el.onclick = () => {
+          this.selectedHeroId = hero.id;
+          this.persist();
+          this.renderHub();
+          sfx.click();
+        };
+        heroBox.appendChild(el);
+      }
+    }
+
     const wepBox = document.getElementById('hub-sale-weapons');
     if (wepBox) {
       wepBox.innerHTML = '';
