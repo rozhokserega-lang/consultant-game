@@ -1,22 +1,22 @@
-/* Minimal offline shell for Sale — cache core assets. */
-const CACHE = 'sale-v0.3.3';
+/* Minimal offline shell for Sale — cache core assets (GitHub Pages /consultant-game/). */
+const BASE = self.registration.scope; // e.g. https://…/consultant-game/
+const CACHE = 'sale-v0.3.3-tg';
 const ASSETS = [
-  './',
-  './index.html',
-  './sale_mode.js',
-  './manifest.webmanifest',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
-  './weapon_atlas.png',
-  './player_anim_atlas.png',
-  './enemy_mob_atlas.png',
-  './vfx_atlas.png',
-  './spell_atlas.png',
-  './pickup_fx_atlas.png',
-  './arena_props_atlas.png',
-  './storefront_atlas.png',
-  './wall_decor_atlas.png',
-];
+  'index.html',
+  'sale_mode.js',
+  'manifest.webmanifest',
+  'icons/icon-192.png',
+  'icons/icon-512.png',
+  'weapon_atlas.png',
+  'player_anim_atlas.png',
+  'enemy_mob_atlas.png',
+  'vfx_atlas.png',
+  'spell_atlas.png',
+  'pickup_fx_atlas.png',
+  'arena_props_atlas.png',
+  'storefront_atlas.png',
+  'wall_decor_atlas.png',
+].map((p) => new URL(p, BASE).href);
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -44,7 +44,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE).then((cache) => cache.put(req, copy));
         }
         return res;
-      }).catch(() => caches.match('./index.html'));
+      }).catch(() => caches.match(new URL('index.html', BASE).href));
     }),
   );
 });

@@ -13,6 +13,7 @@
 - [x] Эволюции/пассы из атласа (иконки + новые эво; фикс hunter/black_friday)
 - [x] Вычистить мёртвый код shift (хаб/магазин/волны/spawn) из `index.html`
 - [x] PWA: `manifest.webmanifest` + `sw.js` + иконки
+- [x] Telegram Mini App: Pages ← `dev`, bootstrap WebApp (см. `TELEGRAM.md`)
 - [ ] (опц.) вырезать неиспользуемое тело `Game.update` / melee UI
 
 ## Принцип
