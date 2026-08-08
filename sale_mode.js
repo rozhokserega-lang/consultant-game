@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const SALE_VERSION = '0.5.0-sale';
+  const SALE_VERSION = '0.5.1-sale';
   const SALE_DURATION = 20 * 60; // 20 минут
   const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
   const SALE_WORLD_MUL = 2.75;
@@ -102,7 +102,7 @@
 
   /** Пауэрапы с элиток/боссов (LN-style: chest / magnet / bomb) */
   const SALE_POWERUPS = {
-    chest: { id: 'chest', ico: '📦', name: 'Посылка со склада', color: '#d35400' },
+    chest: { id: 'chest', ico: '📦', sprite: 'paper_bag', name: 'Посылка со склада', color: '#d35400' },
     magnet: { id: 'magnet', ico: '🧲', name: 'Промо-магнит', color: '#9b59b6' },
     bomb: { id: 'bomb', ico: '🧨', name: 'Хлопушка', color: '#e74c3c' },
   };
@@ -2716,15 +2716,35 @@
       }
     }
 
-    // XP-кристаллы
+    // XP-дропы: выпавшие товары (Pixel Mart), тир по ценности гема
     for (const g of this.xpGems || []) {
       const bob = Math.sin(performance.now() / 180 + g.x * 0.05) * 2;
-      const sc = 0.18 + Math.min(0.12, (g.value || 1) * 0.03);
-      if (!drawVfx(ctx, 'fx_crystal', g.x, g.y + bob, { scale: sc, anchorY: 0.85, alpha: 0.95 })) {
-        ctx.fillStyle = '#2ecc71';
+      if (!g.ico && window.MART_TIERS) {
+        const tier = (g.value || 1) >= 6 ? '3' : (g.value || 1) >= 3 ? '2' : '1';
+        const list = window.MART_TIERS[tier] || [];
+        if (list.length) g.ico = list[Math.floor(Math.random() * list.length)];
+      }
+      const size = 16 + Math.min(10, (g.value || 1) * 2);
+      let drawn = false;
+      if (g.ico && typeof drawMartIcon === 'function') {
+        // мягкая тень, чтобы товар читался на полу
+        ctx.save();
+        ctx.globalAlpha = 0.28;
+        ctx.fillStyle = '#000';
         ctx.beginPath();
-        ctx.arc(g.x, g.y, g.r, 0, Math.PI * 2);
+        ctx.ellipse(g.x, g.y + bob + size * 0.42, size * 0.4, size * 0.16, 0, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
+        drawn = drawMartIcon(ctx, g.ico, g.x, g.y + bob, { targetSize: size });
+      }
+      if (!drawn) {
+        const sc = 0.18 + Math.min(0.12, (g.value || 1) * 0.03);
+        if (!drawVfx(ctx, 'fx_crystal', g.x, g.y + bob, { scale: sc, anchorY: 0.85, alpha: 0.95 })) {
+          ctx.fillStyle = '#2ecc71';
+          ctx.beginPath();
+          ctx.arc(g.x, g.y, g.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
     }
 
@@ -2743,14 +2763,18 @@
       ctx.arc(pu.x, pu.y + bob, (pu.r + 6) * pulse, 0, Math.PI * 2);
       ctx.stroke();
       ctx.globalAlpha = alpha;
-      const s = Math.round(24 * pulse);
-      ctx.font = `${s}px "Apple Color Emoji","Segoe UI Emoji",sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-      ctx.strokeText(def.ico, pu.x, pu.y + bob);
-      ctx.fillText(def.ico, pu.x, pu.y + bob);
+      const drewSprite = def.sprite && typeof drawMartIcon === 'function'
+        && drawMartIcon(ctx, def.sprite, pu.x, pu.y + bob, { targetSize: Math.round(30 * pulse) });
+      if (!drewSprite) {
+        const s = Math.round(24 * pulse);
+        ctx.font = `${s}px "Apple Color Emoji","Segoe UI Emoji",sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+        ctx.strokeText(def.ico, pu.x, pu.y + bob);
+        ctx.fillText(def.ico, pu.x, pu.y + bob);
+      }
       ctx.restore();
     }
 

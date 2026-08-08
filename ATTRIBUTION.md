@@ -30,3 +30,13 @@
 ### Pixel Art Spells — DevWizard (скачан, пока не в runtime)
 - https://opengameart.org/content/pixel-art-spells
 - License: CC0 (public domain)
+
+## Графические ассеты (mart_atlas.png)
+
+Атлас собран скриптом `assets_src/build_mart_atlas.py`:
+
+### Pixel Mart — ghostpixxells
+- https://ghostpixxells.itch.io/pixel-mart
+- License: CC0 (public domain)
+- Использовано: товары как XP-дропы с покупателей (3 тира по ценности),
+  бумажный пакет для «Посылки со склада».
