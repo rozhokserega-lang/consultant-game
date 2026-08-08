@@ -4,3 +4,7 @@ data/game-assets.json
 .tmp-game-assets-copy.json
 .tmp-batch-gen.cjs
 .next-tiktok/
+# исходники ассетов: скачанные паки не коммитим, только скрипты сборки
+assets_src/*
+!assets_src/build_anim_atlas.py
+!assets_src/make_previews.py

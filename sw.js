@@ -1,9 +1,11 @@
 /* Minimal offline shell for Sale — cache core assets (GitHub Pages /consultant-game/). */
 const BASE = self.registration.scope; // e.g. https://…/consultant-game/
-const CACHE = 'sale-v0.4.0-tg';
+const CACHE = 'sale-v0.5.0-tg';
 const ASSETS = [
   'index.html',
   'sale_mode.js',
+  'anim_fx_data.js',
+  'anim_fx_atlas.png',
   'manifest.webmanifest',
   'icons/icon-192.png',
   'icons/icon-512.png',

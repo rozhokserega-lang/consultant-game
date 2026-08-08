@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const SALE_VERSION = '0.4.0-sale';
+  const SALE_VERSION = '0.5.0-sale';
   const SALE_DURATION = 20 * 60; // 20 минут
   const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
   const SALE_WORLD_MUL = 2.75;
@@ -606,6 +606,8 @@
     this.vibrate([40, 30, 60]);
     this.boomFx = this.boomFx || [];
     this.boomFx.push({ x, y, life: 0.45, max: 0.45 });
+    // подпалина после взрыва (тонированная частица Kenney)
+    this.spawnAnimFx('kfx_scorch', x, y, { life: 3.0, scale: 1.35, alpha: 0.45, tint: '#140b05' });
 
     if (this.player.invincible <= 0 && this.player.lunchTimer <= 0) {
       if (dist(x, y, this.player.x, this.player.y) < R + this.player.r) {
@@ -663,6 +665,7 @@
     this.saleBoomerangs = [];
     this.xpGems = [];
     this.spriteFx = [];
+    this.animFx = [];
 
     this.score = 0;
     this.coins = 5 + (this.metaPerks.wallet || 0) * 4;
@@ -921,6 +924,8 @@
     this.saleBossSpawned = this.saleBossSpawned || {};
     this.saleBossSpawned[def.id] = true;
     this._eventBanner = { t: 4.2, text: '⚠ ' + def.name.toUpperCase() + '!', sub: def.tag };
+    this.spawnAnimFx('afx_darkburst', e.x, e.y, { life: 0.75, scale: 1.6, scaleEnd: 2.2 });
+    this.spawnAnimFx('afx_ring', e.x, e.y, { life: 0.5, scale: 1.0, scaleEnd: 3.0 });
     if (typeof sfx !== 'undefined' && sfx.alarm) sfx.alarm();
     return e;
   };
@@ -989,6 +994,9 @@
           enemy.knockback.x = Math.cos(enemy._saleChargeAng) * spd * 0.55;
           enemy.knockback.y = Math.sin(enemy._saleChargeAng) * spd * 0.55;
           enemy.mobPose = 'attack';
+          this.spawnAnimFx('afx_slash', enemy.x + Math.cos(enemy._saleChargeAng) * 40, enemy.y + Math.sin(enemy._saleChargeAng) * 40, {
+            life: 0.35, scale: 1.3, rot: enemy._saleChargeAng + Math.PI / 2,
+          });
           if (typeof SpeechBubble === 'function') {
             enemy.bubble = new SpeechBubble(enemy, pick(['СТОЯТЬ!', 'Охрана!', 'Проход закрыт!']));
           }
@@ -1169,13 +1177,12 @@
     if (pu.kind === 'chest') {
       this.pendingUpgrades = (this.pendingUpgrades || 0) + 1;
       this.showEventBanner('📦 Посылка со склада: бесплатное улучшение!', 1.8);
-      this.spawnSpriteFx('fx_levelup', p.x, p.y - 40, { scale: 1.2, life: 0.6, vy: -40 });
+      this.spawnAnimFx('afx_levelup', p.x, p.y, { life: 0.65, scale: 0.9, scaleEnd: 1.3 });
       sfx.level();
       this.openSaleUpgradeUI();
     } else if (pu.kind === 'magnet') {
       this.saleVacuumT = 1.8;
       this.showEventBanner('🧲 Промо-магнит: весь XP летит к тебе!', 1.5);
-      this.spawnSpriteFx('fx_aura_gold', p.x, p.y, { scale: 0.6, scaleEnd: 1.1, life: 0.6, vy: 0 });
       sfx.pickup();
     } else if (pu.kind === 'bomb') {
       const R = 540;
@@ -1183,6 +1190,8 @@
       this.screenShake = Math.max(this.screenShake, 0.6);
       this.boomFx = this.boomFx || [];
       this.boomFx.push({ x: p.x, y: p.y, life: 0.45, max: 0.45 });
+      this.spawnAnimFx('afx_bigburst', p.x, p.y, { life: 0.6, scale: 2.4, scaleEnd: 3.6 });
+      this.spawnAnimFx('afx_ring', p.x, p.y, { life: 0.5, scale: 1.5, scaleEnd: 5.5 });
       this.spawnParticles(p.x, p.y, 60, '#ff6b00', 480, 0.9);
       this.vibrate([50, 40, 70]);
       sfx.hurt();
@@ -1242,6 +1251,10 @@
     this.waveKills++;
     this.dropSaleXp(enemy);
     this.dropSalePowerup(enemy);
+    if (enemy.saleBossId) {
+      this.spawnAnimFx('afx_darkburst', enemy.x, enemy.y, { life: 0.9, scale: 2.0, scaleEnd: 2.8 });
+      this.spawnAnimFx('afx_ring', enemy.x, enemy.y, { life: 0.6, scale: 1.4, scaleEnd: 4.5 });
+    }
     if (enemy.saleBossId === 'mall_closing') this.saleArenaShrink = 0;
     this.spawnSpriteFx(Math.random() < 0.55 ? 'fx_blood' : 'fx_hit_blood', enemy.x, enemy.y, {
       scale: enemy.saleBossId ? 1.1 : enemy.type === 'fatty' ? 0.85 : 0.55,
@@ -1271,11 +1284,8 @@
       this.pendingUpgrades += leveled;
       this.openSaleUpgradeUI();
       sfx.level();
-      this.spawnSpriteFx('fx_levelup', this.player.x, this.player.y - 50, {
-        scale: 0.7, scaleEnd: 1.0, life: 0.85, vy: -55, anchorY: 0.5,
-      });
-      this.spawnSpriteFx('fx_aura_gold', this.player.x, this.player.y, {
-        scale: 0.45, scaleEnd: 0.7, life: 0.55, vy: -10,
+      this.spawnAnimFx('afx_levelup', this.player.x, this.player.y, {
+        life: 0.7, scale: 1.1, scaleEnd: 1.5,
       });
       this.spawnParticles(this.player.x, this.player.y, 22, '#f1c40f', 200, 0.55);
     }
@@ -1443,7 +1453,8 @@
       delete this.saleWeapons[up.from];
       this.saleWeapons[up.id] = 1;
       this.saleWeaponCd[up.id] = 0.1;
-      this.spawnSpriteFx('fx_levelup', this.player.x, this.player.y - 40, { scale: 1.8, life: 0.7, vy: -40 });
+      this.spawnAnimFx('afx_levelup', this.player.x, this.player.y, { life: 0.9, scale: 1.6, scaleEnd: 2.4 });
+      this.spawnAnimFx('afx_ring', this.player.x, this.player.y, { life: 0.55, scale: 1.2, scaleEnd: 3.2 });
       this.spawnParticles(this.player.x, this.player.y, 28, '#f1c40f', 240, 0.6);
       this.applySalePassivesToPlayer();
     } else if (up.kind === 'passive') {
@@ -1505,7 +1516,7 @@
       if ((this._saleLsCd || 0) <= 0 && Math.random() < opts.lifesteal) {
         this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);
         this._saleLsCd = SALE_LIFESTEAL_CD;
-        this.spawnSpriteFx('sp_heal1', this.player.x, this.player.y - 18, { scale: 0.45, life: 0.25, vy: -25 });
+        this.spawnAnimFx('afx_heal', this.player.x, this.player.y - 10, { life: 0.45, scale: 0.7, vy: -20 });
       }
     }
     if (died) {
@@ -1517,7 +1528,7 @@
         this.spawnSpriteFx('sp_bleed3', e.x, e.y, { scale: 0.4, life: 0.35, vy: 0 });
       }
     } else if (Math.random() < 0.35) {
-      this.spawnSpriteFx(opts.spark || 'fx_hit_spark', e.x, e.y, { scale: 0.35, life: 0.14, vy: -4 });
+      this.spawnAnimFx('afx_hit', e.x, e.y - 4, { life: 0.22, scale: 0.55, rot: rand(-0.4, 0.4) });
     }
     return died;
   };
@@ -2548,14 +2559,24 @@
     for (const h of this.saleBossHazards || []) {
       if (h.kind !== 'pricetag') continue;
       const pulse = 0.75 + Math.sin(performance.now() / 120 + h.x) * 0.15;
+      const a = Math.min(0.9, 0.35 + h.life * 0.12);
       ctx.save();
-      ctx.globalAlpha = Math.min(0.9, 0.35 + h.life * 0.12);
-      ctx.fillStyle = '#fbbf24';
-      ctx.beginPath();
-      ctx.arc(h.x, h.y, h.r * pulse, 0, Math.PI * 2);
-      ctx.fill();
+      // мягкая тонированная зона (Kenney) вместо плоского круга
+      const drewZone = drawAnimFxFrame(ctx, 'kfx_circle', h.x, h.y, {
+        scale: (h.r * pulse * 2.6) / 100, alpha: a * 0.85, tint: '#fbbf24',
+      });
+      if (!drewZone) {
+        ctx.globalAlpha = a;
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, h.r * pulse, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = Math.min(1, a + 0.2);
       ctx.strokeStyle = '#b45309';
       ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(h.x, h.y, h.r * pulse, 0, Math.PI * 2);
       ctx.stroke();
       ctx.fillStyle = '#7c2d12';
       ctx.font = 'bold 11px sans-serif';
@@ -2581,6 +2602,11 @@
         ctx.stroke();
         ctx.setLineDash([]);
         ctx.restore();
+        // пульсирующий слэш-телеграф по направлению рывка (Kenney, тонировка)
+        const flash = 0.45 + Math.sin(performance.now() / 90) * 0.3;
+        drawAnimFxFrame(ctx, 'kfx_slash', e.x + Math.cos(e._saleChargeAng) * len * 0.55, e.y + Math.sin(e._saleChargeAng) * len * 0.55, {
+          scale: 1.6, rot: e._saleChargeAng + Math.PI / 2, alpha: flash, tint: '#38bdf8',
+        });
       }
       if (def) {
         ctx.save();
@@ -2631,7 +2657,8 @@
       }
     }
 
-    // лужи (кофе / яд / кровь)
+    // лужи (кофе / яд / кровь / пожар)
+    const nowSec = performance.now() / 1000;
     for (const u of this.salePuddles) {
       const a = Math.min(0.55, 0.2 + u.life * 0.15);
       ctx.globalAlpha = a;
@@ -2640,8 +2667,17 @@
       ctx.ellipse(u.x, u.y + 4, u.r * 0.95, u.r * 0.55, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
-      if (u.poison && typeof drawSpell === 'function') {
-        drawSpell(ctx, 'sp_poison1', u.x, u.y, { scale: 0.45, anchorY: 0.5, alpha: 0.5 });
+      if (u.hurtPlayer) {
+        // живой огонь поверх горящей зоны
+        drawAnimFxFrame(ctx, 'afx_fireloop', u.x, u.y - u.r * 0.35, {
+          time: nowSec + u.x * 0.01, scale: (u.r * 2.2) / 100, alpha: Math.min(1, a * 2.2),
+        });
+      } else if (u.poison) {
+        if (!drawAnimFxFrame(ctx, 'afx_bubbles', u.x, u.y - 4, {
+          time: nowSec + u.y * 0.01, scale: (u.r * 2.4) / 100, alpha: 0.85,
+        }) && typeof drawSpell === 'function') {
+          drawSpell(ctx, 'sp_poison1', u.x, u.y, { scale: 0.45, anchorY: 0.5, alpha: 0.5 });
+        }
       }
     }
 
@@ -2716,6 +2752,14 @@
       ctx.strokeText(def.ico, pu.x, pu.y + bob);
       ctx.fillText(def.ico, pu.x, pu.y + bob);
       ctx.restore();
+    }
+
+    // вихрь промо-магнита вокруг игрока
+    if ((this.saleVacuumT || 0) > 0 && this.player) {
+      drawAnimFxFrame(ctx, 'afx_vortex', this.player.x, this.player.y, {
+        time: performance.now() / 1000, scale: 1.5,
+        alpha: Math.min(0.9, this.saleVacuumT * 1.4),
+      });
     }
 
     // цифры урона
