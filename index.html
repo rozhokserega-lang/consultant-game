@@ -154,6 +154,36 @@
   .card .ico { font-size: 28px; margin-bottom: 6px; }
   .card .ttl { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
   .card .desc { font-size: 11px; color: #aaa; }
+  .pause-loadout {
+    text-align: left;
+    margin: 0 0 12px;
+    max-height: 42vh;
+    overflow-y: auto;
+    padding: 8px 10px;
+    background: rgba(0,0,0,0.28);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+  }
+  .pause-loadout .sec {
+    font-size: 11px; color: #f1c40f; font-weight: 700;
+    margin: 8px 0 6px; letter-spacing: 0.02em;
+  }
+  .pause-loadout .sec:first-child { margin-top: 0; }
+  .pause-chips {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .pause-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 8px; border-radius: 8px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.14);
+    font-size: 12px; color: #eee;
+  }
+  .pause-chip .lv { color: #f1c40f; font-weight: 700; font-size: 11px; }
+  .pause-chip .nm { color: #ccc; font-size: 11px; }
+  .pause-empty { font-size: 12px; color: #888; }
+  #upgrade-overlay .panel { max-width: 560px; }
+  #btn-upgrade-reroll:disabled { opacity: 0.4; cursor: not-allowed; }
   .row-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
   .btn {
     background: #f1c40f; color: #222; border: none; border-radius: 10px;
@@ -302,6 +332,26 @@
   body.hub-mode #desktop-hint,
   body.hub-mode .mobile-only { display: none !important; }
   body.hub-mode #game-container { padding-bottom: 0 !important; }
+  body.sale-mode #attack-btn { opacity: 0.35; pointer-events: none; }
+  body.sale-mode #attack-btn::after { content: 'AUTO'; font-size: 9px; }
+  .hub-mode-pick {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 4px;
+  }
+  @media (max-width: 560px) {
+    .hub-mode-pick { grid-template-columns: 1fr; }
+  }
+  .hub-mode-card {
+    text-align: left; padding: 14px 12px; border-radius: 12px; cursor: pointer;
+    border: 2px solid #555; background: rgba(255,255,255,0.04); color: #eee;
+  }
+  .hub-mode-card:hover { border-color: #f1c40f; }
+  .hub-mode-card .big { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+  .hub-mode-card .sub { font-size: 12px; color: #aaa; line-height: 1.35; }
+  .hub-back {
+    background: transparent; border: 1px solid #555; color: #ccc;
+    border-radius: 8px; padding: 4px 10px; font-size: 12px; cursor: pointer; margin-bottom: 6px;
+  }
+  .hub-back:hover { border-color: #f1c40f; color: #fff; }
   @media (max-height: 720px) {
     .hub-card .desc { display: none; }
     #hub-overlay .hub-panel { padding: 10px; }
@@ -375,8 +425,11 @@
   <div class="overlay" id="upgrade-overlay">
     <div class="panel">
       <h2>⬆ Повышение!</h2>
-      <p>Выбери бонус смены</p>
+      <p id="upgrade-sub">Выбери бонус смены</p>
       <div class="cards" id="upgrade-cards"></div>
+      <div class="row-btns">
+        <button class="btn ghost" id="btn-upgrade-reroll" type="button">🔄 Другие варианты (3)</button>
+      </div>
     </div>
   </div>
 
@@ -397,9 +450,10 @@
 
   <!-- Пауза -->
   <div class="overlay" id="pause-overlay">
-    <div class="panel">
+    <div class="panel" style="max-width:520px;">
       <h2>⏸ Пауза</h2>
-      <p>Смена на паузе. Покупатели ждут…</p>
+      <p id="pause-sub">Смена на паузе. Покупатели ждут…</p>
+      <div class="pause-loadout" id="pause-loadout"></div>
       <div class="row-btns">
         <button class="btn" id="btn-resume" type="button">Продолжить</button>
         <button class="btn ghost" id="btn-pause-settings" type="button">Настройки</button>
@@ -446,27 +500,58 @@
       <div class="hub-scroll">
         <h2>🛒 Консультант</h2>
         <p>Банк: <b id="hub-bank">0</b> 🪙 · Рекорд: <b id="hub-record">0</b></p>
-        <div class="hub-tabs">
-          <button type="button" class="hub-tab on" data-hub-tab="prep" id="hub-tab-prep">Подготовка к смене</button>
-          <button type="button" class="hub-tab" data-hub-tab="book" id="hub-tab-book">📖 Книга жалоб</button>
+
+        <div class="hub-pane on" id="hub-pane-modes">
+          <div class="hub-sec">Выбери режим</div>
+          <div class="hub-mode-pick">
+            <button type="button" class="hub-mode-card" id="hub-pick-shift">
+              <div class="big">⚔ Смена</div>
+              <div class="sub">10 волн, боссы, магазин между волнами. Классический режим с ручной атакой.</div>
+            </button>
+            <button type="button" class="hub-mode-card" id="hub-pick-sale">
+              <div class="big">🛒 Распродажа</div>
+              <div class="sub">20 минут, авто-атака, XP и прокачка на лету. Большая карта в духе Vampire Survivors.</div>
+            </button>
+          </div>
+          <p style="font-size:11px;color:#888;text-align:left;margin:8px 0 0;">После выбора откроется подготовка и прокачка именно для этого режима.</p>
         </div>
 
-        <div class="hub-pane on" id="hub-pane-prep">
-          <div class="hub-sec">Оружие на смену</div>
-          <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Выбери из купленного. Прокачка до 10 ур. за монеты банка (по чуть-чуть).</p>
-          <div class="wep-grid" id="hub-weapons"></div>
-          <div class="hub-sec">Способности</div>
-          <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 4px;">Дэш · Обед · Сильный удар — до 5 ур. за банк.</p>
-          <div class="perk-row" id="hub-abilities"></div>
-          <div class="hub-sec">Мета-перки</div>
-          <div class="perk-row" id="hub-perks"></div>
-          <div class="hub-sec">Зона ТЦ</div>
-          <div class="hub-grid" id="hub-arenas"></div>
-          <div class="hub-sec">Испытание</div>
-          <div class="hub-grid" id="hub-challenges"></div>
+        <div class="hub-pane" id="hub-pane-prep">
+          <button type="button" class="hub-back" id="hub-back-modes">← К выбору режима</button>
+          <div class="hub-tabs">
+            <button type="button" class="hub-tab on" data-hub-tab="prep" id="hub-tab-prep">Подготовка</button>
+            <button type="button" class="hub-tab" data-hub-tab="book" id="hub-tab-book">📖 Книга жалоб</button>
+          </div>
+
+          <div id="hub-shift-loadout">
+            <div class="hub-sec">Оружие на смену</div>
+            <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;" id="hub-weapon-hint">Выбери из купленного. Прокачка до 10 ур. за монеты банка.</p>
+            <div class="wep-grid" id="hub-weapons"></div>
+            <div class="hub-sec">Способности</div>
+            <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 4px;">Дэш · Обед · Сильный удар — до 5 ур. за банк.</p>
+            <div class="perk-row" id="hub-abilities"></div>
+            <div class="hub-sec">Мета-перки</div>
+            <div class="perk-row" id="hub-perks"></div>
+            <div class="hub-sec">Зона ТЦ</div>
+            <div class="hub-grid" id="hub-arenas"></div>
+            <div class="hub-sec">Испытание</div>
+            <div class="hub-grid" id="hub-challenges"></div>
+          </div>
+
+          <div id="hub-sale-loadout" style="display:none;">
+            <div class="hub-sec">Стартовые авто-оружия</div>
+            <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Разблокируй стартовые оружия Распродажи. Чек всегда с тобой. Эволюции открываются в забеге.</p>
+            <div class="hub-grid" id="hub-sale-weapons"></div>
+            <div class="hub-sec">Стартовые пассивки</div>
+            <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Постоянные бонусы к началу забега Распродажи (за монеты банка).</p>
+            <div class="perk-row" id="hub-sale-passives"></div>
+            <div class="hub-sec">Зона ТЦ</div>
+            <div class="hub-grid" id="hub-sale-arenas"></div>
+          </div>
         </div>
 
         <div class="hub-pane" id="hub-pane-book">
+          <button type="button" class="hub-back" id="hub-back-modes-book">← К выбору режима</button>
           <div class="hub-sec">📖 Книга жалоб</div>
           <p class="book-total" id="book-total">Всего выписано жалоб: 0</p>
           <div class="book-list" id="hub-book"></div>
@@ -613,6 +698,98 @@ pickupFxImg.src = 'pickup_fx_atlas.png';
 
 function drawPickupFx(ctx, name, x, y, opts = {}) {
   return drawAtlasFrame(ctx, pickupFxImg, pickupFxReady, PICKUP_FX_FRAMES, name, x, y, opts);
+}
+
+const VFX_FRAMES = {"fx_hit_blood":{"x":812,"y":226,"w":74,"h":56},"fx_hit_spark":{"x":430,"y":246,"w":50,"h":36},"fx_slash":{"x":496,"y":246,"w":52,"h":30},"fx_bolt":{"x":572,"y":250,"w":54,"h":24},"fx_blood":{"x":938,"y":234,"w":54,"h":42},"fx_medkit":{"x":257,"y":244,"w":37,"h":42},"fx_potion":{"x":308,"y":242,"w":26,"h":44},"fx_skull":{"x":786,"y":303,"w":45,"h":49},"fx_void_orb":{"x":848,"y":296,"w":70,"h":61},"fx_smoke":{"x":522,"y":312,"w":78,"h":35},"fx_aura_gold":{"x":256,"y":394,"w":42,"h":54},"fx_aura_dark":{"x":310,"y":386,"w":52,"h":63},"fx_tornado":{"x":634,"y":388,"w":66,"h":64},"fx_shield":{"x":80,"y":396,"w":48,"h":50},"fx_aoe_fire":{"x":422,"y":404,"w":90,"h":50},"fx_aoe_ice":{"x":528,"y":412,"w":92,"h":42},"fx_aoe_void":{"x":716,"y":404,"w":90,"h":50},"fx_aoe_rune":{"x":918,"y":403,"w":94,"h":53},"fx_boom1":{"x":740,"y":478,"w":81,"h":76},"fx_boom2":{"x":836,"y":478,"w":92,"h":78},"fx_boom3":{"x":939,"y":482,"w":75,"h":72},"fx_boom4":{"x":476,"y":496,"w":76,"h":54},"fx_boom5":{"x":565,"y":488,"w":74,"h":66},"fx_boom6":{"x":654,"y":487,"w":78,"h":68},"fx_crystal":{"x":957,"y":594,"w":43,"h":60},"fx_levelup":{"x":373,"y":637,"w":39,"h":29},"fx_chest":{"x":425,"y":599,"w":59,"h":54}};
+const VFX_BOOM_FRAMES = ['fx_boom1','fx_boom2','fx_boom3','fx_boom4','fx_boom5','fx_boom6'];
+const vfxImg = new Image();
+let vfxReady = false;
+vfxImg.onload = () => { vfxReady = true; };
+vfxImg.src = 'vfx_atlas.png';
+
+function drawVfx(ctx, name, x, y, opts = {}) {
+  return drawAtlasFrame(ctx, vfxImg, vfxReady, VFX_FRAMES, name, x, y, opts);
+}
+
+const SPELL_FRAMES = {"sp_fire1":{"x":40,"y":42,"w":54,"h":34},"sp_fire2":{"x":160,"y":30,"w":92,"h":56},"sp_fire3":{"x":313,"y":21,"w":108,"h":72},"sp_ice1":{"x":42,"y":132,"w":54,"h":20},"sp_ice2":{"x":157,"y":116,"w":99,"h":44},"sp_ice3":{"x":315,"y":112,"w":107,"h":58},"sp_bolt1":{"x":22,"y":214,"w":68,"h":20},"sp_bolt2":{"x":154,"y":188,"w":98,"h":62},"sp_bolt3":{"x":308,"y":180,"w":122,"h":80},"sp_poison1":{"x":218,"y":290,"w":23,"h":35},"sp_poison2":{"x":322,"y":283,"w":99,"h":44},"sp_poison3":{"x":811,"y":268,"w":150,"h":83},"sp_heal1":{"x":194,"y":386,"w":28,"h":27},"sp_heal2":{"x":304,"y":430,"w":140,"h":78},"sp_heal3":{"x":174,"y":442,"w":74,"h":62},"sp_shield1":{"x":44,"y":456,"w":42,"h":42},"sp_shield2":{"x":512,"y":378,"w":56,"h":28},"sp_shield3":{"x":649,"y":434,"w":116,"h":72},"sp_dash1":{"x":42,"y":544,"w":76,"h":36},"sp_dash2":{"x":168,"y":536,"w":100,"h":46},"sp_dash3":{"x":322,"y":524,"w":114,"h":66},"sp_bleed1":{"x":40,"y":636,"w":36,"h":16},"sp_bleed2":{"x":145,"y":620,"w":79,"h":43},"sp_bleed3":{"x":314,"y":624,"w":126,"h":44},"sp_fwave1":{"x":512,"y":30,"w":100,"h":49},"sp_fwave2":{"x":664,"y":24,"w":112,"h":57},"sp_fwave3":{"x":815,"y":18,"w":181,"h":70},"sp_iwave1":{"x":514,"y":122,"w":104,"h":40},"sp_iwave2":{"x":660,"y":110,"w":124,"h":58},"sp_iwave3":{"x":820,"y":95,"w":182,"h":77},"sp_elec1":{"x":524,"y":204,"w":60,"h":42},"sp_elec2":{"x":662,"y":192,"w":106,"h":64},"sp_elec3":{"x":822,"y":182,"w":178,"h":78},"sp_hole1":{"x":524,"y":286,"w":64,"h":48},"sp_hole2":{"x":658,"y":278,"w":103,"h":62},"sp_hole3":{"x":820,"y":359,"w":124,"h":65},"sp_bat1":{"x":647,"y":378,"w":41,"h":26},"sp_bat2":{"x":681,"y":368,"w":47,"h":26},"sp_bat3":{"x":810,"y":428,"w":175,"h":80},"sp_boom1":{"x":526,"y":463,"w":64,"h":37},"sp_boom2":{"x":640,"y":522,"w":123,"h":65},"sp_boom3":{"x":798,"y":515,"w":194,"h":77},"sp_quake1":{"x":506,"y":543,"w":87,"h":41},"sp_quake2":{"x":652,"y":594,"w":102,"h":78},"sp_quake3":{"x":806,"y":595,"w":156,"h":81},"sp_curse1":{"x":528,"y":624,"w":59,"h":42},"sp_curse2":{"x":913,"y":370,"w":59,"h":29},"sp_curse3":{"x":806,"y":595,"w":156,"h":81}};
+const spellImg = new Image();
+let spellReady = false;
+spellImg.onload = () => { spellReady = true; };
+spellImg.src = 'spell_atlas.png';
+
+function drawSpell(ctx, name, x, y, opts = {}) {
+  return drawAtlasFrame(ctx, spellImg, spellReady, SPELL_FRAMES, name, x, y, opts);
+}
+
+const WEAPON_FRAMES = {"wp_phone1":{"x":46,"y":28,"w":27,"h":28},"wp_phone2":{"x":101,"y":28,"w":31,"h":24},"wp_phone3":{"x":162,"y":28,"w":30,"h":29},"wp_cart1":{"x":50,"y":78,"w":50,"h":22},"wp_cart2":{"x":107,"y":78,"w":48,"h":22},"wp_cart3":{"x":161,"y":78,"w":56,"h":25},"wp_mop1":{"x":38,"y":112,"w":27,"h":34},"wp_mop2":{"x":92,"y":112,"w":33,"h":34},"wp_mop3":{"x":154,"y":112,"w":55,"h":34},"wp_extinguisher1":{"x":32,"y":167,"w":30,"h":21},"wp_extinguisher2":{"x":79,"y":164,"w":54,"h":24},"wp_extinguisher3":{"x":136,"y":155,"w":81,"h":33},"wp_coffee1":{"x":34,"y":211,"w":27,"h":25},"wp_coffee2":{"x":88,"y":211,"w":48,"h":26},"wp_coffee3":{"x":149,"y":206,"w":63,"h":32},"wp_receipt1":{"x":4,"y":643,"w":50,"h":52},"wp_receipt2":{"x":58,"y":643,"w":52,"h":37},"wp_receipt3":{"x":114,"y":643,"w":52,"h":36},"wp_card1":{"x":36,"y":270,"w":20,"h":13},"wp_card2":{"x":92,"y":270,"w":18,"h":12},"wp_card3":{"x":161,"y":296,"w":54,"h":14},"wp_bag1":{"x":42,"y":310,"w":30,"h":19},"wp_bag2":{"x":91,"y":310,"w":40,"h":16},"wp_bag3":{"x":157,"y":310,"w":56,"h":15},"wp_speaker1":{"x":283,"y":28,"w":52,"h":32},"wp_speaker2":{"x":335,"y":28,"w":51,"h":32},"wp_speaker3":{"x":384,"y":28,"w":26,"h":29},"wp_flashlight1":{"x":260,"y":79,"w":44,"h":28},"wp_flashlight2":{"x":311,"y":80,"w":36,"h":27},"wp_flashlight3":{"x":347,"y":78,"w":31,"h":21},"wp_chair1":{"x":259,"y":125,"w":27,"h":25},"wp_chair2":{"x":305,"y":125,"w":61,"h":25},"wp_chair3":{"x":372,"y":124,"w":43,"h":26},"wp_axe1":{"x":279,"y":177,"w":23,"h":18},"wp_axe2":{"x":318,"y":174,"w":40,"h":21},"wp_axe3":{"x":370,"y":173,"w":45,"h":22},"wp_magnet1":{"x":317,"y":195,"w":17,"h":15},"wp_magnet2":{"x":366,"y":226,"w":35,"h":14},"wp_magnet3":{"x":392,"y":195,"w":23,"h":16},"wp_spray1":{"x":260,"y":240,"w":43,"h":27},"wp_spray2":{"x":331,"y":242,"w":15,"h":12},"wp_spray3":{"x":350,"y":240,"w":56,"h":32},"wp_box1":{"x":254,"y":287,"w":28,"h":35},"wp_box2":{"x":302,"y":285,"w":100,"h":37},"wp_box3":{"x":391,"y":301,"w":21,"h":19},"wp_bloody_price1":{"x":524,"y":61,"w":29,"h":28},"wp_bloody_price2":{"x":592,"y":60,"w":41,"h":30},"wp_bloody_price3":{"x":660,"y":60,"w":50,"h":30},"wp_bite1":{"x":502,"y":97,"w":71,"h":31},"wp_bite2":{"x":582,"y":97,"w":73,"h":32},"wp_bite3":{"x":666,"y":95,"w":44,"h":34},"wp_bloody_aura1":{"x":481,"y":149,"w":33,"h":12},"wp_bloody_aura2":{"x":514,"y":138,"w":26,"h":15},"wp_bloody_aura3":{"x":675,"y":135,"w":35,"h":27},"wp_bats1":{"x":504,"y":177,"w":37,"h":26},"wp_bats2":{"x":587,"y":177,"w":37,"h":26},"wp_bats3":{"x":668,"y":177,"w":42,"h":27},"wp_graveyard1":{"x":523,"y":264,"w":21,"h":24},"wp_graveyard2":{"x":586,"y":262,"w":34,"h":27},"wp_graveyard3":{"x":648,"y":232,"w":62,"h":58},"pas_mug":{"x":755,"y":58,"w":36,"h":17},"pas_badge":{"x":807,"y":58,"w":43,"h":18},"pas_radio":{"x":920,"y":60,"w":35,"h":16},"pas_key":{"x":757,"y":91,"w":34,"h":26},"pas_charger":{"x":811,"y":89,"w":35,"h":29},"pas_discount":{"x":867,"y":92,"w":34,"h":27},"pas_pouch":{"x":923,"y":87,"w":30,"h":32},"pas_shoes":{"x":977,"y":87,"w":32,"h":32},"pas_headphones":{"x":754,"y":122,"w":39,"h":16},"pas_gloves":{"x":813,"y":122,"w":31,"h":16},"pas_map":{"x":976,"y":122,"w":33,"h":16},"pas_scanner":{"x":761,"y":151,"w":28,"h":35},"pas_gold_badge":{"x":810,"y":153,"w":36,"h":32},"pas_energy":{"x":868,"y":156,"w":30,"h":28},"pas_medkit":{"x":923,"y":154,"w":30,"h":31},"pas_sandwich":{"x":984,"y":155,"w":22,"h":30},"pas_headlamp":{"x":759,"y":215,"w":27,"h":29},"pas_umbrella":{"x":811,"y":216,"w":30,"h":28},"pas_token":{"x":865,"y":217,"w":31,"h":24},"pas_icecream":{"x":921,"y":214,"w":32,"h":31},"pas_fidget":{"x":980,"y":215,"w":29,"h":30},"pas_scissors":{"x":865,"y":247,"w":34,"h":16},"pas_pen":{"x":762,"y":275,"w":21,"h":34},"pas_calc":{"x":812,"y":277,"w":31,"h":30},"pas_folder":{"x":868,"y":276,"w":31,"h":32},"pas_plane":{"x":925,"y":277,"w":27,"h":31},"pas_usb":{"x":977,"y":275,"w":33,"h":33},"pas_battery":{"x":807,"y":311,"w":42,"h":16},"pas_gum":{"x":760,"y":339,"w":25,"h":21},"pas_coffee_xl":{"x":813,"y":345,"w":28,"h":15},"evo_phone5g":{"x":139,"y":420,"w":35,"h":43},"evo_mag_cart":{"x":131,"y":477,"w":51,"h":40},"evo_cleaner":{"x":130,"y":535,"w":40,"h":35},"evo_caffeine":{"x":142,"y":592,"w":46,"h":40},"evo_black_card":{"x":420,"y":421,"w":47,"h":33},"evo_ultrasound":{"x":410,"y":475,"w":75,"h":36},"evo_endless_receipt":{"x":409,"y":535,"w":76,"h":29},"evo_logistics":{"x":400,"y":590,"w":71,"h":35},"evo_furniture_ram":{"x":625,"y":423,"w":48,"h":31},"evo_mall_fire":{"x":618,"y":475,"w":79,"h":43},"evo_consultant_call":{"x":627,"y":535,"w":67,"h":30},"evo_hunter":{"x":623,"y":593,"w":67,"h":37},"evo_black_friday":{"x":854,"y":421,"w":89,"h":40},"evo_vip":{"x":890,"y":481,"w":64,"h":41},"evo_sleepless":{"x":888,"y":536,"w":62,"h":42},"evo_night_consultant":{"x":882,"y":592,"w":61,"h":47}};
+const weaponImg = new Image();
+let weaponReady = false;
+weaponImg.onload = () => { weaponReady = true; };
+weaponImg.src = 'weapon_atlas.png';
+
+/** Отрисовка кадра оружия из концепт-атласа (стадии 1/2/3). */
+function drawWeaponAtlas(ctx, visual, stage, x, y, opts = {}) {
+  if (!weaponReady || !visual) return false;
+  let st = Math.max(1, Math.min(3, stage | 0 || 2));
+  let key = `wp_${visual}${st}`;
+  if (!WEAPON_FRAMES[key]) {
+    key = null;
+    for (const alt of [2, 1, 3]) {
+      const k = `wp_${visual}${alt}`;
+      if (WEAPON_FRAMES[k]) { key = k; st = alt; break; }
+    }
+    if (!key) return false;
+  }
+  const f = WEAPON_FRAMES[key];
+  // цель ~36px по большей стороне, чтобы не раздувать мелкие кадры
+  const target = opts.targetSize ?? 36;
+  const base = Math.max(f.w, f.h) || 1;
+  const scale = opts.scale != null ? opts.scale : (target / base);
+  ctx.save();
+  ctx.translate(x, y);
+  if (opts.rot) ctx.rotate(opts.rot);
+  const ok = drawAtlasFrame(ctx, weaponImg, true, WEAPON_FRAMES, key, 0, 0, {
+    scale,
+    anchorX: opts.anchorX ?? 0.5,
+    anchorY: opts.anchorY ?? 0.5,
+    alpha: opts.alpha,
+  });
+  ctx.restore();
+  return ok;
+}
+
+function drawWeaponEvoIcon(ctx, evoId, x, y, opts = {}) {
+  const key = `evo_${evoId}`;
+  if (!weaponReady || !WEAPON_FRAMES[key]) return false;
+  const f = WEAPON_FRAMES[key];
+  const target = opts.targetSize ?? 40;
+  const base = Math.max(f.w, f.h) || 1;
+  const scale = opts.scale != null ? opts.scale : (target / base);
+  ctx.save();
+  ctx.translate(x, y);
+  const ok = drawAtlasFrame(ctx, weaponImg, true, WEAPON_FRAMES, key, 0, 0, {
+    scale,
+    anchorX: 0.5,
+    anchorY: 0.5,
+    alpha: opts.alpha,
+  });
+  ctx.restore();
+  return ok;
+}
+
+function drawPassiveAtlas(ctx, id, x, y, opts = {}) {
+  const key = `pas_${id}`;
+  if (!weaponReady || !WEAPON_FRAMES[key]) return false;
+  const f = WEAPON_FRAMES[key];
+  const target = opts.targetSize ?? 28;
+  const base = Math.max(f.w, f.h) || 1;
+  const scale = opts.scale != null ? opts.scale : (target / base);
+  return drawAtlasFrame(ctx, weaponImg, true, WEAPON_FRAMES, key, x, y, {
+    scale,
+    anchorX: 0.5,
+    anchorY: 0.5,
+    alpha: opts.alpha,
+  });
 }
 
 // ── Покупатели (анимированный лист 7×4) ──
@@ -1596,7 +1773,9 @@ class Enemy {
     }
 
     const d = dist(this.x, this.y, player.x, player.y);
-    const rushBase = (isRush ? 1.28 : 1) * (game && game.fireAlarm > 0 ? 1.35 : 1);
+    const rushBase = (isRush ? 1.28 : 1)
+      * (game && game.fireAlarm > 0 ? 1.35 : 1)
+      * (game && game.saleMobSpeedMul ? game.saleMobSpeedMul : 1);
     const rushMul = (rushBase - 1) * DIFFICULTY_EASE + 1;
 
     // 1) Аура менеджера — ускорение + лёгкий реген (dist², без Math.hypot)
@@ -2083,7 +2262,7 @@ class Player {
     if (this.attacking) {
       this.attackTimer += dt;
       const t = this.attackTimer / this.attackDuration;
-      this.stickSwingAngle = Math.sin(t * Math.PI) * (Math.PI / 2.2) - Math.PI / 4;
+      this.stickSwingAngle = Math.sin(t * Math.PI) * (Math.PI / 1.7) - Math.PI / 3.2;
       if (this.attackTimer >= this.attackDuration) {
         this.attacking = false; this.stickSwingAngle = 0; this.hitEnemies.clear();
         this.chargePower = 0;
@@ -2328,12 +2507,6 @@ class Player {
     c.fillStyle = 'rgba(0,0,0,0.28)';
     c.beginPath(); c.ellipse(this.x + 2, this.y + 4, 12, 5, 0, 0, Math.PI * 2); c.fill();
 
-    // маркер удара под спрайтом — куда смотрит / куда попадёт
-    c.restore();
-    this.drawAimMarker(c);
-    c.save();
-    if (blink && this.lunchTimer <= 0) c.globalAlpha = 0.35;
-
     const ang = this.angle;
     let flip = false;
     let anim = this._animName || 'walk_down';
@@ -2406,32 +2579,61 @@ class Player {
       c.stroke();
     }
 
-    // Оружие в руках рисуем, кроме атаки рацией/кулаком (уже в спрайте)
+    // Оружие: рисуем сам предмет удара (не «иконку на палке»)
     const showStick = this.attacking || this.attackCooldown > this.attackCooldownTime - 0.05;
     const hideWeaponSprite = this.useSpriteAttackDraw();
-    if (showStick && !hideWeaponSprite) {
+    if (showStick && !(hideWeaponSprite && (this.weapon && this.weapon.id === 'glove'))) {
       const stick = this.getStickEnd();
       const w = this.weapon || WEAPONS[0];
-      c.strokeStyle = w.color || '#8B4513';
-      c.lineWidth = (w.id === 'sledge' || w.id === 'bat') ? 5 : 3.5;
-      c.lineCap = 'round';
-      c.beginPath();
-      c.moveTo(this.x, this.y - 8);
-      c.lineTo(stick.x, stick.y); c.stroke();
-      if (w.icon && drawWeaponIcon(c, w.icon, stick.x, stick.y, { scale: 0.42, rotation: stick.angle + 0.6 })) {
-        // icon drawn
-      } else if (w.sprite) {
-        drawSprite(c, w.sprite, stick.x, stick.y, { scale: 0.7, anchorY: 0.5, rotation: stick.angle });
-      } else {
-        c.fillStyle = w.tip || '#95a5a6';
-        c.beginPath(); c.arc(stick.x, stick.y, 6, 0, Math.PI * 2); c.fill();
+      const t = this.attacking
+        ? Math.min(1, this.attackTimer / Math.max(0.01, this.attackDuration))
+        : 0;
+      // точка «хвата» ближе к телу, клинок/предмет — в середине–конце дуги
+      const gripX = this.x + Math.cos(this.angle) * (this.r * 0.35);
+      const gripY = this.y - 6 + Math.sin(this.angle) * (this.r * 0.35);
+      const midX = (gripX + stick.x) * 0.5;
+      const midY = (gripY + stick.y) * 0.5;
+      const weaponAngle = stick.angle + Math.PI / 2;
+      const iconScale = 0.52 + (this.attacking ? 0.12 * Math.sin(t * Math.PI) : 0);
+
+      // след взмаха
+      if (this.attacking) {
+        c.save();
+        c.globalAlpha = 0.22 + 0.2 * Math.sin(t * Math.PI);
+        c.strokeStyle = w.color || '#f1c40f';
+        c.lineWidth = 10;
+        c.lineCap = 'round';
+        c.beginPath();
+        const arcR = this.r + this.stickLength * 0.72;
+        const swing = this.stickSwingAngle;
+        c.arc(this.x, this.y, arcR, this.angle + swing - 0.55, this.angle + swing + 0.15);
+        c.stroke();
+        c.restore();
       }
-    } else if (showStick && hideWeaponSprite) {
-      // всё равно рисуем иконку оружия у конца удара (кроме перчатки)
-      const w = this.weapon || WEAPONS[0];
-      if (w.id !== 'glove') {
-        const stick = this.getStickEnd();
-        if (w.icon) drawWeaponIcon(c, w.icon, stick.x, stick.y, { scale: 0.38, rotation: stick.angle + 0.5 });
+
+      // короткая рукоять только если нет иконки/спрайта
+      const hasVisual = !!(w.icon || w.sprite);
+      if (!hasVisual) {
+        c.strokeStyle = w.color || '#8B4513';
+        c.lineWidth = (w.id === 'sledge' || w.id === 'bat') ? 5 : 3.5;
+        c.lineCap = 'round';
+        c.beginPath();
+        c.moveTo(gripX, gripY);
+        c.lineTo(stick.x, stick.y);
+        c.stroke();
+        c.fillStyle = w.tip || '#95a5a6';
+        c.beginPath();
+        c.arc(stick.x, stick.y, 7, 0, Math.PI * 2);
+        c.fill();
+      } else if (w.icon && drawWeaponIcon(c, w.icon, midX, midY, { scale: iconScale, rotation: weaponAngle })) {
+        // ударный след иконкой у конца
+        if (this.attacking && t > 0.35 && t < 0.85) {
+          c.globalAlpha = 0.35;
+          drawWeaponIcon(c, w.icon, stick.x, stick.y, { scale: iconScale * 0.85, rotation: weaponAngle + 0.25 });
+          c.globalAlpha = 1;
+        }
+      } else if (w.sprite) {
+        drawSprite(c, w.sprite, midX, midY, { scale: 0.85, anchorY: 0.5, rotation: stick.angle });
       }
     }
     c.restore();
@@ -2474,8 +2676,14 @@ class Game {
     this.abilityLevels = Object.assign({ dash: 0, tea: 0, charge: 0 }, this.save.abilityLevels || {});
     this.killLog = Object.assign({}, this.save.killLog || {});
     this.hubTab = 'prep';
+    this.hubScreen = 'modes'; // modes | prep | book
+    this.gameMode = this.save.gameMode === 'sale' ? 'sale' : 'shift';
     this.selectedArena = this.save.selectedArena || 'food';
     this.selectedChallenge = 'none';
+    const saleWeps = Array.isArray(this.save.saleUnlockedWeapons) ? this.save.saleUnlockedWeapons : [];
+    const migratedSale = saleWeps.map((id) => (id === 'hammer' || id === 'tags' || id === 'scanner' ? 'receipt' : id));
+    this.saleUnlockedWeapons = Array.from(new Set(['receipt', ...migratedSale]));
+    this.saleStartPassives = Object.assign({}, this.save.saleStartPassives || {});
     this.challengeFailed = false;
     this.tookDamage = false;
     this.playerProjectiles = [];
@@ -2525,6 +2733,7 @@ class Game {
     this.combo = 0; this.maxCombo = 0; this.comboTimer = 0; this.comboShield = 0;
     this.pendingUpgrades = 0;
     this.upgradeChoices = [];
+    this.upgradeRerollsLeft = 3;
     this.choosingUpgrade = false;
     this.paused = false;
     this.gameOver = false;
@@ -2605,10 +2814,16 @@ class Game {
     document.getElementById('btn-pause').onclick = () => this.togglePause();
     document.getElementById('btn-resume').onclick = () => this.togglePause(false);
     document.getElementById('btn-restart').onclick = () => { this.hideOverlays(); this.openHub(); };
+    const rerollBtn = document.getElementById('btn-upgrade-reroll');
+    if (rerollBtn) rerollBtn.onclick = () => this.rerollUpgradeChoices();
     document.getElementById('btn-again').onclick = () => { this.hideOverlays(); this.openHub(); };
     document.getElementById('btn-hub-start').onclick = () => this.startShiftFromHub();
     document.getElementById('hub-tab-prep').onclick = () => this.setHubTab('prep');
     document.getElementById('hub-tab-book').onclick = () => this.setHubTab('book');
+    document.getElementById('hub-pick-shift').onclick = () => this.pickHubMode('shift');
+    document.getElementById('hub-pick-sale').onclick = () => this.pickHubMode('sale');
+    document.getElementById('hub-back-modes').onclick = () => this.showHubModes();
+    document.getElementById('hub-back-modes-book').onclick = () => this.showHubModes();
     document.getElementById('btn-settings').onclick = () => this.openSettings();
     document.getElementById('btn-pause-settings').onclick = () => this.openSettings();
     document.getElementById('btn-settings-close').onclick = () => this.closeSettings();
@@ -2658,6 +2873,9 @@ class Game {
       bankCoins: this.bankCoins,
       metaPerks: this.metaPerks,
       selectedArena: this.selectedArena,
+      gameMode: this.gameMode,
+      saleUnlockedWeapons: this.saleUnlockedWeapons,
+      saleStartPassives: this.saleStartPassives,
       killLog: this.killLog,
     });
   }
@@ -2688,6 +2906,7 @@ class Game {
     this.choosingUpgrade = false;
     this.shopping = false;
     this.paused = false;
+    if (typeof this.updateUpgradeRerollBtn === 'function') this.updateUpgradeRerollBtn();
   }
 
   openSettings() {
@@ -2731,8 +2950,81 @@ class Game {
     if (this.inHub || this.gameOver || this.won || this.choosingUpgrade || this.shopping) return;
     this.paused = force !== undefined ? force : !this.paused;
     document.getElementById('pause-overlay').classList.toggle('show', this.paused);
+    if (this.paused) {
+      this.renderPauseLoadout();
+      sfx.click();
+    }
     this.refreshMusicState();
-    if (this.paused) sfx.click();
+  }
+
+  renderPauseLoadout() {
+    const box = document.getElementById('pause-loadout');
+    const sub = document.getElementById('pause-sub');
+    if (!box) return;
+    if (this.gameMode === 'sale') {
+      if (sub) sub.textContent = 'Распродажа на паузе. Твой текущий билд:';
+      const weps = Object.entries(this.saleWeapons || {})
+        .filter(([, lv]) => lv > 0)
+        .map(([id, lv]) => {
+          const def = (typeof SALE_WEAPONS !== 'undefined' && SALE_WEAPONS[id]) || { ico: '⚔', name: id, max: 5 };
+          return `<span class="pause-chip"><span>${def.ico || '⚔'}</span><span class="nm">${def.name || id}</span><span class="lv">Lv${lv}${def.max ? '/' + def.max : ''}</span></span>`;
+        });
+      const pass = Object.entries(this.salePassives || {})
+        .filter(([, lv]) => lv > 0)
+        .map(([id, lv]) => {
+          const def = (typeof SALE_PASSIVES !== 'undefined' && SALE_PASSIVES[id]) || { ico: '◆', name: id, max: 5 };
+          return `<span class="pause-chip"><span>${def.ico || '◆'}</span><span class="nm">${def.name || id}</span><span class="lv">Lv${lv}</span></span>`;
+        });
+      box.innerHTML = `
+        <div class="sec">Оружие · ${weps.length}/6</div>
+        <div class="pause-chips">${weps.length ? weps.join('') : '<span class="pause-empty">Пока только кулаки…</span>'}</div>
+        <div class="sec">Пассивки · ${pass.length}/6</div>
+        <div class="pause-chips">${pass.length ? pass.join('') : '<span class="pause-empty">Пассивок ещё нет</span>'}</div>
+      `;
+    } else {
+      if (sub) sub.textContent = 'Смена на паузе. Покупатели ждут…';
+      const w = this.getWeapon ? this.getWeapon() : null;
+      const ab = this.abilityLevels || {};
+      const abChips = [];
+      if ((ab.dash || 0) > 0) abChips.push(`<span class="pause-chip"><span>💨</span><span class="nm">Дэш</span><span class="lv">Lv${ab.dash}</span></span>`);
+      if ((ab.tea || 0) > 0) abChips.push(`<span class="pause-chip"><span>☕</span><span class="nm">Обед</span><span class="lv">Lv${ab.tea}</span></span>`);
+      if ((ab.charge || 0) > 0) abChips.push(`<span class="pause-chip"><span>💥</span><span class="nm">Сильный удар</span><span class="lv">Lv${ab.charge}</span></span>`);
+      box.innerHTML = `
+        <div class="sec">Оружие в руках</div>
+        <div class="pause-chips">${w
+          ? `<span class="pause-chip"><span>${w.ico || '⚔'}</span><span class="nm">${w.name}</span><span class="lv">Lv${this.getWeaponLevel ? this.getWeaponLevel(w.id) : 1}</span></span>`
+          : '<span class="pause-empty">—</span>'}</div>
+        <div class="sec">Способности</div>
+        <div class="pause-chips">${abChips.length ? abChips.join('') : '<span class="pause-empty">Базовый набор</span>'}</div>
+      `;
+    }
+  }
+
+  updateUpgradeRerollBtn() {
+    const btn = document.getElementById('btn-upgrade-reroll');
+    if (!btn) return;
+    const left = this.upgradeRerollsLeft | 0;
+    btn.textContent = left > 0 ? `🔄 Другие варианты (${left})` : '🔄 Рероллы закончились';
+    btn.disabled = left <= 0 || !this.choosingUpgrade;
+    btn.style.display = this.choosingUpgrade ? '' : 'none';
+  }
+
+  rerollUpgradeChoices() {
+    if (!this.choosingUpgrade) return;
+    if ((this.upgradeRerollsLeft | 0) <= 0) { sfx.hurt(); return; }
+    this.upgradeRerollsLeft -= 1;
+    sfx.click();
+    if (this.gameMode === 'sale' && typeof this.openSaleUpgradeUI === 'function') {
+      // не тратим pending — только пересобираем карточки
+      this._saleRerolling = true;
+      this.openSaleUpgradeUI();
+      this._saleRerolling = false;
+    } else {
+      this._shiftRerolling = true;
+      this.openUpgradeUI();
+      this._shiftRerolling = false;
+    }
+    this.updateUpgradeRerollBtn();
   }
 
   vibrate(ms = 30) {
@@ -2767,6 +3059,9 @@ class Game {
   }
 
   prepareIdleWorld() {
+    // хаб всегда на обычной карте (Распродажа увеличивает мир только в бою)
+    this.worldW = Math.max(1200, Math.floor(this.viewW() * 1.5));
+    this.worldH = Math.max(800, Math.floor(this.viewH() * 1.5));
     this.generateObstacles();
     this.generateStorefronts();
     this.generateWallDecor();
@@ -2793,6 +3088,9 @@ class Game {
     this.choosingUpgrade = false;
     this.gameOver = false;
     this.won = false;
+    document.body.classList.remove('sale-mode');
+    this.hubScreen = 'modes';
+    this.hubTab = 'prep';
     this.prepareIdleWorld();
     this.renderHub();
     document.body.classList.add('hub-mode');
@@ -2803,6 +3101,23 @@ class Game {
 
   setHubTab(tab) {
     this.hubTab = tab === 'book' ? 'book' : 'prep';
+    this.hubScreen = this.hubTab === 'book' ? 'book' : 'prep';
+    this.renderHub();
+    sfx.click();
+  }
+
+  pickHubMode(mode) {
+    this.gameMode = mode === 'sale' ? 'sale' : 'shift';
+    this.hubScreen = 'prep';
+    this.hubTab = 'prep';
+    this.persist();
+    this.renderHub();
+    sfx.click();
+  }
+
+  showHubModes() {
+    this.hubScreen = 'modes';
+    this.hubTab = 'prep';
     this.renderHub();
     sfx.click();
   }
@@ -2913,15 +3228,49 @@ class Game {
   renderHub() {
     document.getElementById('hub-bank').textContent = this.bankCoins;
     document.getElementById('hub-record').textContent = this.highScore;
+    if (!this.hubScreen) this.hubScreen = 'modes';
     if (!this.hubTab) this.hubTab = 'prep';
-    document.getElementById('hub-tab-prep').classList.toggle('on', this.hubTab === 'prep');
-    document.getElementById('hub-tab-book').classList.toggle('on', this.hubTab === 'book');
-    document.getElementById('hub-pane-prep').classList.toggle('on', this.hubTab === 'prep');
-    document.getElementById('hub-pane-book').classList.toggle('on', this.hubTab === 'book');
-    document.getElementById('btn-hub-start').style.display = this.hubTab === 'prep' ? '' : 'none';
+
+    const onModes = this.hubScreen === 'modes';
+    const onPrep = this.hubScreen === 'prep';
+    const onBook = this.hubScreen === 'book';
+
+    document.getElementById('hub-pane-modes').classList.toggle('on', onModes);
+    document.getElementById('hub-pane-prep').classList.toggle('on', onPrep);
+    document.getElementById('hub-pane-book').classList.toggle('on', onBook);
+
+    const tabPrep = document.getElementById('hub-tab-prep');
+    const tabBook = document.getElementById('hub-tab-book');
+    if (tabPrep) {
+      tabPrep.classList.toggle('on', onPrep);
+      tabPrep.textContent = this.gameMode === 'sale' ? 'Подготовка · Распродажа' : 'Подготовка · Смена';
+    }
+    if (tabBook) tabBook.classList.toggle('on', onBook);
+
+    const startBtn = document.getElementById('btn-hub-start');
+    if (startBtn) {
+      startBtn.style.display = onPrep ? '' : 'none';
+      startBtn.textContent = this.gameMode === 'sale' ? 'Начать распродажу 🛒' : 'Начать смену ⚔';
+    }
+
+    const shiftBox = document.getElementById('hub-shift-loadout');
+    const saleBox = document.getElementById('hub-sale-loadout');
+    if (shiftBox) shiftBox.style.display = this.gameMode === 'sale' ? 'none' : '';
+    if (saleBox) saleBox.style.display = this.gameMode === 'sale' ? '' : 'none';
+
+    if (onPrep || onBook) this.renderComplaintBook();
+    if (!onPrep) return;
+
+    if (this.gameMode === 'sale') {
+      this.renderSaleHubLoadout();
+      return;
+    }
 
     this.renderHubWeapons();
-    this.renderComplaintBook();
+    const hint = document.getElementById('hub-weapon-hint');
+    if (hint) {
+      hint.textContent = 'Выбери из купленного. Прокачка до 10 ур. за монеты банка (по чуть-чуть).';
+    }
 
     const perkWrap = document.getElementById('hub-perks');
     perkWrap.innerHTML = '';
@@ -3058,11 +3407,21 @@ class Game {
     document.getElementById('hub-overlay').classList.remove('show');
     document.body.classList.remove('hub-mode');
     this.inHub = false;
-    this.resetGame();
+    if (this.gameMode === 'sale') {
+      document.body.classList.add('sale-mode');
+      this.resetSaleGame();
+    } else {
+      document.body.classList.remove('sale-mode');
+      this.resetGame();
+    }
+    this.refreshMusicState();
   }
 
   resetGame() {
     this.hideOverlays();
+    // обычная карта смены (Распродажа раздувает мир)
+    this.worldW = Math.max(1200, Math.floor(this.viewW() * 1.5));
+    this.worldH = Math.max(800, Math.floor(this.viewH() * 1.5));
     if (this.selectedChallenge === 'hammer_only') {
       this.weaponId = 'hammer';
       this.hammerId = 'hammer';
@@ -3086,6 +3445,7 @@ class Game {
     this.modeTimer = 0; this.isChaseMode = true; this.modeFlash = 0;
     this.combo = 0; this.maxCombo = 0; this.comboTimer = 0; this.comboShield = 0;
     this.pendingUpgrades = 0; this.upgradeChoices = [];
+    this.upgradeRerollsLeft = 3;
     this.choosingUpgrade = false; this.shopping = false; this.paused = false;
     this.gameOver = false; this.won = false; this.killedBy = '';
     this.directorSpawned = false; this.dayDone = false;
@@ -3753,6 +4113,54 @@ class Game {
     }
   }
 
+  /** Короткий спрайт-эффект из vfx_atlas (кровь, слэш, level up…). */
+  spawnSpriteFx(name, x, y, opts = {}) {
+    if (!this.spriteFx) this.spriteFx = [];
+    if (this.spriteFx.length > 48) this.spriteFx.shift();
+    this.spriteFx.push({
+      name,
+      x,
+      y,
+      life: opts.life ?? 0.35,
+      max: opts.life ?? 0.35,
+      scale: opts.scale ?? 1,
+      scaleEnd: opts.scaleEnd ?? ((opts.scale ?? 1) * 1.35),
+      rot: opts.rot ?? 0,
+      vy: opts.vy ?? -20,
+      anchorY: opts.anchorY ?? 0.5,
+    });
+  }
+
+  tickSpriteFx(dt) {
+    if (!this.spriteFx || !this.spriteFx.length) return;
+    for (const fx of this.spriteFx) {
+      fx.life -= dt;
+      fx.y += (fx.vy || 0) * dt;
+    }
+    this.spriteFx = this.spriteFx.filter((fx) => fx.life > 0);
+  }
+
+  drawSpriteFx(ctx) {
+    if (!this.spriteFx) return;
+    for (const fx of this.spriteFx) {
+      const t = Math.max(0, fx.life / fx.max);
+      const sc = fx.scale + (fx.scaleEnd - fx.scale) * (1 - t);
+      const alpha = Math.min(1, t * 1.15);
+      const opts = { scale: sc, anchorY: fx.anchorY, alpha };
+      ctx.save();
+      if (fx.rot) {
+        ctx.translate(fx.x, fx.y);
+        ctx.rotate(fx.rot);
+        if (!(typeof drawSpell === 'function' && drawSpell(ctx, fx.name, 0, 0, opts))) {
+          drawVfx(ctx, fx.name, 0, 0, opts);
+        }
+      } else if (!(typeof drawSpell === 'function' && drawSpell(ctx, fx.name, fx.x, fx.y, opts))) {
+        drawVfx(ctx, fx.name, fx.x, fx.y, opts);
+      }
+      ctx.restore();
+    }
+  }
+
   /** Завод фитиля — взрыв через FATTY_FUSE_TIME */
   armFattyFuse(enemy) {
     this.fuseBombs = this.fuseBombs || [];
@@ -3834,6 +4242,9 @@ class Game {
               this.vibrate(45);
               this.spawnParticles(this.player.x, this.player.y, 12, '#ff6b6b', 160, 0.4);
               this.screenShake = Math.max(this.screenShake, 0.22);
+              if (this.gameMode === 'sale' && typeof this.applySaleFragileExtra === 'function') {
+                if (this.applySaleFragileExtra()) killed = true;
+              }
             }
           }
         } else {
@@ -3861,8 +4272,8 @@ class Game {
       if (warning) {
         ctx.globalAlpha = 0.35 + 0.45 * pulse;
         ctx.strokeStyle = '#e74c3c';
-        ctx.lineWidth = line.halfW * 2 * (0.55 + 0.2 * tWarn);
-        ctx.setLineDash([18, 14]);
+        ctx.lineWidth = line.halfW * 2 * (0.35 + 0.15 * tWarn);
+        ctx.setLineDash([14, 12]);
         ctx.beginPath();
         ctx.moveTo(line.x1, line.y1);
         ctx.lineTo(line.x2, line.y2);
@@ -3870,7 +4281,7 @@ class Game {
         ctx.setLineDash([]);
         // тонкая яркая ось
         ctx.globalAlpha = 0.7 * pulse;
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2;
         ctx.strokeStyle = '#ffecec';
         ctx.beginPath();
         ctx.moveTo(line.x1, line.y1);
@@ -3879,14 +4290,14 @@ class Game {
       } else {
         ctx.globalAlpha = Math.max(0.15, line.strike / 0.22);
         ctx.strokeStyle = '#ff3b1f';
-        ctx.lineWidth = line.halfW * 2.2;
+        ctx.lineWidth = line.halfW * 1.15;
         ctx.beginPath();
         ctx.moveTo(line.x1, line.y1);
         ctx.lineTo(line.x2, line.y2);
         ctx.stroke();
-        ctx.globalAlpha = 0.9;
+        ctx.globalAlpha = 0.85;
         ctx.strokeStyle = '#fff5e6';
-        ctx.lineWidth = 5;
+        ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(line.x1, line.y1);
         ctx.lineTo(line.x2, line.y2);
@@ -3942,6 +4353,7 @@ class Game {
   openUpgradeUI() {
     this.choosingUpgrade = true;
     this.paused = true;
+    if (this.upgradeRerollsLeft == null) this.upgradeRerollsLeft = 3;
     const pool = [...UPGRADES];
     this.upgradeChoices = [];
     for (let i = 0; i < 3 && pool.length; i++) {
@@ -3950,6 +4362,8 @@ class Game {
     }
     const wrap = document.getElementById('upgrade-cards');
     wrap.innerHTML = '';
+    const sub = document.getElementById('upgrade-sub');
+    if (sub) sub.textContent = 'Выбери бонус смены';
     this.upgradeChoices.forEach((up, i) => {
       const el = document.createElement('button');
       el.className = 'card';
@@ -3959,8 +4373,9 @@ class Game {
       wrap.appendChild(el);
     });
     document.getElementById('upgrade-overlay').classList.add('show');
+    this.updateUpgradeRerollBtn();
     this.refreshMusicState();
-    sfx.level();
+    if (!this._shiftRerolling) sfx.level();
   }
 
   pickUpgrade(i) {
@@ -3970,6 +4385,7 @@ class Game {
     sfx.click();
     document.getElementById('upgrade-overlay').classList.remove('show');
     this.choosingUpgrade = false;
+    this.updateUpgradeRerollBtn();
     this.pendingUpgrades = Math.max(0, this.pendingUpgrades - 1);
     if (this.pendingUpgrades > 0) this.openUpgradeUI();
     else {
@@ -4032,7 +4448,7 @@ class Game {
         this.pickUpgrade(Number(e.key) - 1);
       }
       if (this.paused || this.choosingUpgrade || this.shopping || this.gameOver || this.won) { sfx.ensure(); music.start(); return; }
-      if (e.key === ' ' && !e.repeat) this.player.startCharge();
+      if (e.key === ' ' && !e.repeat && this.gameMode !== 'sale') this.player.startCharge();
       if ((e.key === 'Shift' || e.key === 'ShiftLeft' || e.key === 'ShiftRight') && !e.repeat) {
         const dir = this.getInputDir();
         if (this.player.tryDash(dir.x, dir.y)) { sfx.mode(); this.vibrate(12); this.spawnParticles(this.player.x, this.player.y, 10, '#5dade2', 160, 0.3); }
@@ -4044,7 +4460,7 @@ class Game {
     });
     window.addEventListener('keyup', e => {
       this.keys[e.key] = false;
-      if (e.key === ' ' && !(this.paused || this.choosingUpgrade || this.shopping || this.gameOver)) {
+      if (e.key === ' ' && this.gameMode !== 'sale' && !(this.paused || this.choosingUpgrade || this.shopping || this.gameOver)) {
         if (this.player.releaseAttack()) { sfx.hit(); this.vibrate(15); }
       }
     });
@@ -4057,6 +4473,7 @@ class Game {
       const rect = canvas.getBoundingClientRect();
       const wpt = this.screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
       this.player.angle = angleTo(this.player.x, this.player.y, wpt.x, wpt.y);
+      if (this.gameMode === 'sale') return;
       this.mouseAttack = true;
       this.player.startCharge();
     });
@@ -4064,13 +4481,14 @@ class Game {
       if (e.button !== 0) return;
       if (!this.mouseAttack) return;
       this.mouseAttack = false;
+      if (this.gameMode === 'sale') return;
       if (this.paused || this.choosingUpgrade || this.shopping || this.gameOver) { this.player.charging = false; this.player.charge = 0; return; }
       if (this.player.releaseAttack()) { sfx.hit(); this.vibrate(15); }
     });
     canvas.addEventListener('mouseleave', () => {
       if (this.mouseAttack) {
         this.mouseAttack = false;
-        if (this.player.releaseAttack()) sfx.hit();
+        if (this.gameMode !== 'sale' && this.player.releaseAttack()) sfx.hit();
       }
     });
     canvas.addEventListener('mousemove', e => {
@@ -4165,6 +4583,7 @@ class Game {
           continue;
         }
         if (this.attackTouchId === null) {
+          if (this.gameMode === 'sale') continue;
           this.attackTouchId = t.identifier; this.attackHeld = true;
           attackBtn.classList.add('pressed');
           attackBtn.classList.add('charging');
@@ -4178,7 +4597,7 @@ class Game {
           this.attackTouchId = null; this.attackHeld = false;
           attackBtn.classList.remove('pressed');
           attackBtn.classList.remove('charging');
-          if (!(this.paused || this.choosingUpgrade || this.shopping || this.gameOver)) {
+          if (this.gameMode !== 'sale' && !(this.paused || this.choosingUpgrade || this.shopping || this.gameOver)) {
             if (this.player.releaseAttack()) { sfx.hit(); this.vibrate(18); }
           } else {
             this.player.charging = false; this.player.charge = 0;
@@ -4406,6 +4825,9 @@ class Game {
           const died = enemy.hit(dmg, this.player.x, this.player.y, knock, this.player.stunOnHit || 0);
           this.player.fillSkill(6 + (this.player.chargePower || 0) * 8);
           this.spawnParticles(enemy.x, enemy.y, 8, this.player.stunOnHit ? '#5dade2' : '#ffaa00', 180, 0.4);
+          if (Math.random() < 0.35) {
+            this.spawnSpriteFx('fx_hit_spark', enemy.x, enemy.y, { scale: 0.55, life: 0.18, vy: -5 });
+          }
           sfx.hit();
 
           // Разрушение витрин рядом — через прилавки с hp
@@ -4437,6 +4859,12 @@ class Game {
             const deathColor = enemy.type === 'fatty' ? '#ff6b00'
               : (this.isChaseMode ? '#e74c3c' : '#f1c40f');
             this.spawnParticles(enemy.x, enemy.y, Math.floor(20 * sizeMult), deathColor, 280 * sizeMult, 0.7);
+            this.spawnSpriteFx(Math.random() < 0.5 ? 'fx_blood' : 'fx_hit_blood', enemy.x, enemy.y, {
+              scale: 0.55 * sizeMult, scaleEnd: 0.9 * sizeMult, life: 0.32, vy: -10,
+            });
+            if (enemy.type === 'fatty' || enemy.explodes) {
+              this.spawnSpriteFx('fx_skull', enemy.x, enemy.y - 10, { scale: 0.7, life: 0.45, vy: -40 });
+            }
             this.screenShake = Math.max(this.screenShake, 0.12 * sizeMult);
 
             const dropChance = enemy.type === 'boss' || enemy.type === 'director' ? 1 :
@@ -4507,6 +4935,7 @@ class Game {
     if (this.screenShake > 0) this.screenShake = Math.max(0, this.screenShake - realDt);
     for (const p of this.particles) p.update(realDt);
     this.particles = this.particles.filter(p => !p.dead);
+    this.tickSpriteFx(realDt);
     for (const b of this.boomFx) b.life -= realDt;
     this.boomFx = this.boomFx.filter(b => b.life > 0);
 
@@ -4587,6 +5016,7 @@ class Game {
     }
     sfx.kill();
     this.spawnParticles(enemy.x, enemy.y, 16, '#e74c3c', 220, 0.55);
+    this.spawnSpriteFx('fx_blood', enemy.x, enemy.y, { scale: 0.6, scaleEnd: 0.95, life: 0.3, vy: -8 });
     this.dropCoins(enemy);
     if (Math.random() < 0.22) this.pickups.push(new Pickup(enemy.x, enemy.y, Math.random() < 0.3 ? 'lunch' : 'heal'));
     if (this.selectedChallenge !== 'hammer_only' && Math.random() < 0.08) {
@@ -4726,6 +5156,10 @@ class Game {
     if (this.lightsOut > 0) {
       darkness = 0.72;
       radius *= 0.55;
+      // фонарик / охотник в Распродаже расширяют круг видимости
+      if (this.gameMode === 'sale' && this.saleWeapons) {
+        if (this.saleWeapons.flashlight || this.saleWeapons.hunter) radius *= 1.55;
+      }
     }
 
     ctx.save();
@@ -4813,14 +5247,19 @@ class Game {
     }
 
     for (const b of this.boomFx) {
-      const t = b.life / b.max;
-      const sc = 1.8 + (1 - t) * 2.4;
-      if (!drawPickupFx(ctx, 'fx_boom', b.x, b.y, { scale: sc, anchorY: 0.5, alpha: t })) {
-        drawSprite(ctx, 'fx_boom', b.x, b.y, { scale: 1.2 + (1 - t) * 1.8, anchorY: 0.5, alpha: t });
+      const t = Math.max(0, Math.min(1, b.life / b.max));
+      const progress = 1 - t;
+      const boomName = VFX_BOOM_FRAMES[Math.min(VFX_BOOM_FRAMES.length - 1, Math.floor(progress * VFX_BOOM_FRAMES.length))];
+      const sc = 0.85 + progress * 0.55;
+      if (!drawVfx(ctx, boomName, b.x, b.y, { scale: sc, anchorY: 0.55, alpha: Math.min(1, t * 1.2) })) {
+        const oldSc = 1.8 + progress * 2.4;
+        if (!drawPickupFx(ctx, 'fx_boom', b.x, b.y, { scale: oldSc, anchorY: 0.5, alpha: t })) {
+          drawSprite(ctx, 'fx_boom', b.x, b.y, { scale: 1.2 + progress * 1.8, anchorY: 0.5, alpha: t });
+        }
       }
       if (t > 0.35) {
-        drawPickupFx(ctx, 'fx_spark', b.x + 10, b.y - 8, { scale: 1.2 + (1 - t), anchorY: 0.5, alpha: t * 0.8 });
-        drawPickupFx(ctx, 'fx_smoke2', b.x - 12, b.y + 6, { scale: 1.4 * (1 - t * 0.3), anchorY: 0.5, alpha: t * 0.55 });
+        drawVfx(ctx, 'fx_hit_spark', b.x + 8, b.y - 10, { scale: 0.7 + progress, anchorY: 0.5, alpha: t * 0.75 });
+        drawVfx(ctx, 'fx_smoke', b.x - 10, b.y + 8, { scale: 0.55 + progress * 0.35, anchorY: 0.5, alpha: t * 0.5 });
       }
       // кольцо взрыва
       ctx.save();
@@ -4831,6 +5270,10 @@ class Game {
       ctx.arc(b.x, b.y, FATTY_EXPLODE_RADIUS * (1.1 - t * 0.3), 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
+    }
+    this.drawSpriteFx(ctx);
+    if (this.gameMode === 'sale' && typeof this.renderSaleOverlays === 'function') {
+      this.renderSaleOverlays();
     }
     this.drawBossLineAttacks();
     ctx.restore();
@@ -4900,6 +5343,9 @@ class Game {
   }
 }
 
+</script>
+<script src="sale_mode.js"></script>
+<script>
 new Game();
 </script>
 </body>
