@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const SALE_VERSION = '0.3.3-sale';
+  const SALE_VERSION = '0.4.0-sale';
   const SALE_DURATION = 20 * 60; // 20 минут
   const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
   const SALE_WORLD_MUL = 2.75;
@@ -99,6 +99,14 @@
       coinDrop: 30,
     },
   };
+
+  /** Пауэрапы с элиток/боссов (LN-style: chest / magnet / bomb) */
+  const SALE_POWERUPS = {
+    chest: { id: 'chest', ico: '📦', name: 'Посылка со склада', color: '#d35400' },
+    magnet: { id: 'magnet', ico: '🧲', name: 'Промо-магнит', color: '#9b59b6' },
+    bomb: { id: 'bomb', ico: '🧨', name: 'Хлопушка', color: '#e74c3c' },
+  };
+  const SALE_BANISH_LIMIT = 2;
 
   function saleWarmMul(tSec) {
     const m = Math.max(0, tSec) / 60;
@@ -706,6 +714,12 @@
     this.saleBossSpawned = {};
     this.saleBossHazards = [];
     this.saleArenaShrink = 0;
+    this.salePowerups = [];
+    this.saleDmgNums = [];
+    this.saleVacuumT = 0;
+    this.saleBanned = {};
+    this.saleBanishesLeft = SALE_BANISH_LIMIT;
+    this._saleBanishMode = false;
 
     // Sale state
     this.saleTime = 0;
@@ -1120,11 +1134,114 @@
     }
   };
 
+  Game.prototype.spawnSalePowerup = function (x, y, kind) {
+    const def = SALE_POWERUPS[kind];
+    if (!def) return;
+    this.salePowerups = this.salePowerups || [];
+    this.salePowerups.push({
+      kind,
+      x: Math.max(40, Math.min(this.worldW - 40, x)),
+      y: Math.max(40, Math.min(this.worldH - 40, y)),
+      r: 16,
+      life: 25,
+      vx: rand(-50, 50),
+      vy: rand(-70, -20),
+    });
+  };
+
+  Game.prototype.dropSalePowerup = function (enemy) {
+    if (enemy.saleBossId) {
+      // уникальный босс ТЦ — гарантированная посылка + магнит
+      this.spawnSalePowerup(enemy.x - 22, enemy.y, 'chest');
+      this.spawnSalePowerup(enemy.x + 22, enemy.y, 'magnet');
+      return;
+    }
+    const elite = enemy.type === 'boss' || enemy.type === 'director' || enemy.type === 'miniboss';
+    if (!elite) return;
+    if (Math.random() > 0.55) return;
+    const r = Math.random();
+    const kind = r < 0.45 ? 'bomb' : r < 0.8 ? 'magnet' : 'chest';
+    this.spawnSalePowerup(enemy.x, enemy.y, kind);
+  };
+
+  Game.prototype.applySalePowerup = function (pu) {
+    const p = this.player;
+    if (pu.kind === 'chest') {
+      this.pendingUpgrades = (this.pendingUpgrades || 0) + 1;
+      this.showEventBanner('📦 Посылка со склада: бесплатное улучшение!', 1.8);
+      this.spawnSpriteFx('fx_levelup', p.x, p.y - 40, { scale: 1.2, life: 0.6, vy: -40 });
+      sfx.level();
+      this.openSaleUpgradeUI();
+    } else if (pu.kind === 'magnet') {
+      this.saleVacuumT = 1.8;
+      this.showEventBanner('🧲 Промо-магнит: весь XP летит к тебе!', 1.5);
+      this.spawnSpriteFx('fx_aura_gold', p.x, p.y, { scale: 0.6, scaleEnd: 1.1, life: 0.6, vy: 0 });
+      sfx.pickup();
+    } else if (pu.kind === 'bomb') {
+      const R = 540;
+      this.showEventBanner('🧨 Хлопушка: зал зачищен!', 1.5);
+      this.screenShake = Math.max(this.screenShake, 0.6);
+      this.boomFx = this.boomFx || [];
+      this.boomFx.push({ x: p.x, y: p.y, life: 0.45, max: 0.45 });
+      this.spawnParticles(p.x, p.y, 60, '#ff6b00', 480, 0.9);
+      this.vibrate([50, 40, 70]);
+      sfx.hurt();
+      for (const e of this.enemies) {
+        if (e.hp <= 0) continue;
+        if (dist(p.x, p.y, e.x, e.y) > R) continue;
+        const dmg = e.saleBossId ? 12 : (e.type === 'boss' || e.type === 'director' || e.type === 'miniboss') ? 20 : 999;
+        this.saleHitEnemy(e, dmg, p.x, p.y, 300, { impact: 'sp_fwave2', color: '#ff6b00' });
+      }
+    }
+  };
+
+  Game.prototype.updateSalePowerups = function (dt) {
+    const p = this.player;
+    this.salePowerups = this.salePowerups || [];
+    for (const pu of this.salePowerups) {
+      pu.life -= dt;
+      pu.x += (pu.vx || 0) * dt;
+      pu.y += (pu.vy || 0) * dt;
+      pu.vx *= 0.9;
+      pu.vy *= 0.9;
+      if (!p) continue;
+      const d = dist(p.x, p.y, pu.x, pu.y);
+      // лёгкий магнит на пауэрапы
+      if (d < 110) {
+        const a = angleTo(pu.x, pu.y, p.x, p.y);
+        const pull = (110 - d) * 4 * dt;
+        pu.x += Math.cos(a) * pull;
+        pu.y += Math.sin(a) * pull;
+      }
+      if (d < p.r + pu.r) {
+        pu.dead = true;
+        this.applySalePowerup(pu);
+      }
+    }
+    this.salePowerups = this.salePowerups.filter((pu) => !pu.dead && pu.life > 0);
+  };
+
+  Game.prototype.pushSaleDmgNum = function (x, y, dmg) {
+    if (this.showDmgNumbers === false) return;
+    this.saleDmgNums = this.saleDmgNums || [];
+    if (this.saleDmgNums.length > 48) this.saleDmgNums.shift();
+    this.saleDmgNums.push({
+      x: x + rand(-6, 6),
+      y,
+      txt: String(dmg),
+      big: dmg >= 5,
+      life: 0.65,
+      max: 0.65,
+      vy: -52,
+    });
+  };
+
   Game.prototype.onSaleEnemyKilled = function (enemy) {
     this.recordKill(enemy.type);
     this.score++;
     this.waveKills++;
     this.dropSaleXp(enemy);
+    this.dropSalePowerup(enemy);
     if (enemy.saleBossId === 'mall_closing') this.saleArenaShrink = 0;
     this.spawnSpriteFx(Math.random() < 0.55 ? 'fx_blood' : 'fx_hit_blood', enemy.x, enemy.y, {
       scale: enemy.saleBossId ? 1.1 : enemy.type === 'fatty' ? 0.85 : 0.55,
@@ -1170,8 +1287,10 @@
     const ownedP = Object.keys(this.salePassives).filter((id) => (this.salePassives[id] || 0) > 0);
     const canNewWeapon = ownedW.length < SALE_MAX_WEAPONS;
 
+    const banned = this.saleBanned || {};
     for (const def of Object.values(SALE_WEAPONS)) {
       if (def.evolved) continue;
+      if (banned['w:' + def.id]) continue;
       const lv = this.saleWeapons[def.id] || 0;
       if (lv <= 0) {
         if (canNewWeapon) pool.push({ kind: 'weapon_new', id: def.id, ico: def.ico, ttl: def.name, desc: def.desc });
@@ -1187,6 +1306,7 @@
     for (const def of Object.values(SALE_PASSIVES)) {
       if (seenPassive.has(def.id)) continue;
       seenPassive.add(def.id);
+      if (banned['p:' + def.id]) continue;
       const lv = this.salePassives[def.id] || 0;
       if (lv <= 0 && !canNewPassive) continue;
       if (lv < def.max) {
@@ -1232,6 +1352,7 @@
     this.choosingUpgrade = true;
     this.paused = true;
     if (this.upgradeRerollsLeft == null) this.upgradeRerollsLeft = 3;
+    if (!this._saleKeepBanishMode) this._saleBanishMode = false;
     this.upgradeChoices = this.buildSaleUpgradeChoices();
     if (!this.upgradeChoices.length) {
       this.choosingUpgrade = false;
@@ -1242,23 +1363,72 @@
     }
     const wrap = document.getElementById('upgrade-cards');
     wrap.innerHTML = '';
+    wrap.classList.toggle('banish-mode', !!this._saleBanishMode);
     const title = document.querySelector('#upgrade-overlay h2');
     const sub = document.getElementById('upgrade-sub') || document.querySelector('#upgrade-overlay p');
     if (title) title.textContent = `⬆ Уровень ${this.saleLevel}!`;
-    if (sub) sub.textContent = 'Оружие / пассивка / эволюция · можно перебросить выбор';
+    if (sub) sub.textContent = this._saleBanishMode
+      ? '🚫 Выбери карту, которую забанить до конца забега'
+      : 'Оружие / пассивка / эволюция · можно перебросить выбор';
     this.upgradeChoices.forEach((up, i) => {
       const el = document.createElement('button');
       el.className = 'card';
       el.type = 'button';
       el.innerHTML = `<div class="ico"></div><div class="ttl">${i + 1}. ${up.ttl}</div><div class="desc">${up.desc}</div>`;
       paintSaleChoiceIcon(el.querySelector('.ico'), up);
-      el.onclick = () => this.pickSaleUpgrade(i);
+      el.onclick = () => (this._saleBanishMode ? this.banSaleUpgrade(i) : this.pickSaleUpgrade(i));
       wrap.appendChild(el);
     });
     document.getElementById('upgrade-overlay').classList.add('show');
     this.updateUpgradeRerollBtn();
     this.refreshMusicState();
-    if (!this._saleRerolling) sfx.level();
+    if (!this._saleRerolling && !this._saleKeepBanishMode) sfx.level();
+  };
+
+  Game.prototype.toggleSaleBanish = function () {
+    if (!this.choosingUpgrade) return;
+    if (!this._saleBanishMode && (this.saleBanishesLeft | 0) <= 0) { sfx.hurt(); return; }
+    this._saleBanishMode = !this._saleBanishMode;
+    sfx.click();
+    // пересобираем UI, сохраняя режим бана
+    this._saleKeepBanishMode = true;
+    this._saleRerolling = true;
+    this.openSaleUpgradeUI();
+    this._saleRerolling = false;
+    this._saleKeepBanishMode = false;
+  };
+
+  Game.prototype.banSaleUpgrade = function (i) {
+    const up = this.upgradeChoices[i];
+    if (!up) return;
+    if (up.kind === 'evolve' || up.kind === 'heal') { sfx.hurt(); return; }
+    if ((this.saleBanishesLeft | 0) <= 0) { sfx.hurt(); return; }
+    this.saleBanned = this.saleBanned || {};
+    const key = up.kind === 'passive' ? 'p:' + up.id : 'w:' + up.id;
+    this.saleBanned[key] = true;
+    this.saleBanishesLeft -= 1;
+    this._saleBanishMode = false;
+    sfx.click();
+    this.showEventBanner(`🚫 ${up.ttl} — забанено до конца забега`, 1.6);
+    // пересобрать выбор без потраченного реролла
+    this._saleRerolling = true;
+    this.openSaleUpgradeUI();
+    this._saleRerolling = false;
+  };
+
+  Game.prototype.skipSaleUpgrade = function () {
+    if (!this.choosingUpgrade) return;
+    sfx.click();
+    document.getElementById('upgrade-overlay').classList.remove('show');
+    this.choosingUpgrade = false;
+    this._saleBanishMode = false;
+    this.pendingUpgrades = Math.max(0, this.pendingUpgrades - 1);
+    this.updateUpgradeRerollBtn();
+    if (this.pendingUpgrades > 0) this.openSaleUpgradeUI();
+    else {
+      this.paused = false;
+      this.refreshMusicState();
+    }
   };
 
   Game.prototype.pickSaleUpgrade = function (i) {
@@ -1293,6 +1463,7 @@
     sfx.click();
     document.getElementById('upgrade-overlay').classList.remove('show');
     this.choosingUpgrade = false;
+    this._saleBanishMode = false;
     this.updateUpgradeRerollBtn();
     this.pendingUpgrades = Math.max(0, this.pendingUpgrades - 1);
     if (this.pendingUpgrades > 0) this.openSaleUpgradeUI();
@@ -1302,6 +1473,22 @@
     }
   };
 
+  // расширяем управление кнопками апгрейда: бан + скип
+  const _updateRerollBtn = Game.prototype.updateUpgradeRerollBtn;
+  Game.prototype.updateUpgradeRerollBtn = function () {
+    _updateRerollBtn.call(this);
+    const banBtn = document.getElementById('btn-upgrade-banish');
+    if (banBtn) {
+      const left = this.saleBanishesLeft | 0;
+      banBtn.textContent = this._saleBanishMode ? '🚫 Выбери карту…' : `🚫 Бан (${left})`;
+      banBtn.disabled = (left <= 0 && !this._saleBanishMode) || !this.choosingUpgrade;
+      banBtn.style.display = this.choosingUpgrade ? '' : 'none';
+      banBtn.classList.toggle('active', !!this._saleBanishMode);
+    }
+    const skipBtn = document.getElementById('btn-upgrade-skip');
+    if (skipBtn) skipBtn.style.display = this.choosingUpgrade ? '' : 'none';
+  };
+
   Game.prototype.saleHitEnemy = function (e, dmg, srcX, srcY, knock, opts) {
     opts = opts || {};
     if (e._saleInvuln && this.saleInvulnExcept && e.type !== this.saleInvulnExcept) {
@@ -1309,6 +1496,7 @@
       return false;
     }
     const died = e.hit(dmg, srcX, srcY, knock || 140, opts.stun || 0);
+    this.pushSaleDmgNum(e.x, e.y - e.r - 6, Math.min(dmg, e.maxHp || dmg));
     if (opts.confuse && !died) {
       e._saleConfuse = Math.max(e._saleConfuse || 0, opts.confuse);
     }
@@ -2207,8 +2395,22 @@
 
     this.enemies = this.enemies.filter((e) => e.hp > 0);
 
+    // пауэрапы (посылка / магнит / хлопушка)
+    this.updateSalePowerups(realDt);
+
+    // цифры урона
+    if (this.saleDmgNums && this.saleDmgNums.length) {
+      for (const dn of this.saleDmgNums) {
+        dn.life -= realDt;
+        dn.y += dn.vy * realDt;
+      }
+      this.saleDmgNums = this.saleDmgNums.filter((dn) => dn.life > 0);
+    }
+
     // XP gems
-    const mag = this.saleMagnetRange();
+    if (this.saleVacuumT > 0) this.saleVacuumT -= realDt;
+    const vacuum = this.saleVacuumT > 0;
+    const mag = vacuum ? 1e9 : this.saleMagnetRange();
     for (const g of this.xpGems) {
       g.life -= realDt;
       g.x += (g.vx || 0) * realDt;
@@ -2216,10 +2418,12 @@
       g.vx *= 0.92; g.vy *= 0.92;
       const d = dist(this.player.x, this.player.y, g.x, g.y);
       if (d < mag) {
-        const pull = Math.min(1, (mag - d) / mag) * 420 * realDt;
+        const pull = vacuum
+          ? 1200 * realDt
+          : Math.min(1, (mag - d) / mag) * 420 * realDt;
         const a = angleTo(g.x, g.y, this.player.x, this.player.y);
-        g.x += Math.cos(a) * pull;
-        g.y += Math.sin(a) * pull;
+        g.x += Math.cos(a) * Math.min(d, pull);
+        g.y += Math.sin(a) * Math.min(d, pull);
       }
       if (d < this.player.r + g.r) {
         g.dead = true;
@@ -2306,6 +2510,34 @@
 
     if (this.$skillFill) this.$skillFill.style.width = (100 * p.skill / p.skillMax) + '%';
     if (this.$chargeFill) this.$chargeFill.style.width = '0%';
+
+    // HP-бар уникального босса ТЦ
+    if (!this.$bossBar) {
+      this.$bossBar = document.getElementById('sale-boss-bar');
+      this.$bossName = document.getElementById('sale-boss-name');
+      this.$bossFill = document.getElementById('sale-boss-fill');
+    }
+    if (this.$bossBar) {
+      let boss = null;
+      for (const e of this.enemies) {
+        if (e.hp > 0 && e.saleBossId && (!boss || e.maxHp > boss.maxHp)) boss = e;
+      }
+      const show = !!boss && !this.inHub && !this.gameOver && !this.won;
+      this.$bossBar.classList.toggle('show', show);
+      if (show) {
+        const def = SALE_BOSS_DEFS[boss.saleBossId];
+        this.$bossName.textContent = `${def ? def.name : boss.nameTag || 'Босс'} · фаза ${boss.bossPhase || 1}`;
+        this.$bossFill.style.width = (100 * boss.hp / Math.max(1, boss.maxHp)) + '%';
+      }
+    }
+
+    // синхронизация кнопки скорости (дев-панель тоже меняет timescale)
+    if (!this.$speedBtn) this.$speedBtn = document.getElementById('btn-speed');
+    if (this.$speedBtn) {
+      const ts = this.__saleTimeScale || 1;
+      const label = ts > 1.01 ? `▶▶ ×${ts}` : '▶ ×1';
+      if (this.$speedBtn.textContent !== label) this.$speedBtn.textContent = label;
+    }
   };
 
   Game.prototype.renderSaleOverlays = function () {
@@ -2460,6 +2692,50 @@
       }
     }
 
+    // пауэрапы (посылка / магнит / хлопушка)
+    for (const pu of this.salePowerups || []) {
+      const def = SALE_POWERUPS[pu.kind];
+      if (!def) continue;
+      const bob = Math.sin(performance.now() / 220 + pu.x * 0.03) * 3;
+      const pulse = 1 + Math.sin(performance.now() / 180) * 0.1;
+      const alpha = pu.life < 3 ? Math.max(0.25, pu.life / 3) : 1;
+      ctx.save();
+      ctx.globalAlpha = alpha * 0.45;
+      ctx.strokeStyle = def.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(pu.x, pu.y + bob, (pu.r + 6) * pulse, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = alpha;
+      const s = Math.round(24 * pulse);
+      ctx.font = `${s}px "Apple Color Emoji","Segoe UI Emoji",sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+      ctx.strokeText(def.ico, pu.x, pu.y + bob);
+      ctx.fillText(def.ico, pu.x, pu.y + bob);
+      ctx.restore();
+    }
+
+    // цифры урона
+    if (this.showDmgNumbers !== false) {
+      for (const dn of this.saleDmgNums || []) {
+        const t = Math.max(0, dn.life / dn.max);
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, t * 2.5);
+        ctx.font = dn.big ? 'bold 15px sans-serif' : 'bold 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+        ctx.fillStyle = dn.big ? '#f1c40f' : '#fff';
+        ctx.strokeText(dn.txt, dn.x, dn.y);
+        ctx.fillText(dn.txt, dn.x, dn.y);
+        ctx.restore();
+      }
+    }
+
     // орбиты — чеки / швабра / лента
     for (const o of this.saleOrbits || []) {
       const rot = o.angle + performance.now() / 180;
@@ -2577,6 +2853,51 @@
           ctx.restore();
         }
       }
+    }
+  };
+
+  /** Экранные оверлеи Sale (после restore камеры): стрелка на босса за экраном */
+  Game.prototype.renderSaleScreenUI = function () {
+    if (this.inHub || this.gameOver || this.won || !this.player) return;
+    const cam = this._renderCam;
+    if (!cam) return;
+    for (const e of this.enemies || []) {
+      if (e.hp <= 0 || !e.saleBossId) continue;
+      const def = SALE_BOSS_DEFS[e.saleBossId];
+      if (!def) continue;
+      const sx = (e.x - cam.x) * cam.z;
+      const sy = (e.y - cam.y) * cam.z;
+      const pad = 26;
+      if (sx > -pad && sx < this.W + pad && sy > -pad && sy < this.H + pad) continue;
+      // босс за экраном — стрелка у края
+      const edge = 46;
+      const ax = Math.max(edge, Math.min(this.W - edge, sx));
+      const ay = Math.max(edge + 40, Math.min(this.H - edge, sy));
+      const ang = Math.atan2(sy - ay, sx - ax);
+      const pulse = 1 + Math.sin(performance.now() / 160) * 0.12;
+      ctx.save();
+      ctx.translate(ax, ay);
+      ctx.rotate(ang);
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = def.color;
+      ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(16 * pulse, 0);
+      ctx.lineTo(-8 * pulse, -10 * pulse);
+      ctx.lineTo(-8 * pulse, 10 * pulse);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.rotate(-ang);
+      ctx.font = 'bold 10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+      ctx.lineWidth = 3;
+      ctx.strokeText(def.tag, 0, 22);
+      ctx.fillText(def.tag, 0, 22);
+      ctx.restore();
     }
   };
 
@@ -2799,6 +3120,12 @@
           bq('boss', 'security_chief', 'Охрана') +
           bq('boss', 'mall_closing', 'Закрытие ТЦ'),
       ) +
+      H('Пауэрапы') +
+      R(
+        bq('powerup', 'chest', '📦 посылка') +
+          bq('powerup', 'magnet', '🧲 магнит') +
+          bq('powerup', 'bomb', '🧨 хлопушка'),
+      ) +
       H('Оружие +1') +
       R(wepIds.map((id) => bq('wpn', id, SALE_WEAPONS[id].ico + ' ' + SALE_WEAPONS[id].name)).join(''));
   }
@@ -2915,6 +3242,13 @@
         info(b ? `босс ${SALE_BOSS_DEFS[arg].name}` : 'не удалось заспавнить');
         break;
       }
+      case 'powerup': {
+        const run = saleDevEnsureRun();
+        if (!run || !run.player) break;
+        run.spawnSalePowerup(run.player.x + 60, run.player.y, arg || 'chest');
+        info(`пауэрап ${arg}`);
+        break;
+      }
       case 'wpn': {
         const run = saleDevEnsureRun();
         if (!run || !arg || !SALE_WEAPONS[arg]) break;
@@ -2989,6 +3323,28 @@
       });
     }
     window.toggleSaleDev = toggleSaleDev;
+
+    // кнопки бан / скип на левел-апе
+    const banBtn = document.getElementById('btn-upgrade-banish');
+    if (banBtn) banBtn.onclick = () => {
+      const g = window.game;
+      if (g && typeof g.toggleSaleBanish === 'function') g.toggleSaleBanish();
+    };
+    const skipBtn = document.getElementById('btn-upgrade-skip');
+    if (skipBtn) skipBtn.onclick = () => {
+      const g = window.game;
+      if (g && typeof g.skipSaleUpgrade === 'function') g.skipSaleUpgrade();
+    };
+
+    // кнопка скорости ×1.5 в HUD
+    const speedBtn = document.getElementById('btn-speed');
+    if (speedBtn) speedBtn.onclick = () => {
+      const g = window.game;
+      if (!g) return;
+      g.__saleTimeScale = (g.__saleTimeScale || 1) > 1.01 ? 1 : 1.5;
+      speedBtn.textContent = g.__saleTimeScale > 1.01 ? `▶▶ ×${g.__saleTimeScale}` : '▶ ×1';
+      if (typeof sfx !== 'undefined') sfx.click();
+    };
   }
 
   window.__sale = {

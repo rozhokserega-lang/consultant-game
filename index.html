@@ -187,7 +187,10 @@
   .pause-chip .nm { color: #ccc; font-size: 11px; }
   .pause-empty { font-size: 12px; color: #888; }
   #upgrade-overlay .panel { max-width: 560px; }
-  #btn-upgrade-reroll:disabled { opacity: 0.4; cursor: not-allowed; }
+  #btn-upgrade-reroll:disabled, #btn-upgrade-banish:disabled { opacity: 0.4; cursor: not-allowed; }
+  #btn-upgrade-banish.active { border-color: #e74c3c; color: #e74c3c; }
+  .cards.banish-mode .card { border-color: #e74c3c; background: rgba(231,76,60,0.1); }
+  .cards.banish-mode .card:hover, .cards.banish-mode .card:active { border-color: #ff6b5b; background: rgba(231,76,60,0.22); }
   .row-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
   .btn {
     background: #f1c40f; color: #222; border: none; border-radius: 10px;
@@ -207,6 +210,25 @@
     position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
     z-index: 15; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
     pointer-events: none; max-width: 90%;
+  }
+  #sale-boss-bar {
+    position: absolute; top: 34px; left: 50%; transform: translateX(-50%);
+    z-index: 15; width: min(420px, 72%); pointer-events: none;
+    display: none; flex-direction: column; align-items: center; gap: 2px;
+  }
+  #sale-boss-bar.show { display: flex; }
+  #sale-boss-bar .nm {
+    font-size: 11px; font-weight: 800; color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8); letter-spacing: 0.03em;
+  }
+  #sale-boss-bar .track {
+    width: 100%; height: 9px; border-radius: 6px; overflow: hidden;
+    background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.35);
+  }
+  #sale-boss-bar .fill {
+    display: block; height: 100%; width: 100%;
+    background: linear-gradient(90deg, #e74c3c, #f39c12);
+    transition: width 0.12s linear;
   }
   .shop-grid {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -333,6 +355,7 @@
   }
   body.hub-mode #hud,
   body.hub-mode #buff-bar,
+  body.hub-mode #sale-boss-bar,
   body.hub-mode #desktop-hint,
   body.hub-mode .mobile-only { display: none !important; }
   body.hub-mode #game-container { padding-bottom: 0 !important; }
@@ -499,6 +522,7 @@
     </div>
 
     <div style="justify-content:flex-end;">
+      <button class="hud-btn" id="btn-speed" type="button" title="Скорость игры">▶ ×1</button>
       <button class="hud-btn" id="btn-pause" type="button" title="Пауза">⏸</button>
       <button class="hud-btn" id="btn-settings" type="button" title="Настройки">⚙️</button>
     </div>
@@ -514,6 +538,10 @@
 <div id="game-container">
   <canvas id="game"></canvas>
   <div id="buff-bar"></div>
+  <div id="sale-boss-bar" aria-hidden="true">
+    <span class="nm" id="sale-boss-name"></span>
+    <div class="track"><div class="fill" id="sale-boss-fill"></div></div>
+  </div>
 
   <div id="joystick-zone" class="mobile-only">
     <div id="joystick-base"><div id="joystick-thumb"></div></div>
@@ -533,6 +561,8 @@
       <div class="cards" id="upgrade-cards"></div>
       <div class="row-btns">
         <button class="btn ghost" id="btn-upgrade-reroll" type="button">🔄 Другие варианты (3)</button>
+        <button class="btn ghost" id="btn-upgrade-banish" type="button">🚫 Бан (2)</button>
+        <button class="btn ghost" id="btn-upgrade-skip" type="button">⏭ Пропустить</button>
       </div>
     </div>
   </div>
@@ -559,6 +589,7 @@
         <button class="btn ghost" id="tog-sound" type="button">🔊 Звук: ВКЛ</button>
         <button class="btn ghost" id="tog-music" type="button">🎵 Музыка: ВКЛ</button>
         <button class="btn ghost" id="tog-vibro" type="button">📳 Вибрация: ВКЛ</button>
+        <button class="btn ghost" id="tog-dmgnum" type="button">🔢 Цифры урона: ВКЛ</button>
         <button class="btn" id="btn-settings-close" type="button">Закрыть</button>
       </div>
       <p style="margin-top:12px;font-size:12px;">Рекорд: <b id="set-record">0</b> · Банк: <b id="set-bank">0</b></p>
@@ -2768,6 +2799,7 @@ class Game {
     sfx.enabled = this.save.sound !== false;
     music.enabled = this.save.music !== false;
     this.vibro = this.save.vibro !== false;
+    this.showDmgNumbers = this.save.dmgNumbers !== false;
     this.coins = 0;
     this.coinMult = 1;
     this.shopping = false;
@@ -2905,6 +2937,13 @@ class Game {
     document.getElementById('tog-vibro').onclick = () => {
       this.vibro = !this.vibro; this.persist(); this.refreshSettingsUI();
     };
+    const togDmg = document.getElementById('tog-dmgnum');
+    if (togDmg) togDmg.onclick = () => {
+      this.showDmgNumbers = !this.showDmgNumbers;
+      this.persist();
+      this.refreshSettingsUI();
+      sfx.click();
+    };
   }
 
   persist() {
@@ -2913,6 +2952,7 @@ class Game {
       sound: sfx.enabled,
       music: music.enabled,
       vibro: this.vibro,
+      dmgNumbers: this.showDmgNumbers,
       weaponId: this.weaponId,
       hammerId: this.weaponId,
       ownedWeapons: this.ownedWeapons,
@@ -2988,6 +3028,8 @@ class Game {
     const togMusic = document.getElementById('tog-music');
     if (togMusic) togMusic.textContent = music.enabled ? '🎵 Музыка: ВКЛ' : '🔕 Музыка: ВЫКЛ';
     document.getElementById('tog-vibro').textContent = this.vibro ? '📳 Вибрация: ВКЛ' : '📳 Вибрация: ВЫКЛ';
+    const togDmg = document.getElementById('tog-dmgnum');
+    if (togDmg) togDmg.textContent = this.showDmgNumbers ? '🔢 Цифры урона: ВКЛ' : '🔢 Цифры урона: ВЫКЛ';
     document.getElementById('set-record').textContent = this.highScore;
     const bankEl = document.getElementById('set-bank');
     if (bankEl) bankEl.textContent = this.bankCoins;
@@ -4795,6 +4837,11 @@ class Game {
 
     // Лёгкая темень + свет над персонажем
     this.drawPlayerLight(sx, sy);
+
+    // Sale: экранные оверлеи (стрелка на босса и т.п.)
+    if (this.gameMode === 'sale' && typeof this.renderSaleScreenUI === 'function') {
+      this.renderSaleScreenUI();
+    }
 
     if (this.modeFlash > 0) {
       ctx.save();
