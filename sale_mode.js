@@ -6,7 +6,7 @@
   'use strict';
 
   const SALE_DURATION = 20 * 60; // 20 минут
-  const SALE_MAX_ENEMIES = 55;
+  const SALE_MAX_ENEMIES = 72; // +30% к базовым 55
   const SALE_WORLD_MUL = 2.75;
   const SALE_MAX_WEAPONS = 6;
   const SALE_MAX_PASSIVES = 6;
@@ -316,7 +316,8 @@
 
   function saleSpawnInterval(t) {
     const f = saleTimeFactor(t);
-    return Math.max(0.18, 1.15 - f * 0.95);
+    // на ~30% чаще спавн
+    return Math.max(0.14, (1.15 - f * 0.95) / 1.3);
   }
 
   function saleEnemyType(t) {
@@ -581,7 +582,7 @@
     this.camera.y = this.player.y - this.viewH() / 2;
 
     // стартовый наплыв
-    for (let i = 0; i < 12; i++) this.spawnSaleEnemy();
+    for (let i = 0; i < 16; i++) this.spawnSaleEnemy();
 
     this.refreshMusicState();
     sfx.click();
@@ -1807,11 +1808,6 @@
 
     // линейные удары босса (телеграф → удар → исчезновение)
     if (this.updateBossLineAttacks(realDt)) return;
-
-    // skill/dash still work via input
-    if ((this.keys['f'] || this.keys['F'] || this.keys['e'] || this.keys['E']) && this.player.trySkill()) {
-      sfx.level(); this.vibrate([20, 30, 20]);
-    }
   };
 
   Game.prototype.updateSaleHUD = function () {

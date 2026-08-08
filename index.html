@@ -332,8 +332,14 @@
   body.hub-mode #desktop-hint,
   body.hub-mode .mobile-only { display: none !important; }
   body.hub-mode #game-container { padding-bottom: 0 !important; }
-  body.sale-mode #attack-btn { opacity: 0.35; pointer-events: none; }
-  body.sale-mode #attack-btn::after { content: 'AUTO'; font-size: 9px; }
+  body.sale-mode #attack-zone { display: none !important; }
+  body.sale-mode #joystick-zone {
+    left: 0; width: 100%; height: 100%; bottom: 0;
+  }
+  body.sale-mode .hud-meters { display: none !important; }
+  @media (hover: none) and (pointer: coarse) {
+    body.sale-mode #game-container { padding-bottom: 12px; }
+  }
   .hub-mode-pick {
     display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 4px;
   }
@@ -4449,11 +4455,11 @@ class Game {
       }
       if (this.paused || this.choosingUpgrade || this.shopping || this.gameOver || this.won) { sfx.ensure(); music.start(); return; }
       if (e.key === ' ' && !e.repeat && this.gameMode !== 'sale') this.player.startCharge();
-      if ((e.key === 'Shift' || e.key === 'ShiftLeft' || e.key === 'ShiftRight') && !e.repeat) {
+      if (this.gameMode !== 'sale' && (e.key === 'Shift' || e.key === 'ShiftLeft' || e.key === 'ShiftRight') && !e.repeat) {
         const dir = this.getInputDir();
         if (this.player.tryDash(dir.x, dir.y)) { sfx.mode(); this.vibrate(12); this.spawnParticles(this.player.x, this.player.y, 10, '#5dade2', 160, 0.3); }
       }
-      if ((e.key === 'f' || e.key === 'F' || e.key === 'e' || e.key === 'E') && !e.repeat) {
+      if (this.gameMode !== 'sale' && (e.key === 'f' || e.key === 'F' || e.key === 'e' || e.key === 'E') && !e.repeat) {
         if (this.player.trySkill()) { sfx.level(); this.vibrate([20, 30, 20]); this.spawnParticles(this.player.x, this.player.y, 24, '#f1c40f', 220, 0.55); }
       }
       sfx.ensure(); music.start();
@@ -4566,6 +4572,8 @@ class Game {
       e.preventDefault(); sfx.ensure(); music.start();
       if (this.gameOver || this.won) { this.hideOverlays(); this.resetGame(); return; }
       if (this.paused || this.choosingUpgrade || this.shopping) return;
+      // В Распродаже атак/дэша/обеда нет — только джойстик на весь экран
+      if (this.gameMode === 'sale') return;
       for (const t of e.changedTouches) {
         if (this.joystickId === t.identifier) continue;
 
@@ -4583,7 +4591,6 @@ class Game {
           continue;
         }
         if (this.attackTouchId === null) {
-          if (this.gameMode === 'sale') continue;
           this.attackTouchId = t.identifier; this.attackHeld = true;
           attackBtn.classList.add('pressed');
           attackBtn.classList.add('charging');
