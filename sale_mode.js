@@ -471,6 +471,9 @@
 
   Game.prototype.resetSaleGame = function () {
     this.hideOverlays();
+    // на случай если class ещё не применился — гарантируем layout
+    document.body.classList.add('sale-mode');
+    this.resize();
     this.worldW = Math.max(2800, Math.floor(this.viewW() * SALE_WORLD_MUL));
     this.worldH = Math.max(2000, Math.floor(this.viewH() * SALE_WORLD_MUL));
 
