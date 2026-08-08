@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const SALE_VERSION = '0.2.0-sale';
+  const SALE_VERSION = '0.2.1-sale';
   const SALE_DURATION = 20 * 60; // 20 минут
   const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
   const SALE_WORLD_MUL = 2.75;
@@ -1647,7 +1647,9 @@
 
   Game.prototype.updateSale = function (dt) {
     if (this.inHub || this.paused || this.choosingUpgrade || this.shopping || this.gameOver || this.won) return;
-    const realDt = Math.min(dt, 0.1);
+    if (this.__saleDevOpen) return;
+    const scale = this.__saleTimeScale || 1;
+    const realDt = Math.min(dt, 0.1) * scale;
     music.setIntensity(this.saleTime > SALE_DURATION * 0.75 ? 'boss' : 'rush');
 
     this.saleTime += realDt;
@@ -2238,30 +2240,267 @@
     sfx.shop();
   };
 
-  // ─── Debug API (по мотивам LONG NIGHT __game) ─────────────────
+  // ─── Debug API + UI panel (по мотивам LONG NIGHT) ─────────────
+  function fmtSaleClock(sec) {
+    sec = Math.max(0, Math.floor(sec || 0));
+    const m = String(Math.floor(sec / 60)).padStart(2, '0');
+    const s = String(sec % 60).padStart(2, '0');
+    return m + ':' + s;
+  }
+
+  function saleDevEnsureRun() {
+    const g = window.game;
+    if (!g) return null;
+    if (g.inHub || g.gameMode !== 'sale' || !g.player) {
+      g.gameMode = 'sale';
+      g.startShiftFromHub();
+      g.__god = true;
+    }
+    return g;
+  }
+
+  function buildSaleDevPanel() {
+    const panel = document.getElementById('sale-dev-panel');
+    if (!panel) return;
+    const g = window.game;
+    const bq = (act, arg, label) =>
+      `<button type="button" class="dvb" data-act="${act}"${arg != null ? ` data-arg="${arg}"` : ''}>${label}</button>`;
+    const H = (t) => `<div class="dvh">${t}</div>`;
+    const R = (s) => `<div class="dvrow">${s}</div>`;
+    const enemyTypes = ['normal', 'fast', 'tank', 'fatty', 'manager', 'returner', 'boss', 'director', 'miniboss'];
+    const wepIds = Object.keys(SALE_WEAPONS).filter((id) => !SALE_WEAPONS[id].evolved).slice(0, 12);
+    const info = g
+      ? `t=${fmtSaleClock(g.saleTime)} · lv=${g.saleLevel || 0} · 🪙${g.coins || 0} · mobs=${(g.enemies || []).filter((e) => e.hp > 0).length} · god=${g.__god ? 'ON' : 'off'} · ×${g.__saleTimeScale || 1}`
+      : 'game не готов';
+    panel.innerHTML =
+      bq('close', null, '✕ закрыть') +
+      `<h3>DEV · Распродажа · v${SALE_VERSION}</h3>` +
+      `<div id="sale-dev-info">${info}</div>` +
+      H('Старт') +
+      R(bq('start', null, 'старт / рестарт') + bq('hub', null, 'в хаб')) +
+      H('Время') +
+      R(
+        bq('warp', 60, '+1 мин') +
+          bq('warp', 180, '+3 мин') +
+          bq('warp', 600, '+10 мин') +
+          bq('warpto', 0, '0:00') +
+          bq('warpto', 300, '5:00') +
+          bq('warpto', 900, '15:00'),
+      ) +
+      H('Скорость') +
+      R(bq('ts', 0.5, '0.5×') + bq('ts', 1, '1×') + bq('ts', 2, '2×') + bq('ts', 3, '3×')) +
+      H('Прокачка') +
+      R(bq('lvl', 1, '+1 ур') + bq('lvl', 5, '+5 ур') + bq('gold', 500, '+500 🪙') + bq('bank', 1000, '+1000 банк')) +
+      H('Читы') +
+      R(bq('god', null, 'бог-мод') + bq('heal', null, 'хил') + bq('killall', null, 'убить всех') + bq('killself', null, 'убить себя')) +
+      H('Спавн ×15') +
+      R(enemyTypes.map((t) => bq('spawn', t, t)).join('')) +
+      H('Оружие +1') +
+      R(wepIds.map((id) => bq('wpn', id, SALE_WEAPONS[id].ico + ' ' + SALE_WEAPONS[id].name)).join(''));
+  }
+
+  function saleDevAction(act, arg) {
+    const g = window.game;
+    const info = (msg) => {
+      const el = document.getElementById('sale-dev-info');
+      if (el) el.textContent = msg;
+    };
+    switch (act) {
+      case 'close':
+        toggleSaleDev(false);
+        break;
+      case 'start':
+        saleDevEnsureRun();
+        toggleSaleDev(false);
+        break;
+      case 'hub':
+        if (g) {
+          g.__saleDevOpen = false;
+          g.openHub();
+        }
+        toggleSaleDev(false);
+        break;
+      case 'warp': {
+        const run = saleDevEnsureRun();
+        if (!run) break;
+        run.saleTime = Math.min(SALE_DURATION - 1, (run.saleTime || 0) + (+arg || 0));
+        info(`время ${fmtSaleClock(run.saleTime)}`);
+        break;
+      }
+      case 'warpto': {
+        const run = saleDevEnsureRun();
+        if (!run) break;
+        run.saleTime = Math.max(0, Math.min(SALE_DURATION - 1, +arg || 0));
+        info(`время ${fmtSaleClock(run.saleTime)}`);
+        break;
+      }
+      case 'ts':
+        if (g) {
+          g.__saleTimeScale = +arg || 1;
+          info(`скорость ×${g.__saleTimeScale}`);
+        }
+        break;
+      case 'lvl': {
+        const run = saleDevEnsureRun();
+        if (!run) break;
+        const n = Math.max(1, +arg || 1);
+        for (let i = 0; i < n; i++) run.gainSaleXp(run.saleXpNext || 99);
+        info(`уровень ${run.saleLevel}`);
+        break;
+      }
+      case 'gold': {
+        if (!g) break;
+        g.coins = (g.coins || 0) + (+arg || 0);
+        info(`монеты забега ${g.coins}`);
+        break;
+      }
+      case 'bank': {
+        if (!g) break;
+        g.bankCoins = (g.bankCoins || 0) + (+arg || 0);
+        g.persist && g.persist();
+        g.renderHub && g.inHub && g.renderHub();
+        info(`банк ${g.bankCoins}`);
+        break;
+      }
+      case 'god': {
+        const run = saleDevEnsureRun();
+        if (!run) break;
+        run.__god = !run.__god;
+        if (run.__god && run.player) run.player.hp = run.player.maxHp;
+        info(`бог-мод ${run.__god ? 'ON' : 'off'}`);
+        break;
+      }
+      case 'heal': {
+        const run = saleDevEnsureRun();
+        if (run && run.player) {
+          run.player.hp = run.player.maxHp;
+          info('хил full');
+        }
+        break;
+      }
+      case 'killall': {
+        const run = window.game;
+        if (!run || !run.enemies) break;
+        for (const e of run.enemies) e.hp = 0;
+        run.enemies = run.enemies.filter((e) => e.hp > 0);
+        info('враги очищены');
+        break;
+      }
+      case 'killself': {
+        const run = window.game;
+        if (!run || !run.player) break;
+        run.__god = false;
+        run.player.hp = 0;
+        run.endSaleGame(false);
+        toggleSaleDev(false);
+        break;
+      }
+      case 'spawn': {
+        const run = saleDevEnsureRun();
+        if (!run) break;
+        for (let i = 0; i < 15; i++) run.spawnSaleEnemy(arg || null);
+        info(`спавн ${arg} ×15`);
+        break;
+      }
+      case 'wpn': {
+        const run = saleDevEnsureRun();
+        if (!run || !arg || !SALE_WEAPONS[arg]) break;
+        const max = SALE_WEAPONS[arg].max || 5;
+        run.saleWeapons = run.saleWeapons || {};
+        run.saleWeapons[arg] = Math.min(max, (run.saleWeapons[arg] || 0) + 1);
+        info(`${SALE_WEAPONS[arg].name} lv${run.saleWeapons[arg]}`);
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  function toggleSaleDev(on) {
+    const panel = document.getElementById('sale-dev-panel');
+    if (!panel) return;
+    const g = window.game;
+    const show = on === true || (on == null && !panel.classList.contains('show'));
+    if (show) {
+      buildSaleDevPanel();
+      panel.classList.add('show');
+      panel.setAttribute('aria-hidden', 'false');
+      if (g) {
+        g.__saleDevOpen = true;
+        g.__saleDevPaused = !g.paused && !g.inHub;
+        if (g.__saleDevPaused) g.paused = true;
+      }
+    } else {
+      panel.classList.remove('show');
+      panel.setAttribute('aria-hidden', 'true');
+      if (g) {
+        g.__saleDevOpen = false;
+        if (g.__saleDevPaused) {
+          g.paused = false;
+          g.__saleDevPaused = false;
+        }
+      }
+    }
+  }
+
+  function bindSaleDevUi() {
+    const syncVer = () => {
+      const label = 'v' + SALE_VERSION;
+      const hub = document.getElementById('hub-version');
+      const corner = document.getElementById('sale-ver-corner');
+      if (hub) hub.textContent = label;
+      if (corner) corner.textContent = label;
+    };
+    syncVer();
+    const open = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleSaleDev(true);
+    };
+    const hub = document.getElementById('hub-version');
+    const corner = document.getElementById('sale-ver-corner');
+    if (hub) {
+      hub.addEventListener('click', open);
+      hub.addEventListener('touchend', open, { passive: false });
+    }
+    if (corner) {
+      corner.addEventListener('click', open);
+      corner.addEventListener('touchend', open, { passive: false });
+    }
+    const panel = document.getElementById('sale-dev-panel');
+    if (panel) {
+      panel.addEventListener('click', (e) => {
+        const b = e.target.closest('button[data-act]');
+        if (!b) return;
+        saleDevAction(b.dataset.act, b.dataset.arg);
+      });
+    }
+    window.toggleSaleDev = toggleSaleDev;
+  }
+
   window.__sale = {
     version: () => SALE_VERSION,
-    start: () => { if (window.game) window.game.startShiftFromHub(); },
+    start: () => saleDevEnsureRun(),
     warp: (sec) => {
-      const g = window.game;
-      if (!g || g.gameMode !== 'sale') return;
+      const g = saleDevEnsureRun();
+      if (!g) return;
       g.saleTime = Math.max(0, Number(sec) || 0);
     },
     god: (on) => {
-      const g = window.game;
-      if (!g || !g.player) return;
+      const g = saleDevEnsureRun();
+      if (!g) return;
       g.__god = on !== false;
-      if (g.__god) g.player.hp = g.player.maxHp;
+      if (g.__god && g.player) g.player.hp = g.player.maxHp;
     },
     spawn: (type, n) => {
-      const g = window.game;
-      if (!g || g.gameMode !== 'sale') return;
+      const g = saleDevEnsureRun();
+      if (!g) return;
       const count = Math.max(1, Number(n) || 1);
       for (let i = 0; i < count; i++) g.spawnSaleEnemy(type || null);
     },
     levelup: () => {
-      const g = window.game;
-      if (!g || g.gameMode !== 'sale') return;
+      const g = saleDevEnsureRun();
+      if (!g) return;
       g.gainSaleXp(g.saleXpNext || 99);
     },
     gold: (n) => {
@@ -2272,6 +2511,7 @@
       g.persist && g.persist();
       g.renderHub && g.inHub && g.renderHub();
     },
+    clearEnemies: () => saleDevAction('killall'),
     count: () => {
       const g = window.game;
       if (!g) return null;
@@ -2283,7 +2523,13 @@
       };
     },
     warm: (t) => ({ enemy: saleWarmMul(t || 0), coin: saleCoinWarmMul(t || 0) }),
+    panel: (on) => toggleSaleDev(on),
   };
-  // совместимость с именем из LN
   window.__game = window.__sale;
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindSaleDevUi);
+  } else {
+    bindSaleDevUi();
+  }
 })();

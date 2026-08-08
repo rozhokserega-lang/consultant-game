@@ -337,6 +337,74 @@
   body.sale-mode #joystick-zone {
     left: 0; width: 100%; height: 100%; bottom: 0;
   }
+  #hub-version {
+    opacity: 0.55;
+    font-size: 11px;
+    cursor: pointer;
+    text-decoration: underline dotted;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #sale-ver-corner {
+    position: fixed;
+    left: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    z-index: 60;
+    color: rgba(200, 190, 210, 0.45);
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    padding: 10px 14px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    display: none;
+  }
+  body.sale-mode:not(.hub-mode) #sale-ver-corner { display: block; }
+  #sale-dev-panel {
+    position: fixed;
+    inset: 0;
+    z-index: 220;
+    background: rgba(8, 8, 14, 0.94);
+    color: #d8e0f0;
+    font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+    padding: 12px 12px max(40px, env(safe-area-inset-bottom, 0px));
+    overflow: auto;
+    display: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  #sale-dev-panel.show { display: block; }
+  #sale-dev-panel h3 {
+    margin: 4px 0 10px;
+    font: bold 14px monospace;
+    color: #7ad4ff;
+    letter-spacing: 1px;
+  }
+  #sale-dev-panel .dvh {
+    margin: 10px 0 4px;
+    color: #9ab;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  #sale-dev-panel .dvrow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  #sale-dev-panel .dvb {
+    background: #22283a;
+    color: #e8eef8;
+    border: 1px solid #3a4560;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font: 12px monospace;
+    cursor: pointer;
+  }
+  #sale-dev-panel .dvb:active { background: #2f3850; }
+  #sale-dev-panel #sale-dev-info {
+    margin-top: 12px;
+    color: #8fa;
+    min-height: 1.2em;
+  }
   body.sale-mode .hud-meters { display: none !important; }
   /* без кнопок снизу — поле на весь экран */
   body.sale-mode #game-container {
@@ -516,7 +584,7 @@
     <div class="panel hub-panel">
       <div class="hub-scroll">
         <h2>🛒 Распродажа</h2>
-        <p>Банк: <b id="hub-bank">0</b> 🪙 · Рекорд: <b id="hub-record">0</b> · <span id="hub-version" style="opacity:.55;font-size:11px;"></span></p>
+        <p>Банк: <b id="hub-bank">0</b> 🪙 · Рекорд: <b id="hub-record">0</b> · <span id="hub-version" title="Дев-панель">v?</span></p>
 
         <!-- Режим «Смена» отключён: только Распродажа (механика VS / LONG NIGHT). -->
         <div class="hub-pane" id="hub-pane-modes" style="display:none;"></div>
@@ -2456,6 +2524,7 @@ class Player {
   }
 
   takeDamage(fromX, fromY) {
+    if (window.game && window.game.__god) return false;
     if (this.invincible > 0 || this.lunchTimer > 0) return false;
     if (this.shieldCharges > 0) {
       this.shieldCharges--;
@@ -5338,6 +5407,8 @@ class Game {
 }
 
 </script>
+<div id="sale-ver-corner" title="Дев-панель">v?</div>
+<div id="sale-dev-panel" aria-hidden="true"></div>
 <script src="sale_mode.js"></script>
 <script>
 new Game();
