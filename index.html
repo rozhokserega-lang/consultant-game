@@ -414,6 +414,7 @@
       <h2>⚙️ Настройки</h2>
       <div class="row-btns" style="flex-direction:column;align-items:stretch;">
         <button class="btn ghost" id="tog-sound" type="button">🔊 Звук: ВКЛ</button>
+        <button class="btn ghost" id="tog-music" type="button">🎵 Музыка: ВКЛ</button>
         <button class="btn ghost" id="tog-vibro" type="button">📳 Вибрация: ВКЛ</button>
         <button class="btn ghost" id="tog-hammer" type="button">⚔ Оружие: Молоток</button>
         <p style="font-size:11px;color:#aaa;margin-top:4px;">Смена оружия — только в подготовке к смене</p>
@@ -1127,6 +1128,7 @@ class SFX {
       if (AC) this.ctx = new AC();
     }
     if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    return this.ctx;
   }
   tone(freq, dur, type = 'square', vol = 0.08, slide = 0) {
     if (!this.enabled) return;
@@ -1157,6 +1159,154 @@ class SFX {
 }
 
 const sfx = new SFX();
+
+// ── Фоновая музыка (чиптюн на том же AudioContext, что и SFX) ──
+class Music {
+  constructor() {
+    this.enabled = true;
+    this.muted = false;
+    this.playing = false;
+    this.ctx = null;
+    this.master = null;
+    this.intensity = 'calm';
+    this.step = 0;
+    this.nextStepTime = 0;
+    this.lookahead = 25;
+    this.scheduleAhead = 0.15;
+    this.timerId = null;
+    this.rootFreq = 220;
+    this.chords = [
+      { root: 0, third: 3, fifth: 7 },
+      { root: -4, third: 0, fifth: 3 },
+      { root: 3, third: 7, fifth: 10 },
+      { root: -2, third: 2, fifth: 5 },
+    ];
+  }
+
+  ensure() {
+    sfx.ensure();
+    if (!sfx.ctx) return;
+    this.ctx = sfx.ctx;
+    if (!this.master) {
+      this.master = this.ctx.createGain();
+      this.master.gain.value = 0;
+      this.master.connect(this.ctx.destination);
+    }
+  }
+
+  freq(semi) { return this.rootFreq * Math.pow(2, semi / 12); }
+
+  start() {
+    this.ensure();
+    if (!this.ctx || this.playing || !this.enabled) return;
+    this.playing = true;
+    this.step = 0;
+    this.nextStepTime = this.ctx.currentTime + 0.05;
+    this._fadeTo(this.muted ? 0 : this._targetVol());
+    this._tick();
+  }
+
+  stop() {
+    this.playing = false;
+    if (this.timerId) { clearTimeout(this.timerId); this.timerId = null; }
+    this._fadeTo(0);
+  }
+
+  setEnabled(v) {
+    this.enabled = v;
+    if (v) this.start(); else this.stop();
+  }
+
+  setMuted(v) {
+    this.muted = !!v;
+    if (this.playing) this._fadeTo(this.muted ? 0 : this._targetVol());
+  }
+
+  setIntensity(level) {
+    if (this.intensity === level) return;
+    this.intensity = level;
+    if (this.playing && !this.muted) this._fadeTo(this._targetVol());
+  }
+
+  _targetVol() { return { calm: 0.10, rush: 0.14, boss: 0.16 }[this.intensity] ?? 0.10; }
+  _bpm() { return { calm: 122, rush: 148, boss: 138 }[this.intensity] ?? 122; }
+  _stepDur() { return 60 / this._bpm() / 4; }
+
+  _fadeTo(target) {
+    if (!this.master || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.master.gain.cancelScheduledValues(t);
+    this.master.gain.setValueAtTime(this.master.gain.value, t);
+    this.master.gain.linearRampToValueAtTime(target, t + 0.5);
+  }
+
+  _tick() {
+    if (!this.playing || !this.ctx) return;
+    while (this.nextStepTime < this.ctx.currentTime + this.scheduleAhead) {
+      this._playStep(this.step, this.nextStepTime);
+      this.nextStepTime += this._stepDur();
+      this.step = (this.step + 1) % 16;
+    }
+    this.timerId = setTimeout(() => this._tick(), this.lookahead);
+  }
+
+  _osc(freq, time, type, vol, decay) {
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, time);
+    g.gain.setValueAtTime(0, time);
+    g.gain.linearRampToValueAtTime(vol, time + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, time + decay);
+    o.connect(g); g.connect(this.master);
+    o.start(time); o.stop(time + decay + 0.02);
+  }
+
+  _hat(time, vol) {
+    const n = Math.floor(this.ctx.sampleRate * 0.03);
+    const buf = this.ctx.createBuffer(1, n, this.ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf;
+    const filt = this.ctx.createBiquadFilter();
+    filt.type = 'highpass'; filt.frequency.value = 6000;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(vol, time);
+    g.gain.exponentialRampToValueAtTime(0.001, time + 0.03);
+    src.connect(filt); filt.connect(g); g.connect(this.master);
+    src.start(time); src.stop(time + 0.04);
+  }
+
+  _kick(time, vol) {
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(120, time);
+    o.frequency.exponentialRampToValueAtTime(40, time + 0.12);
+    g.gain.setValueAtTime(vol, time);
+    g.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+    o.connect(g); g.connect(this.master);
+    o.start(time); o.stop(time + 0.16);
+  }
+
+  _playStep(step, time) {
+    // mute — не создаём осцилляторы (экономия CPU)
+    if (this.muted || !this.enabled) return;
+    const chord = this.chords[Math.floor(step / 4) % this.chords.length];
+    const busy = this.intensity !== 'calm';
+    if (step % 4 === 0) this._osc(this.freq(chord.root - 12), time, 'square', 0.10, 0.3);
+    const arp = [chord.root, chord.third, chord.fifth, chord.third];
+    if (busy || step % 2 === 0) {
+      const note = arp[(step >> 1) % arp.length];
+      this._osc(this.freq(note + 12), time, 'triangle', busy ? 0.055 : 0.04, 0.18);
+    }
+    if (step % 2 === 1) this._hat(time, busy ? 0.05 : 0.03);
+    if (busy && step % 8 === 0) this._kick(time, 0.12);
+  }
+}
+
+const music = new Music();
 
 class Particle {
   constructor(x, y, vx, vy, color, life, size = 3) {
@@ -2268,6 +2418,7 @@ class Game {
     if (!this.ownedWeapons.includes(this.weaponId)) this.weaponId = 'hammer';
     this.hammerId = this.weaponId; // compat
     sfx.enabled = this.save.sound !== false;
+    music.enabled = this.save.music !== false;
     this.vibro = this.save.vibro !== false;
     this.coins = 0;
     this.coinMult = 1;
@@ -2392,6 +2543,12 @@ class Game {
       this.refreshSettingsUI();
       sfx.click();
     };
+    document.getElementById('tog-music').onclick = () => {
+      music.setEnabled(!music.enabled);
+      this.persist();
+      this.refreshSettingsUI();
+      sfx.click();
+    };
     document.getElementById('tog-vibro').onclick = () => {
       this.vibro = !this.vibro; this.persist(); this.refreshSettingsUI();
     };
@@ -2416,6 +2573,7 @@ class Game {
     saveSave({
       highScore: this.highScore,
       sound: sfx.enabled,
+      music: music.enabled,
       vibro: this.vibro,
       weaponId: this.weaponId,
       hammerId: this.weaponId,
@@ -2427,6 +2585,25 @@ class Game {
       selectedArena: this.selectedArena,
       killLog: this.killLog,
     });
+  }
+
+  /** Музыка: хаб/бой — on; пауза/настройки/магазин/апгрейд/конец — mute */
+  refreshMusicState() {
+    const settingsOpen = document.getElementById('settings-overlay')?.classList.contains('show');
+    if (settingsOpen || this.gameOver || this.won || this.choosingUpgrade || this.shopping) {
+      music.setMuted(true);
+      return;
+    }
+    if (this.inHub) {
+      music.setIntensity('calm');
+      music.setMuted(false);
+      return;
+    }
+    if (this.paused) {
+      music.setMuted(true);
+      return;
+    }
+    music.setMuted(false);
   }
 
   hideOverlays() {
@@ -2444,6 +2621,7 @@ class Game {
     if (!this.gameOver && !this.won) this.paused = true;
     document.getElementById('pause-overlay').classList.remove('show');
     document.getElementById('hub-overlay').classList.remove('show');
+    this.refreshMusicState();
   }
 
   closeSettings() {
@@ -2451,17 +2629,21 @@ class Game {
     if (this.inHub) {
       this.paused = true;
       document.getElementById('hub-overlay').classList.add('show');
+      this.refreshMusicState();
       return;
     }
     if (!this.gameOver && !this.won && this.paused) {
       document.getElementById('pause-overlay').classList.add('show');
-    } else {
+    } else if (!this.gameOver && !this.won) {
       this.paused = false;
     }
+    this.refreshMusicState();
   }
 
   refreshSettingsUI() {
     document.getElementById('tog-sound').textContent = sfx.enabled ? '🔊 Звук: ВКЛ' : '🔇 Звук: ВЫКЛ';
+    const togMusic = document.getElementById('tog-music');
+    if (togMusic) togMusic.textContent = music.enabled ? '🎵 Музыка: ВКЛ' : '🔕 Музыка: ВЫКЛ';
     document.getElementById('tog-vibro').textContent = this.vibro ? '📳 Вибрация: ВКЛ' : '📳 Вибрация: ВЫКЛ';
     document.getElementById('tog-hammer').textContent = '⚔ Оружие: ' + this.getWeapon().name;
     document.getElementById('set-record').textContent = this.highScore;
@@ -2474,6 +2656,7 @@ class Game {
     if (this.inHub || this.gameOver || this.won || this.choosingUpgrade || this.shopping) return;
     this.paused = force !== undefined ? force : !this.paused;
     document.getElementById('pause-overlay').classList.toggle('show', this.paused);
+    this.refreshMusicState();
     if (this.paused) sfx.click();
   }
 
@@ -2539,6 +2722,7 @@ class Game {
     this.renderHub();
     document.body.classList.add('hub-mode');
     document.getElementById('hub-overlay').classList.add('show');
+    this.refreshMusicState();
     sfx.click();
   }
 
@@ -2848,6 +3032,7 @@ class Game {
     this.camera.x = this.player.x - this.viewW() / 2;
     this.camera.y = this.player.y - this.viewH() / 2;
     this.startWave(1);
+    this.refreshMusicState();
     sfx.click();
   }
 
@@ -3181,6 +3366,7 @@ class Game {
       this._bfBanner = 2.2;
     }
     if (this.wave >= 2) this.maybeTriggerMapEvent();
+    this.refreshMusicState();
     sfx.mode();
   }
 
@@ -3235,6 +3421,7 @@ class Game {
       `Волна ${this.wave}: осталось покупок ${this.shopBuysLeft}. Оружие только покупается — смена в подготовке к смене.`;
     this.renderShop();
     document.getElementById('shop-overlay').classList.add('show');
+    this.refreshMusicState();
     sfx.shop();
   }
 
@@ -3320,6 +3507,7 @@ class Game {
     this.shopping = false;
     this.paused = false;
     this.beginWaveCombat();
+    this.refreshMusicState();
     sfx.click();
   }
 
@@ -3696,6 +3884,7 @@ class Game {
       wrap.appendChild(el);
     });
     document.getElementById('upgrade-overlay').classList.add('show');
+    this.refreshMusicState();
     sfx.level();
   }
 
@@ -3708,7 +3897,10 @@ class Game {
     this.choosingUpgrade = false;
     this.pendingUpgrades = Math.max(0, this.pendingUpgrades - 1);
     if (this.pendingUpgrades > 0) this.openUpgradeUI();
-    else this.paused = false;
+    else {
+      this.paused = false;
+      this.refreshMusicState();
+    }
   }
 
   endGame(won, killer = '') {
@@ -3747,6 +3939,7 @@ class Game {
       else cl.textContent = `Испытание «${ch.name}» ❌`;
     }
     document.getElementById('end-overlay').classList.add('show');
+    this.refreshMusicState();
     if (won) sfx.win(); else sfx.lose();
     this.vibrate(won ? [40, 40, 80] : 80);
   }
@@ -3763,7 +3956,7 @@ class Game {
       if (this.choosingUpgrade && ['1','2','3'].includes(e.key)) {
         this.pickUpgrade(Number(e.key) - 1);
       }
-      if (this.paused || this.choosingUpgrade || this.shopping || this.gameOver || this.won) { sfx.ensure(); return; }
+      if (this.paused || this.choosingUpgrade || this.shopping || this.gameOver || this.won) { sfx.ensure(); music.start(); return; }
       if (e.key === ' ' && !e.repeat) this.player.startCharge();
       if ((e.key === 'Shift' || e.key === 'ShiftLeft' || e.key === 'ShiftRight') && !e.repeat) {
         const dir = this.getInputDir();
@@ -3772,7 +3965,7 @@ class Game {
       if ((e.key === 'f' || e.key === 'F' || e.key === 'e' || e.key === 'E') && !e.repeat) {
         if (this.player.trySkill()) { sfx.level(); this.vibrate([20, 30, 20]); this.spawnParticles(this.player.x, this.player.y, 24, '#f1c40f', 220, 0.55); }
       }
-      sfx.ensure();
+      sfx.ensure(); music.start();
     });
     window.addEventListener('keyup', e => {
       this.keys[e.key] = false;
@@ -3783,7 +3976,7 @@ class Game {
 
     canvas.addEventListener('mousedown', e => {
       if (e.button !== 0) return;
-      sfx.ensure();
+      sfx.ensure(); music.start();
       if (this.gameOver || this.won) return;
       if (this.paused || this.choosingUpgrade || this.shopping) return;
       const rect = canvas.getBoundingClientRect();
@@ -3821,7 +4014,7 @@ class Game {
     const attackBtn = document.getElementById('attack-btn');
 
     joystickZone.addEventListener('touchstart', e => {
-      e.preventDefault(); sfx.ensure();
+      e.preventDefault(); sfx.ensure(); music.start();
       if (this.gameOver || this.won) { this.hideOverlays(); this.resetGame(); return; }
       for (const t of e.changedTouches) {
         if (this.joystickId === null && this.attackTouchId !== t.identifier) {
@@ -3877,7 +4070,7 @@ class Game {
     };
 
     attackZone.addEventListener('touchstart', e => {
-      e.preventDefault(); sfx.ensure();
+      e.preventDefault(); sfx.ensure(); music.start();
       if (this.gameOver || this.won) { this.hideOverlays(); this.resetGame(); return; }
       if (this.paused || this.choosingUpgrade || this.shopping) return;
       for (const t of e.changedTouches) {
@@ -4023,6 +4216,7 @@ class Game {
   update(dt) {
     if (this.inHub || this.paused || this.choosingUpgrade || this.shopping || this.gameOver || this.won) return;
     const realDt = Math.min(dt, 0.1);
+    music.setIntensity(this.wavePhase === 'boss' ? 'boss' : (this.isChaseMode ? 'rush' : 'calm'));
 
     if (this.eventCooldown > 0) this.eventCooldown -= realDt;
     if (this.lightsOut > 0) this.lightsOut -= realDt;
