@@ -515,52 +515,26 @@
     <div class="overlay" id="hub-overlay">
     <div class="panel hub-panel">
       <div class="hub-scroll">
-        <h2>🛒 Консультант</h2>
-        <p>Банк: <b id="hub-bank">0</b> 🪙 · Рекорд: <b id="hub-record">0</b></p>
+        <h2>🛒 Распродажа</h2>
+        <p>Банк: <b id="hub-bank">0</b> 🪙 · Рекорд: <b id="hub-record">0</b> · <span id="hub-version" style="opacity:.55;font-size:11px;"></span></p>
 
-        <div class="hub-pane on" id="hub-pane-modes">
-          <div class="hub-sec">Выбери режим</div>
-          <div class="hub-mode-pick">
-            <button type="button" class="hub-mode-card" id="hub-pick-shift">
-              <div class="big">⚔ Смена</div>
-              <div class="sub">10 волн, боссы, магазин между волнами. Классический режим с ручной атакой.</div>
-            </button>
-            <button type="button" class="hub-mode-card" id="hub-pick-sale">
-              <div class="big">🛒 Распродажа</div>
-              <div class="sub">20 минут, авто-атака, XP и прокачка на лету. Большая карта в духе Vampire Survivors.</div>
-            </button>
-          </div>
-          <p style="font-size:11px;color:#888;text-align:left;margin:8px 0 0;">После выбора откроется подготовка и прокачка именно для этого режима.</p>
-        </div>
+        <!-- Режим «Смена» отключён: только Распродажа (механика VS / LONG NIGHT). -->
+        <div class="hub-pane" id="hub-pane-modes" style="display:none;"></div>
 
-        <div class="hub-pane" id="hub-pane-prep">
-          <button type="button" class="hub-back" id="hub-back-modes">← К выбору режима</button>
+        <div class="hub-pane on" id="hub-pane-prep">
           <div class="hub-tabs">
-            <button type="button" class="hub-tab on" data-hub-tab="prep" id="hub-tab-prep">Подготовка</button>
+            <button type="button" class="hub-tab on" data-hub-tab="prep" id="hub-tab-prep">Подготовка · Распродажа</button>
             <button type="button" class="hub-tab" data-hub-tab="book" id="hub-tab-book">📖 Книга жалоб</button>
           </div>
 
-          <div id="hub-shift-loadout">
-            <div class="hub-sec">Оружие на смену</div>
-            <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;" id="hub-weapon-hint">Выбери из купленного. Прокачка до 10 ур. за монеты банка.</p>
-            <div class="wep-grid" id="hub-weapons"></div>
-            <div class="hub-sec">Способности</div>
-            <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 4px;">Дэш · Обед · Сильный удар — до 5 ур. за банк.</p>
-            <div class="perk-row" id="hub-abilities"></div>
-            <div class="hub-sec">Мета-перки</div>
-            <div class="perk-row" id="hub-perks"></div>
-            <div class="hub-sec">Зона ТЦ</div>
-            <div class="hub-grid" id="hub-arenas"></div>
-            <div class="hub-sec">Испытание</div>
-            <div class="hub-grid" id="hub-challenges"></div>
-          </div>
+          <div id="hub-shift-loadout" style="display:none;"></div>
 
-          <div id="hub-sale-loadout" style="display:none;">
+          <div id="hub-sale-loadout">
             <div class="hub-sec">Стартовые авто-оружия</div>
-            <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Разблокируй стартовые оружия Распродажи. Чек всегда с тобой. Эволюции открываются в забеге.</p>
+            <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Разблокируй стартовые оружия. Чек всегда с тобой. Эволюции открываются в забеге.</p>
             <div class="hub-grid" id="hub-sale-weapons"></div>
             <div class="hub-sec">Стартовые пассивки</div>
-            <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Постоянные бонусы к началу забега Распродажи (за монеты банка).</p>
+            <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Постоянные бонусы к началу забега (за монеты банка).</p>
             <div class="perk-row" id="hub-sale-passives"></div>
             <div class="hub-sec">Зона ТЦ</div>
             <div class="hub-grid" id="hub-sale-arenas"></div>
@@ -568,14 +542,14 @@
         </div>
 
         <div class="hub-pane" id="hub-pane-book">
-          <button type="button" class="hub-back" id="hub-back-modes-book">← К выбору режима</button>
+          <button type="button" class="hub-back" id="hub-back-modes-book">← К подготовке</button>
           <div class="hub-sec">📖 Книга жалоб</div>
           <p class="book-total" id="book-total">Всего выписано жалоб: 0</p>
           <div class="book-list" id="hub-book"></div>
         </div>
       </div>
       <div class="hub-footer">
-        <button class="btn" id="btn-hub-start" type="button">Начать смену ⚔</button>
+        <button class="btn" id="btn-hub-start" type="button">Начать распродажу 🛒</button>
       </div>
     </div>
   </div>
@@ -2693,8 +2667,8 @@ class Game {
     this.abilityLevels = Object.assign({ dash: 0, tea: 0, charge: 0 }, this.save.abilityLevels || {});
     this.killLog = Object.assign({}, this.save.killLog || {});
     this.hubTab = 'prep';
-    this.hubScreen = 'modes'; // modes | prep | book
-    this.gameMode = this.save.gameMode === 'sale' ? 'sale' : 'shift';
+    this.hubScreen = 'prep'; // prep | book (режим «Смена» убран)
+    this.gameMode = 'sale';
     this.selectedArena = this.save.selectedArena || 'food';
     this.selectedChallenge = 'none';
     const saleWeps = Array.isArray(this.save.saleUnlockedWeapons) ? this.save.saleUnlockedWeapons : [];
@@ -2837,10 +2811,8 @@ class Game {
     document.getElementById('btn-hub-start').onclick = () => this.startShiftFromHub();
     document.getElementById('hub-tab-prep').onclick = () => this.setHubTab('prep');
     document.getElementById('hub-tab-book').onclick = () => this.setHubTab('book');
-    document.getElementById('hub-pick-shift').onclick = () => this.pickHubMode('shift');
-    document.getElementById('hub-pick-sale').onclick = () => this.pickHubMode('sale');
-    document.getElementById('hub-back-modes').onclick = () => this.showHubModes();
-    document.getElementById('hub-back-modes-book').onclick = () => this.showHubModes();
+    const backBook = document.getElementById('hub-back-modes-book');
+    if (backBook) backBook.onclick = () => this.setHubTab('prep');
     document.getElementById('btn-settings').onclick = () => this.openSettings();
     document.getElementById('btn-pause-settings').onclick = () => this.openSettings();
     document.getElementById('btn-settings-close').onclick = () => this.closeSettings();
@@ -3105,8 +3077,9 @@ class Game {
     this.choosingUpgrade = false;
     this.gameOver = false;
     this.won = false;
+    this.gameMode = 'sale';
     document.body.classList.remove('sale-mode');
-    this.hubScreen = 'modes';
+    this.hubScreen = 'prep';
     this.hubTab = 'prep';
     this.prepareIdleWorld();
     this.renderHub();
@@ -3123,8 +3096,9 @@ class Game {
     sfx.click();
   }
 
-  pickHubMode(mode) {
-    this.gameMode = mode === 'sale' ? 'sale' : 'shift';
+  pickHubMode(_mode) {
+    // Только Распродажа
+    this.gameMode = 'sale';
     this.hubScreen = 'prep';
     this.hubTab = 'prep';
     this.persist();
@@ -3133,7 +3107,8 @@ class Game {
   }
 
   showHubModes() {
-    this.hubScreen = 'modes';
+    // Выбор режима убран — всегда подготовка Распродажи
+    this.hubScreen = 'prep';
     this.hubTab = 'prep';
     this.renderHub();
     sfx.click();
@@ -3245,14 +3220,17 @@ class Game {
   renderHub() {
     document.getElementById('hub-bank').textContent = this.bankCoins;
     document.getElementById('hub-record').textContent = this.highScore;
-    if (!this.hubScreen) this.hubScreen = 'modes';
+    const verEl = document.getElementById('hub-version');
+    if (verEl) verEl.textContent = typeof SALE_VERSION !== 'undefined' ? 'v' + SALE_VERSION : '';
+    this.gameMode = 'sale';
+    if (!this.hubScreen || this.hubScreen === 'modes') this.hubScreen = 'prep';
     if (!this.hubTab) this.hubTab = 'prep';
 
-    const onModes = this.hubScreen === 'modes';
     const onPrep = this.hubScreen === 'prep';
     const onBook = this.hubScreen === 'book';
 
-    document.getElementById('hub-pane-modes').classList.toggle('on', onModes);
+    const modesPane = document.getElementById('hub-pane-modes');
+    if (modesPane) modesPane.classList.remove('on');
     document.getElementById('hub-pane-prep').classList.toggle('on', onPrep);
     document.getElementById('hub-pane-book').classList.toggle('on', onBook);
 
@@ -3260,20 +3238,20 @@ class Game {
     const tabBook = document.getElementById('hub-tab-book');
     if (tabPrep) {
       tabPrep.classList.toggle('on', onPrep);
-      tabPrep.textContent = this.gameMode === 'sale' ? 'Подготовка · Распродажа' : 'Подготовка · Смена';
+      tabPrep.textContent = 'Подготовка · Распродажа';
     }
     if (tabBook) tabBook.classList.toggle('on', onBook);
 
     const startBtn = document.getElementById('btn-hub-start');
     if (startBtn) {
       startBtn.style.display = onPrep ? '' : 'none';
-      startBtn.textContent = this.gameMode === 'sale' ? 'Начать распродажу 🛒' : 'Начать смену ⚔';
+      startBtn.textContent = 'Начать распродажу 🛒';
     }
 
     const shiftBox = document.getElementById('hub-shift-loadout');
     const saleBox = document.getElementById('hub-sale-loadout');
-    if (shiftBox) shiftBox.style.display = this.gameMode === 'sale' ? 'none' : '';
-    if (saleBox) saleBox.style.display = this.gameMode === 'sale' ? '' : 'none';
+    if (shiftBox) shiftBox.style.display = 'none';
+    if (saleBox) saleBox.style.display = '';
 
     if (onPrep || onBook) this.renderComplaintBook();
     if (!onPrep) return;
@@ -3424,17 +3402,11 @@ class Game {
     document.getElementById('hub-overlay').classList.remove('show');
     document.body.classList.remove('hub-mode');
     this.inHub = false;
-    if (this.gameMode === 'sale') {
-      document.body.classList.add('sale-mode');
-      // сначала убрать отступ под кнопки, потом подогнать canvas
-      this.resize();
-      this.resetSaleGame();
-      requestAnimationFrame(() => this.resize());
-    } else {
-      document.body.classList.remove('sale-mode');
-      this.resize();
-      this.resetGame();
-    }
+    this.gameMode = 'sale';
+    document.body.classList.add('sale-mode');
+    this.resize();
+    this.resetSaleGame();
+    requestAnimationFrame(() => this.resize());
     this.refreshMusicState();
   }
 

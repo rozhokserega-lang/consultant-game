@@ -1,0 +1,6 @@
+.drawthings-models/
+data/game-assets.json
+.tmp-game-assets.json
+.tmp-game-assets-copy.json
+.tmp-batch-gen.cjs
+.next-tiktok/

@@ -1,16 +1,33 @@
 /**
  * Режим «Распродажа» — Vampire Survivors на 20 минут.
  * Подключается после класса Game, до new Game().
+ * Баланс warm-start / дев-API — по мотивам LONG NIGHT (MIT, emorozoff).
  */
 (function () {
   'use strict';
 
+  const SALE_VERSION = '0.2.0-sale';
   const SALE_DURATION = 20 * 60; // 20 минут
   const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
   const SALE_WORLD_MUL = 2.75;
   const SALE_MAX_WEAPONS = 6;
   const SALE_MAX_PASSIVES = 6;
   const SALE_LIFESTEAL_CD = 2.2; // сек между хилами от вампиризма
+  /** LN-style: враги слабее в начале, к 6:00 выходят на baseline */
+  const SALE_WARM_MINUTES = 6;
+
+  function saleWarmMul(tSec) {
+    const m = Math.max(0, tSec) / 60;
+    // 0.65 → 1.0 за SALE_WARM_MINUTES
+    return Math.min(1, 0.65 + 0.35 * Math.min(1, m / SALE_WARM_MINUTES));
+  }
+  function saleCoinWarmMul(tSec) {
+    const m = Math.max(0, tSec) / 60;
+    // ×2 в начале → ×1 к 6 мин
+    return Math.max(1, 2 - m / SALE_WARM_MINUTES);
+  }
+
+  window.SALE_VERSION = SALE_VERSION;
 
   /**
    * Оружия Распродажи — вещи из ТЦ + вампирская ветка.
@@ -658,6 +675,11 @@
     }
     const wave = saleEnemyWaveApprox(this.saleTime);
     const e = new Enemy(x, y, type, wave);
+    const warm = saleWarmMul(this.saleTime);
+    if (warm < 0.999) {
+      e.maxHp = Math.max(1, Math.round(e.maxHp * warm));
+      e.hp = e.maxHp;
+    }
     // в распродаже все агрессивны
     this.enemies.push(e);
     return e;
@@ -671,6 +693,13 @@
     if (opts.nameTag) e.nameTag = opts.nameTag;
     if (opts.hp) { e.hp = e.maxHp = opts.hp; }
     if (opts.hpMul) { e.maxHp = Math.max(1, Math.round(e.maxHp * opts.hpMul)); e.hp = e.maxHp; }
+    if (!opts.hp && !opts.hpMul) {
+      const warm = saleWarmMul(this.saleTime);
+      if (warm < 0.999) {
+        e.maxHp = Math.max(1, Math.round(e.maxHp * warm));
+        e.hp = e.maxHp;
+      }
+    }
     if (opts.xpReward) e.xpReward = opts.xpReward;
     if (opts.vip) e._saleVip = true;
     this.enemies.push(e);
@@ -1801,7 +1830,8 @@
       if (!pk.dead && dist(this.player.x, this.player.y, pk.x, pk.y) < this.player.r + pk.r + 8) {
         if (pk.type === 'coin' || pk.type === 'coins') {
           const wallet = 1 + (this.salePassives.wallet || 0) * 0.15;
-          this.coins += Math.ceil((pk.value || 1) * wallet * (this.coinMult || 1));
+          const warmCoins = saleCoinWarmMul(this.saleTime || 0);
+          this.coins += Math.ceil((pk.value || 1) * wallet * (this.coinMult || 1) * warmCoins);
           pk.life = 0;
           sfx.pickup();
         } else if (pk.type === 'heal' && this.player.hp < this.player.maxHp) {
@@ -2207,4 +2237,53 @@
     this.renderHub();
     sfx.shop();
   };
+
+  // ─── Debug API (по мотивам LONG NIGHT __game) ─────────────────
+  window.__sale = {
+    version: () => SALE_VERSION,
+    start: () => { if (window.game) window.game.startShiftFromHub(); },
+    warp: (sec) => {
+      const g = window.game;
+      if (!g || g.gameMode !== 'sale') return;
+      g.saleTime = Math.max(0, Number(sec) || 0);
+    },
+    god: (on) => {
+      const g = window.game;
+      if (!g || !g.player) return;
+      g.__god = on !== false;
+      if (g.__god) g.player.hp = g.player.maxHp;
+    },
+    spawn: (type, n) => {
+      const g = window.game;
+      if (!g || g.gameMode !== 'sale') return;
+      const count = Math.max(1, Number(n) || 1);
+      for (let i = 0; i < count; i++) g.spawnSaleEnemy(type || null);
+    },
+    levelup: () => {
+      const g = window.game;
+      if (!g || g.gameMode !== 'sale') return;
+      g.gainSaleXp(g.saleXpNext || 99);
+    },
+    gold: (n) => {
+      const g = window.game;
+      if (!g) return;
+      g.coins = Math.max(0, Number(n) || 0);
+      g.bankCoins = Math.max(g.bankCoins || 0, g.coins);
+      g.persist && g.persist();
+      g.renderHub && g.inHub && g.renderHub();
+    },
+    count: () => {
+      const g = window.game;
+      if (!g) return null;
+      return {
+        enemies: (g.enemies || []).filter((e) => e.hp > 0).length,
+        time: g.saleTime || 0,
+        level: g.saleLevel || 0,
+        coins: g.coins || 0,
+      };
+    },
+    warm: (t) => ({ enemy: saleWarmMul(t || 0), coin: saleCoinWarmMul(t || 0) }),
+  };
+  // совместимость с именем из LN
+  window.__game = window.__sale;
 })();
