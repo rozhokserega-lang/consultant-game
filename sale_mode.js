@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const SALE_VERSION = '0.3.1-sale';
+  const SALE_VERSION = '0.3.2-sale';
   const SALE_DURATION = 20 * 60; // 20 минут
   const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
   const SALE_WORLD_MUL = 2.75;
@@ -256,55 +256,85 @@
       id: 'endless_receipt', name: 'Бесконечный чек', ico: '📜', max: 1,
       desc: 'Длинная лента чеков вокруг тебя',
       type: 'orbit', evolved: true,
-      baseCd: 0.08, dmg: [3], count: [12], radius: [100], spin: 5.5, visual: 'receipt', size: 1.15,
+      baseCd: 0.08, dmg: [3], count: [12], radius: [100], spin: 5.5, visual: 'endless_receipt', size: 1.15,
     },
     phone5g: {
       id: 'phone5g', name: 'Смартфон 5G', ico: '📱', max: 1,
       desc: 'Быстрые телефоны + молнии между врагами',
       type: 'ricochet', evolved: true,
-      baseCd: 0.55, dmg: [3], count: [3], speed: 520, bounces: [8], visual: 'phone', impact: 'sp_elec3',
+      baseCd: 0.55, dmg: [3], count: [3], speed: 520, bounces: [8], visual: 'phone5g', impact: 'sp_elec3',
     },
     mag_cart: {
       id: 'mag_cart', name: 'Магнитная тележка', ico: '🛒', max: 1,
       desc: 'Огромная тележка притягивает врагов',
       type: 'charge', evolved: true,
-      baseCd: 1.1, dmg: [5], speed: 300, range: [450], visual: 'cart', size: 1.6, pull: 180, impact: 'sp_quake3',
+      baseCd: 1.1, dmg: [5], speed: 300, range: [450], visual: 'mag_cart', size: 1.6, pull: 180, impact: 'sp_quake3',
     },
     cleaner: {
       id: 'cleaner', name: 'Оружие уборщицы', ico: '🧹', max: 1,
       desc: 'Швабра + ядовитый след',
       type: 'orbit', evolved: true,
-      baseCd: 0.08, dmg: [3], count: [4], radius: [95], spin: 5.0, visual: 'mop', trail: true, size: 1.3,
+      baseCd: 0.08, dmg: [3], count: [4], radius: [95], spin: 5.0, visual: 'cleaner', trail: true, size: 1.3,
     },
     caffeine: {
       id: 'caffeine', name: 'КОФЕИН', ico: '⚡', max: 1,
       desc: 'Кофе в 3 стороны + ускорение',
       type: 'puddle', evolved: true,
-      baseCd: 0.7, dmg: [3], speed: 380, count: [3], visual: 'coffee', impact: 'sp_bolt3', buffSpeed: 1.3,
+      baseCd: 0.7, dmg: [3], speed: 380, count: [3], visual: 'caffeine', impact: 'sp_bolt3', buffSpeed: 1.3,
     },
     black_card: {
       id: 'black_card', name: 'Чёрная карта', ico: '🖤', max: 1,
       desc: 'Огромная вращающаяся карта',
       type: 'orbit', evolved: true,
-      baseCd: 0.1, dmg: [4], count: [1], radius: [70], spin: 6.5, visual: 'card', size: 2.2,
+      baseCd: 0.1, dmg: [4], count: [1], radius: [70], spin: 6.5, visual: 'black_card', size: 2.2,
     },
     ultrasound: {
       id: 'ultrasound', name: 'Ультразвук', ico: '🔊', max: 1,
       desc: 'Экранная звуковая волна',
       type: 'aura', evolved: true,
-      baseCd: 1.8, dmg: [4], radius: [260], visual: 'speaker', impact: 'sp_elec3', knock: 320,
+      baseCd: 1.8, dmg: [4], radius: [260], visual: 'ultrasound', impact: 'sp_elec3', knock: 320,
     },
     hunter: {
       id: 'hunter', name: 'Охотник на покупателей', ico: '🔦', max: 1,
       desc: 'Прожектор + мыши на цель луча',
       type: 'beam', evolved: true,
-      baseCd: 0.06, dmg: [2], length: [220], width: 40, spin: 2.6, visual: 'flashlight', summonBats: true,
+      baseCd: 0.06, dmg: [2], length: [220], width: 40, spin: 2.6, visual: 'hunter', summonBats: true,
     },
     black_friday: {
       id: 'black_friday', name: 'Чёрная пятница', ico: '💀', max: 1,
       desc: 'Убитые взрываются; слабый хил с убийств',
       type: 'aura', evolved: true,
-      baseCd: 0.35, dmg: [3], radius: [120], lifesteal: 0.16, visual: 'bloody_aura', explodeOnKill: true,
+      baseCd: 0.35, dmg: [3], radius: [120], lifesteal: 0.16, visual: 'black_friday', explodeOnKill: true,
+    },
+    furniture_ram: {
+      id: 'furniture_ram', name: 'Таран мебели', ico: '🪑', max: 1,
+      desc: 'Стулья таранят толпу и отскакивают',
+      type: 'ricochet', evolved: true,
+      baseCd: 0.85, dmg: [4], count: [3], speed: 440, bounces: [5], visual: 'furniture_ram', impact: 'sp_quake3',
+    },
+    mall_fire: {
+      id: 'mall_fire', name: 'Пожар в ТЦ', ico: '🔥', max: 1,
+      desc: 'Широкая струя огня и горящие лужи',
+      type: 'spray', evolved: true,
+      baseCd: 0.4, dmg: [3], range: [180], arc: 1.05, visual: 'mall_fire', impact: 'sp_fwave3',
+    },
+    logistics: {
+      id: 'logistics', name: 'Логистика', ico: '📦', max: 1,
+      desc: 'Пачки коробок сыпятся и путают очередь',
+      type: 'projectile', evolved: true,
+      baseCd: 0.9, dmg: [3], speed: 320, count: [5], confuse: 2.2, visual: 'logistics', impact: 'sp_quake2',
+    },
+    sleepless: {
+      id: 'sleepless', name: 'Бессонница отдела', ico: '👻', max: 1,
+      desc: 'Кладбище бьёт чаще и шире',
+      type: 'aura', evolved: true,
+      baseCd: 1.2, dmg: [4], radius: [190], visual: 'sleepless', impact: 'sp_curse3',
+    },
+    vip: {
+      id: 'vip', name: 'VIP-клиент', ico: '⭐', max: 1,
+      desc: 'Карта + золотой магнит XP',
+      type: 'boomerang', evolved: true,
+      baseCd: 0.75, dmg: [4], speed: 420, range: [340], visual: 'vip', magnetBonus: 50,
     },
   };
 
@@ -322,6 +352,8 @@
     energy: { id: 'energy', name: 'Энергетик', ico: '🥤', max: 5, desc: '+10% скорость атаки / ур.' },
     map: { id: 'map', name: 'План ТЦ', ico: '🗺️', max: 5, desc: '+10% дальность / ур.' },
     money: { id: 'money', name: 'Деньги', ico: '💰', max: 5, desc: '+18% монет / ур.' },
+    medkit: { id: 'medkit', name: 'Аптечка', ico: '🩹', max: 3, desc: 'Реген HP каждые N сек' },
+    headlamp: { id: 'headlamp', name: 'Налобный фонарь', ico: '💡', max: 5, desc: '+магнит XP / ур.' },
     printer: { id: 'printer', name: 'Принтер', ico: '🖨️', max: 3, desc: 'Нужен для эволюции чека' },
     spray: { id: 'spray', name: 'Спрей', ico: '🧴', max: 3, desc: 'Нужен для эволюции швабры' },
     magnet_pass: { id: 'magnet_pass', name: 'Магнит', ico: '🧲', max: 3, desc: 'Нужен для эволюции тележки' },
@@ -333,10 +365,10 @@
   SALE_PASSIVES.speed = SALE_PASSIVES.shoes;
   SALE_PASSIVES.magnet = SALE_PASSIVES.radio;
   SALE_PASSIVES.vitality = SALE_PASSIVES.mug;
-  SALE_PASSIVES.regen = { id: 'regen', name: 'Пластырь', ico: '🩹', max: 3, desc: 'Реген HP' };
+  SALE_PASSIVES.regen = SALE_PASSIVES.medkit;
   SALE_PASSIVES.wallet = SALE_PASSIVES.money;
 
-  /** Эволюции: оружие max + пассивка → новое оружие */
+  /** Эволюции: оружие max + пассивка/второе оружие → новое оружие */
   const SALE_EVOLUTIONS = [
     { from: 'receipt', needPassive: 'printer', into: 'endless_receipt', name: 'Бесконечный чек' },
     { from: 'phone', needPassive: 'charger', into: 'phone5g', name: 'Смартфон 5G' },
@@ -345,8 +377,13 @@
     { from: 'coffee', needPassive: 'energy', into: 'caffeine', name: 'КОФЕИН' },
     { from: 'card', needPassive: 'money', into: 'black_card', name: 'Чёрная карта' },
     { from: 'speaker', needPassive: 'headphones', into: 'ultrasound', name: 'Ультразвук' },
-    { from: 'flashlight', needPassive: 'bats', into: 'hunter', name: 'Охотник', needWeapon: 'bats' },
-    { from: 'bloody_price', needPassive: 'bloody_aura', into: 'black_friday', name: 'Чёрная пятница', needWeapon: 'bloody_aura' },
+    { from: 'flashlight', into: 'hunter', name: 'Охотник', needWeapon: 'bats' },
+    { from: 'bloody_price', into: 'black_friday', name: 'Чёрная пятница', needWeapon: 'bloody_aura' },
+    { from: 'chair', needPassive: 'gloves', into: 'furniture_ram', name: 'Таран мебели' },
+    { from: 'extinguisher', needPassive: 'map', into: 'mall_fire', name: 'Пожар в ТЦ' },
+    { from: 'bag', needPassive: 'pouch', into: 'logistics', name: 'Логистика' },
+    { from: 'graveyard', needPassive: 'medkit', into: 'sleepless', name: 'Бессонница отдела' },
+    { from: 'card', needPassive: 'badge', into: 'vip', name: 'VIP-клиент' },
   ];
 
   const SALE_HUB_WEAPON_COST = {
@@ -385,6 +422,12 @@
     const st = stage || 2;
     // scale — относительный множитель к целевому размеру ~32px
     const mul = Math.max(0.45, scale || 1);
+    // эволюции из атласа (evo_<id>)
+    if (v && typeof drawWeaponEvoIcon === 'function' && drawWeaponEvoIcon(ctx, v, x, y, {
+      targetSize: 36 * mul,
+    })) {
+      return;
+    }
     if (v && typeof drawWeaponAtlas === 'function' && drawWeaponAtlas(ctx, v, st, x, y, {
       targetSize: 32 * mul,
       rot: rot || 0,
@@ -405,6 +448,35 @@
     ctx.strokeText(ico, 0, 0);
     ctx.fillText(ico, 0, 0);
     ctx.restore();
+  }
+
+  function paintSaleChoiceIcon(el, up) {
+    if (!el) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = 48;
+    canvas.height = 48;
+    canvas.style.width = '36px';
+    canvas.style.height = '36px';
+    const c = canvas.getContext('2d');
+    let ok = false;
+    if (up.kind === 'evolve' && typeof drawWeaponEvoIcon === 'function') {
+      ok = drawWeaponEvoIcon(c, up.id, 24, 24, { targetSize: 40 });
+    } else if ((up.kind === 'weapon_new' || up.kind === 'weapon_up') && SALE_WEAPONS[up.id]) {
+      const def = SALE_WEAPONS[up.id];
+      if (def.evolved && typeof drawWeaponEvoIcon === 'function') {
+        ok = drawWeaponEvoIcon(c, def.id, 24, 24, { targetSize: 40 });
+      } else if (typeof drawWeaponAtlas === 'function') {
+        ok = drawWeaponAtlas(c, saleVisualKey(def.visual || def.id), Math.min(3, (up.lv || 2)), 24, 24, { targetSize: 36 });
+      }
+    } else if (up.kind === 'passive' && typeof drawPassiveAtlas === 'function') {
+      ok = drawPassiveAtlas(c, up.id, 24, 24, { targetSize: 32 });
+    }
+    if (ok) {
+      el.innerHTML = '';
+      el.appendChild(canvas);
+    } else {
+      el.textContent = up.ico || '?';
+    }
   }
 
   function saleXpToNext(level) {
@@ -747,9 +819,11 @@
     return 1 + ((this.salePassives.area || 0) + (this.salePassives.gloves || 0) + (this.salePassives.map || 0)) * 0.1;
   };
   Game.prototype.saleMagnetRange = function () {
-    const mag = (this.salePassives.magnet || 0) + (this.salePassives.radio || 0);
+    const mag = (this.salePassives.magnet || 0) + (this.salePassives.radio || 0) + (this.salePassives.headlamp || 0);
     const hero = getSaleHero(this.saleHeroId || this.selectedHeroId);
-    return 70 + mag * 36 + (this.metaPerks.magnet || 0) * 20 + (hero.magnetBonus || 0);
+    let bonus = 70 + mag * 36 + (this.metaPerks.magnet || 0) * 20 + (hero.magnetBonus || 0);
+    if (this.saleWeapons && this.saleWeapons.vip) bonus += 50;
+    return bonus;
   };
   Game.prototype.saleXpMul = function () {
     const hero = getSaleHero(this.saleHeroId || this.selectedHeroId);
@@ -1190,7 +1264,8 @@
       const el = document.createElement('button');
       el.className = 'card';
       el.type = 'button';
-      el.innerHTML = `<div class="ico">${up.ico}</div><div class="ttl">${i + 1}. ${up.ttl}</div><div class="desc">${up.desc}</div>`;
+      el.innerHTML = `<div class="ico"></div><div class="ttl">${i + 1}. ${up.ttl}</div><div class="desc">${up.desc}</div>`;
+      paintSaleChoiceIcon(el.querySelector('.ico'), up);
       el.onclick = () => this.pickSaleUpgrade(i);
       wrap.appendChild(el);
     });
@@ -2008,7 +2083,7 @@
     if (this.modeFlash > 0) this.modeFlash -= realDt;
 
     // regen
-    const regenLv = this.salePassives.regen || 0;
+    const regenLv = this.salePassives.medkit || this.salePassives.regen || 0;
     if (regenLv > 0) {
       this.saleRegenTimer += realDt;
       const every = Math.max(4, 12 - regenLv * 2.5);
