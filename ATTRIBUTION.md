@@ -39,4 +39,12 @@
 - https://ghostpixxells.itch.io/pixel-mart
 - License: CC0 (public domain)
 - Использовано: товары как XP-дропы с покупателей (3 тира по ценности),
-  бумажный пакет для «Посылки со склада».
+  бумажный пакет для «Посылки со склада»;
+  часть UI-иконок пассивок/эволюций в `skill_icon_atlas.png`.
+
+## Графические ассеты (skill_icon_atlas.png)
+
+Атлас собран скриптом `assets_src/build_skill_icons.py`:
+- Pixel Mart (CC0) — предметные пассивки
+- CodeManu Free Pixel Effects + Kenney Particle Pack (CC0) — ореолы эволюций/аур
+- простые пиксельные силуэты — для предметов без спрайта в паках

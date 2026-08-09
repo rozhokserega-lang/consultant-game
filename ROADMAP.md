@@ -3,7 +3,12 @@
 > Миграция: механики/баланс в духе [LONG NIGHT](https://github.com/emorozoff/long-night) (MIT), атмосфера — ТЦ / консультант.
 > Режим «Смена» отключён. Живая версия в UI: `SALE_VERSION` (`sale_mode.js`).
 
-## Сейчас (v0.5.0-sale)
+## Сейчас (v0.5.2-sale)
+- [x] UI-иконки пассивок / эволюций / кровавой ауры: `skill_icon_atlas.png` (Pixel Mart + CC0 FX + силуэты)
+- [x] Pixel Mart (CC0): XP-дропы = товары (3 тира по ценности), посылка = бумажный пакет (`mart_atlas.png`)
+- [x] Атлас анимированных эффектов `anim_fx_atlas.png` (CC0: CodeManu + Kenney)
+
+## v0.5.0
 - [x] Атлас анимированных эффектов `anim_fx_atlas.png` (CC0: CodeManu + Kenney), сборка `assets_src/build_anim_atlas.py`
 - [x] Движок: `spawnAnimFx` / `drawAnimFxFrame` — покадровые анимации + тонировка белых частиц
 - [x] Новые взрывы (жирный, хлопушка), левел-ап/эволюция, появление и смерть боссов

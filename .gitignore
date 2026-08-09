@@ -8,4 +8,5 @@ data/game-assets.json
 assets_src/*
 !assets_src/build_anim_atlas.py
 !assets_src/build_mart_atlas.py
+!assets_src/build_skill_icons.py
 !assets_src/make_previews.py
