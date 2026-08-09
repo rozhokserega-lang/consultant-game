@@ -846,11 +846,41 @@ function drawSkillIconFrame(ctx, key, x, y, opts = {}) {
   return ok;
 }
 
-/** Отрисовка кадра оружия из концепт-атласа (стадии 1/2/3). */
+/** Отрисовка кадра оружия: штатный weapon_atlas (чеки/тележки/…) → skill_icon fallback. */
 function drawWeaponAtlas(ctx, visual, stage, x, y, opts = {}) {
   if (!visual) return false;
   let st = Math.max(1, Math.min(3, stage | 0 || 2));
-  // ауры / bloody_price — сначала новый чистый атлас
+  // 1) системный атлас оружия игры
+  if (weaponReady) {
+    let key = `wp_${visual}${st}`;
+    if (!WEAPON_FRAMES[key]) {
+      key = null;
+      for (const alt of [2, 1, 3]) {
+        const k = `wp_${visual}${alt}`;
+        if (WEAPON_FRAMES[k]) { key = k; st = alt; break; }
+      }
+    }
+    // эволюции иногда лежат как evo_* в том же атласе
+    if (!key && WEAPON_FRAMES[`evo_${visual}`]) key = `evo_${visual}`;
+    if (key) {
+      const f = WEAPON_FRAMES[key];
+      const target = opts.targetSize ?? 36;
+      const base = Math.max(f.w, f.h) || 1;
+      const scale = opts.scale != null ? opts.scale : (target / base);
+      ctx.save();
+      ctx.translate(x, y);
+      if (opts.rot) ctx.rotate(opts.rot);
+      const ok = drawAtlasFrame(ctx, weaponImg, true, WEAPON_FRAMES, key, 0, 0, {
+        scale,
+        anchorX: opts.anchorX ?? 0.5,
+        anchorY: opts.anchorY ?? 0.5,
+        alpha: opts.alpha,
+      });
+      ctx.restore();
+      if (ok) return true;
+    }
+  }
+  // 2) fallback: skill_icon_atlas (если кадра нет в weapon_atlas)
   const skillKey = `wp_${visual}${st}`;
   if (drawSkillIconFrame(ctx, skillKey, x, y, {
     targetSize: opts.targetSize ?? 36,
@@ -862,67 +892,38 @@ function drawWeaponAtlas(ctx, visual, stage, x, y, opts = {}) {
   })) {
     return true;
   }
-  // эволюции как visual id (endless_receipt → evo_endless_receipt)
-  if (drawSkillIconFrame(ctx, `evo_${visual}`, x, y, {
+  return drawSkillIconFrame(ctx, `evo_${visual}`, x, y, {
     targetSize: opts.targetSize ?? 36,
     scale: opts.scale,
     rot: opts.rot,
     alpha: opts.alpha,
-  })) {
-    return true;
-  }
-  if (!weaponReady) return false;
-  let key = `wp_${visual}${st}`;
-  if (!WEAPON_FRAMES[key]) {
-    key = null;
-    for (const alt of [2, 1, 3]) {
-      const k = `wp_${visual}${alt}`;
-      if (WEAPON_FRAMES[k]) { key = k; st = alt; break; }
-    }
-    if (!key) return false;
-  }
-  const f = WEAPON_FRAMES[key];
-  // цель ~36px по большей стороне, чтобы не раздувать мелкие кадры
-  const target = opts.targetSize ?? 36;
-  const base = Math.max(f.w, f.h) || 1;
-  const scale = opts.scale != null ? opts.scale : (target / base);
-  ctx.save();
-  ctx.translate(x, y);
-  if (opts.rot) ctx.rotate(opts.rot);
-  const ok = drawAtlasFrame(ctx, weaponImg, true, WEAPON_FRAMES, key, 0, 0, {
-    scale,
-    anchorX: opts.anchorX ?? 0.5,
-    anchorY: opts.anchorY ?? 0.5,
-    alpha: opts.alpha,
   });
-  ctx.restore();
-  return ok;
 }
 
 function drawWeaponEvoIcon(ctx, evoId, x, y, opts = {}) {
   const key = `evo_${evoId}`;
-  if (drawSkillIconFrame(ctx, key, x, y, {
+  // штатный weapon_atlas первым — там уже есть эволюции оружия
+  if (weaponReady && WEAPON_FRAMES[key]) {
+    const f = WEAPON_FRAMES[key];
+    const target = opts.targetSize ?? 40;
+    const base = Math.max(f.w, f.h) || 1;
+    const scale = opts.scale != null ? opts.scale : (target / base);
+    ctx.save();
+    ctx.translate(x, y);
+    const ok = drawAtlasFrame(ctx, weaponImg, true, WEAPON_FRAMES, key, 0, 0, {
+      scale,
+      anchorX: 0.5,
+      anchorY: 0.5,
+      alpha: opts.alpha,
+    });
+    ctx.restore();
+    if (ok) return true;
+  }
+  return drawSkillIconFrame(ctx, key, x, y, {
     targetSize: opts.targetSize ?? 40,
     scale: opts.scale,
     alpha: opts.alpha,
-  })) {
-    return true;
-  }
-  if (!weaponReady || !WEAPON_FRAMES[key]) return false;
-  const f = WEAPON_FRAMES[key];
-  const target = opts.targetSize ?? 40;
-  const base = Math.max(f.w, f.h) || 1;
-  const scale = opts.scale != null ? opts.scale : (target / base);
-  ctx.save();
-  ctx.translate(x, y);
-  const ok = drawAtlasFrame(ctx, weaponImg, true, WEAPON_FRAMES, key, 0, 0, {
-    scale,
-    anchorX: 0.5,
-    anchorY: 0.5,
-    alpha: opts.alpha,
   });
-  ctx.restore();
-  return ok;
 }
 
 function drawPassiveAtlas(ctx, id, x, y, opts = {}) {

@@ -471,66 +471,30 @@
     return SALE_VISUAL_ALIAS[visual] || visual;
   }
 
-  function drawSaleIcon(ctx, ico, x, y, scale, rot, visual, stage) {
-    const v = saleVisualKey(visual);
-    const st = stage || 2;
-    // scale — относительный множитель к целевому размеру ~32px
+  /** Оружие в бою и UI — системные emoji (🧾 🧹 📱), не атлас. */
+  function drawSaleIcon(ctx, ico, x, y, scale, rot) {
     const mul = Math.max(0.45, scale || 1);
-    // эволюции из атласа (evo_<id>)
-    if (v && typeof drawWeaponEvoIcon === 'function' && drawWeaponEvoIcon(ctx, v, x, y, {
-      targetSize: 36 * mul,
-    })) {
-      return;
-    }
-    if (v && typeof drawWeaponAtlas === 'function' && drawWeaponAtlas(ctx, v, st, x, y, {
-      targetSize: 32 * mul,
-      rot: rot || 0,
-      anchorX: 0.5,
-      anchorY: 0.5,
-    })) {
-      return;
-    }
     ctx.save();
     ctx.translate(x, y);
     if (rot) ctx.rotate(rot);
     const s = Math.max(14, Math.round(22 * mul));
-    ctx.font = `${s}px "Apple Color Emoji","Segoe UI Emoji",sans-serif`;
+    ctx.font = `${s}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.lineWidth = Math.max(2, s * 0.12);
     ctx.strokeStyle = 'rgba(0,0,0,0.65)';
-    ctx.strokeText(ico, 0, 0);
-    ctx.fillText(ico, 0, 0);
+    ctx.strokeText(ico || '?', 0, 0);
+    ctx.fillText(ico || '?', 0, 0);
     ctx.restore();
   }
 
   function paintSaleChoiceIcon(el, up) {
     if (!el) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = 48;
-    canvas.height = 48;
-    canvas.style.width = '36px';
-    canvas.style.height = '36px';
-    const c = canvas.getContext('2d');
-    let ok = false;
-    if (up.kind === 'evolve' && typeof drawWeaponEvoIcon === 'function') {
-      ok = drawWeaponEvoIcon(c, up.id, 24, 24, { targetSize: 40 });
-    } else if ((up.kind === 'weapon_new' || up.kind === 'weapon_up') && SALE_WEAPONS[up.id]) {
-      const def = SALE_WEAPONS[up.id];
-      if (def.evolved && typeof drawWeaponEvoIcon === 'function') {
-        ok = drawWeaponEvoIcon(c, def.id, 24, 24, { targetSize: 40 });
-      } else if (typeof drawWeaponAtlas === 'function') {
-        ok = drawWeaponAtlas(c, saleVisualKey(def.visual || def.id), Math.min(3, (up.lv || 2)), 24, 24, { targetSize: 36 });
-      }
-    } else if (up.kind === 'passive' && typeof drawPassiveAtlas === 'function') {
-      ok = drawPassiveAtlas(c, up.id, 24, 24, { targetSize: 32 });
-    }
-    if (ok) {
-      el.innerHTML = '';
-      el.appendChild(canvas);
-    } else {
-      el.textContent = up.ico || '?';
-    }
+    // оружие / эволюции / пассивки — системные emoji из ico, если есть
+    let ico = up.ico;
+    if (!ico && up.kind === 'passive' && SALE_PASSIVES[up.id]) ico = SALE_PASSIVES[up.id].ico;
+    if (!ico && SALE_WEAPONS[up.id]) ico = SALE_WEAPONS[up.id].ico;
+    el.textContent = ico || '?';
   }
 
   function saleXpToNext(level) {
