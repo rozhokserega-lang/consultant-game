@@ -169,6 +169,87 @@ def main():
     icons['wp_bloody_price2'] = cell_of(seven('I_Scroll02.png'), Sp('sp_bleed2'), 0.45)
     icons['wp_bloody_price3'] = cell_of(Vx('fx_skull'), Sp('sp_bleed3'), 0.5)
 
+    # ── Базовое оружие (3 стадии): вместо грязного концепт-атласа ──
+    # (item1, item2, item3, optional halo_at_stage3)
+    base_weapons = {
+        'phone': (
+            seven('S_Thunder01.png'), seven('S_Thunder03.png'), seven('S_Thunder05.png'),
+            Sp('sp_elec2'),
+        ),
+        'cart': (
+            seven('I_Chest01.png'), seven('I_Chest02.png'), seven('W_Mace008.png'),
+            Sp('sp_quake1'),
+        ),
+        'mop': (
+            seven('W_Staff01.png'), seven('W_Staff03.png'), seven('W_Staff06.png'),
+            Sp('sp_poison1'),
+        ),
+        'extinguisher': (
+            seven('I_Cannon01.png'), seven('I_Cannon03.png'), seven('S_Fire03.png'),
+            Sp('sp_fwave2'),
+        ),
+        'coffee': (
+            seven('I_Bottle01.png'), seven('I_Bottle02.png'), seven('P_Orange01.png'),
+            Sp('sp_fire1'),
+        ),
+        'card': (
+            seven('Ac_Medal01.png'), seven('Ac_Medal03.png'), seven('Ac_Medal04.png'),
+            Vx('fx_aura_gold'),
+        ),
+        'speaker': (
+            seven('S_Wind01.png'), seven('S_Wind03.png'), seven('S_Wind06.png'),
+            Sp('sp_elec1'),
+        ),
+        'flashlight': (
+            seven('I_Torch01.png'), seven('I_Torch02.png'), seven('S_Light01.png'),
+            Vx('fx_aura_gold'),
+        ),
+        'bag': (
+            seven('I_Fabric.png'), seven('I_Chest01.png'), seven('I_Chest02.png'),
+            Sp('sp_poison1'),
+        ),
+        'chair': (
+            seven('E_Wood01.png'), seven('E_Wood03.png'), seven('W_Mace003.png'),
+            Sp('sp_quake1'),
+        ),
+        'axe': (
+            seven('W_Axe001.png'), seven('W_Axe004.png'), seven('W_Axe008.png'),
+            Sp('sp_quake2'),
+        ),
+        'magnet': (
+            seven('I_IronBall.png'), seven('Ac_Ring01.png'), seven('Ac_Ring02.png'),
+            Sp('sp_elec1'),
+        ),
+        'spray': (
+            seven('P_Green01.png'), seven('P_Green03.png'), seven('S_Poison03.png'),
+            Sp('sp_poison2'),
+        ),
+        'box': (
+            seven('I_Chest01.png'), seven('I_Chest02.png'), seven('I_Rock03.png'),
+            Sp('sp_quake1'),
+        ),
+        'receipt': (
+            seven('I_Scroll.png'), seven('I_Scroll02.png'), seven('W_Book02.png'),
+            Sp('sp_heal1'),
+        ),
+        'bats': (
+            seven('I_BatWing.png'), Sp('sp_bat1'), Sp('sp_bat3'),
+            Vx('fx_aura_dark'),
+        ),
+        'graveyard': (
+            seven('E_Bones02.png'), seven('E_Bones03.png'), Sp('sp_curse2'),
+            Sp('sp_curse1'),
+        ),
+        'bite': (
+            seven('I_Fang.png'), seven('I_Bone.png'), Sp('sp_bleed2'),
+            Sp('sp_bleed1'),
+        ),
+    }
+    for visual, (i1, i2, i3, halo) in base_weapons.items():
+        icons[f'wp_{visual}1'] = cell_of(i1)
+        icons[f'wp_{visual}2'] = cell_of(i2)
+        icons[f'wp_{visual}3'] = cell_of(i3, halo, 0.45)
+
     keys = sorted(icons.keys())
     rows = (len(keys) + COLS - 1) // COLS
     atlas = Image.new('RGBA', (COLS * CELL, rows * CELL), (0, 0, 0, 0))

@@ -45,7 +45,7 @@
 ## Графические ассеты (skill_icon_atlas.png)
 
 Атлас собран скриптом `assets_src/build_skill_icons.py` в стиле боевых VFX игры:
-- кадры из `spell_atlas.png` / `vfx_atlas.png` / `pickup_fx_atlas.png` — эволюции и ауры
+- кадры из `spell_atlas.png` / `vfx_atlas.png` / `pickup_fx_atlas.png` — эволюции, ауры, ореолы
 - **496 pixel art icons for medieval/fantasy RPG** — Henrique Lazarini (7Soul1), CC0
   https://opengameart.org/content/496-pixel-art-icons-for-medievalfantasy-rpg
-  — предметные пассивки (ключи, медали, зелья, свитки, обувь…)
+  — пассивки и базовое оружие (стадии 1–3)
