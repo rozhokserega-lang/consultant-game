@@ -3973,7 +3973,13 @@ class Game {
     const warn = opts.warn || 1.05;
     const length = opts.length || (boss.type === 'director' ? 560 : 500);
     const halfW = opts.halfW || (boss.type === 'director' ? 42 : 36);
-    const base = angleTo(boss.x, boss.y, player.x, player.y);
+    // цвет телеграфа: у sale-боссов — свой акцент, иначе янтарный (не кровавый красный)
+    let color = opts.color;
+    if (!color && boss.saleBossId && typeof SALE_BOSS_DEFS !== 'undefined' && SALE_BOSS_DEFS[boss.saleBossId]) {
+      color = SALE_BOSS_DEFS[boss.saleBossId].color;
+    }
+    if (!color) color = (opts.soft || this.gameMode === 'sale') ? '#f59e0b' : '#e74c3c';
+    const soft = opts.soft != null ? !!opts.soft : this.gameMode === 'sale';
     // чуть вперёд от текущей позиции игрока (lead)
     const lead = 40 + (boss.bossPhase || 1) * 12;
     const aimX = player.x + Math.cos(player.angle || 0) * lead * 0.25;
@@ -3992,9 +3998,11 @@ class Game {
       this.bossLines.push({
         x1, y1, x2, y2, ang,
         warn, warnMax: warn,
-        strike: 0.22,
+        strike: soft ? 0.18 : 0.22,
         halfW,
         owner: boss,
+        color,
+        soft,
         hit: false,
         dead: false,
       });
@@ -4054,38 +4062,43 @@ class Game {
     for (const line of this.bossLines) {
       const warning = line.warn > 0;
       const tWarn = warning ? (1 - line.warn / (line.warnMax || 1)) : 1;
-      const pulse = warning ? (0.45 + 0.55 * Math.abs(Math.sin(performance.now() / 90))) : 1;
+      const soft = !!line.soft;
+      const pulse = warning
+        ? (soft ? (0.55 + 0.3 * Math.abs(Math.sin(performance.now() / 140))) : (0.45 + 0.55 * Math.abs(Math.sin(performance.now() / 90))))
+        : 1;
+      const col = line.color || (soft ? '#f59e0b' : '#e74c3c');
       ctx.save();
       ctx.lineCap = 'round';
       if (warning) {
-        ctx.globalAlpha = 0.35 + 0.45 * pulse;
-        ctx.strokeStyle = '#e74c3c';
-        ctx.lineWidth = line.halfW * 2 * (0.35 + 0.15 * tWarn);
-        ctx.setLineDash([14, 12]);
+        ctx.globalAlpha = soft ? (0.22 + 0.28 * pulse) : (0.35 + 0.45 * pulse);
+        ctx.strokeStyle = col;
+        ctx.lineWidth = line.halfW * 2 * (soft ? (0.28 + 0.12 * tWarn) : (0.35 + 0.15 * tWarn));
+        ctx.setLineDash(soft ? [10, 14] : [14, 12]);
         ctx.beginPath();
         ctx.moveTo(line.x1, line.y1);
         ctx.lineTo(line.x2, line.y2);
         ctx.stroke();
         ctx.setLineDash([]);
-        // тонкая яркая ось
-        ctx.globalAlpha = 0.7 * pulse;
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#ffecec';
+        // тонкая ось
+        ctx.globalAlpha = soft ? (0.4 * pulse) : (0.7 * pulse);
+        ctx.lineWidth = soft ? 1.5 : 2;
+        ctx.strokeStyle = soft ? '#fff7ed' : '#ffecec';
         ctx.beginPath();
         ctx.moveTo(line.x1, line.y1);
         ctx.lineTo(line.x2, line.y2);
         ctx.stroke();
       } else {
-        ctx.globalAlpha = Math.max(0.15, line.strike / 0.22);
-        ctx.strokeStyle = '#ff3b1f';
-        ctx.lineWidth = line.halfW * 1.15;
+        const strikeMax = soft ? 0.18 : 0.22;
+        ctx.globalAlpha = Math.max(0.12, line.strike / strikeMax) * (soft ? 0.75 : 1);
+        ctx.strokeStyle = soft ? col : '#ff3b1f';
+        ctx.lineWidth = line.halfW * (soft ? 0.95 : 1.15);
         ctx.beginPath();
         ctx.moveTo(line.x1, line.y1);
         ctx.lineTo(line.x2, line.y2);
         ctx.stroke();
-        ctx.globalAlpha = 0.85;
+        ctx.globalAlpha = soft ? 0.55 : 0.85;
         ctx.strokeStyle = '#fff5e6';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = soft ? 2 : 3;
         ctx.beginPath();
         ctx.moveTo(line.x1, line.y1);
         ctx.lineTo(line.x2, line.y2);

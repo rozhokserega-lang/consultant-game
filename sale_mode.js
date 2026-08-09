@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const SALE_VERSION = '0.10.1-sale';
+  const SALE_VERSION = '0.10.3-sale';
   const SALE_DURATION = 20 * 60; // 20 минут
   const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
   const SALE_WORLD_MUL = 2.75;
@@ -150,11 +150,12 @@
     'security_chief', 'promo_witch', 'mall_closing',
   ];
 
-  /** Пауэрапы с элиток/боссов (LN-style: chest / magnet / bomb) */
+  /** Пауэрапы (LN-style: chest / magnet / bomb / heart) */
   const SALE_POWERUPS = {
     chest: { id: 'chest', ico: '📦', sprite: 'paper_bag', name: 'Посылка со склада', color: '#d35400' },
     magnet: { id: 'magnet', ico: '🧲', name: 'Промо-магнит', color: '#9b59b6' },
     bomb: { id: 'bomb', ico: '🧨', name: 'Хлопушка', color: '#e74c3c' },
+    heart: { id: 'heart', ico: '❤️', name: 'Сердце', color: '#e11d48' },
   };
   const SALE_BANISH_LIMIT = 2;
 
@@ -525,7 +526,10 @@
     energy: { id: 'energy', name: 'Энергетик', ico: '🥤', max: 5, desc: '+10% скорость атаки / ур.' },
     map: { id: 'map', name: 'План ТЦ', ico: '🗺️', max: 5, desc: '+10% дальность / ур.' },
     money: { id: 'money', name: 'Деньги', ico: '💰', max: 5, desc: '+18% монет / ур.' },
-    medkit: { id: 'medkit', name: 'Аптечка', ico: '🩹', max: 3, desc: 'Реген HP каждые N сек' },
+    medkit: {
+      id: 'medkit', name: 'Аптечка', ico: '🩹', max: 3,
+      desc: 'Реген HP каждые N сек; +2% шанс сердца с врагов / ур.',
+    },
     headlamp: { id: 'headlamp', name: 'Налобный фонарь', ico: '💡', max: 5, desc: '+магнит XP / ур.' },
     printer: {
       id: 'printer', name: 'Чековый аппарат', ico: '🖨️', max: 3,
@@ -1502,10 +1506,24 @@
     this.spawnAnimFx('afx_ring', enemy.x, enemy.y, { life: 0.28, scale: 0.5, scaleEnd: 1.4 });
   };
 
-  /** Кольцо телеграфов под игроком → взрыв (могилы LN). */
+  function saleHexRgba(hex, a) {
+    let h = String(hex || '#f59e0b').replace('#', '');
+    if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+    const n = parseInt(h, 16);
+    if (Number.isNaN(n)) return `rgba(245,158,11,${a})`;
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  }
+
+  /** Кольцо телеграфов под игроком → взрыв (могилы LN). Цвет — от босса, не «кровавый» красный. */
   Game.prototype.saleBossGraveRing = function (cx, cy, count, opts) {
     opts = opts || {};
     this.saleBossHazards = this.saleBossHazards || [];
+    // не заваливать экран телеграфами в конце забега
+    const pending = this.saleBossHazards.filter((h) => h.kind === 'grave' && !h.boom).length;
+    const room = Math.max(0, 5 - pending);
+    count = Math.min(count, room);
+    if (count <= 0) return;
+    const col = opts.color || '#f59e0b';
     for (let i = 0; i < count; i++) {
       const a = (Math.PI * 2 * i) / count + (opts.spin || 0);
       const rr = opts.radius != null ? opts.radius : (i === 0 && opts.underPlayer ? 0 : 90);
@@ -1519,8 +1537,17 @@
         warnMax: opts.warn || 1.15,
         boom: false,
         killName: opts.killName || 'Взрыв',
+        color: col,
       });
     }
+  };
+
+  Game.prototype.saleBossLineOpts = function (enemy, extra) {
+    const def = enemy && SALE_BOSS_DEFS[enemy.saleBossId];
+    return Object.assign({
+      color: (def && def.color) || '#f59e0b',
+      soft: true,
+    }, extra || {});
   };
 
   Game.prototype.saleBossHurtPlayer = function (fromX, fromY, killName) {
@@ -1597,7 +1624,9 @@
       if (enemy._saleBossCd3 <= 0) {
         enemy._saleBossCd3 = Math.max(3.2, 5.5 - ph * 0.5);
         if (ph >= 2 && typeof this.spawnBossLineAttack === 'function') {
-          this.spawnBossLineAttack(enemy, p, { lines: ph >= 3 ? 2 : 1, warn: 0.9, length: 420, halfW: 32 });
+          this.spawnBossLineAttack(enemy, p, this.saleBossLineOpts(enemy, {
+            lines: ph >= 3 ? 2 : 1, warn: 0.9, length: 420, halfW: 32,
+          }));
         } else {
           this.saleBossVolley(enemy, 1 + ph, { speed: 240, spread: 0.7, killName: 'Жалоба' });
         }
@@ -1628,7 +1657,10 @@
       if (enemy._saleBossCd3 <= 0) {
         enemy._saleBossCd3 = Math.max(5.5, 8 - ph);
         // стампид: телеграфы вокруг игрока → взрывы «колёс»
-        this.saleBossGraveRing(p.x, p.y, 1 + ph, { underPlayer: true, radius: 70, warn: 1.0, r: 42, killName: 'Тележка' });
+        this.saleBossGraveRing(p.x, p.y, 1 + ph, {
+          underPlayer: true, radius: 70, warn: 1.0, r: 42, killName: 'Тележка',
+          color: SALE_BOSS_DEFS.cart_horde.color,
+        });
       }
       if (enemy._salePhaseSpike && ph === 3) {
         enemy._salePhaseSpike = false;
@@ -1668,15 +1700,21 @@
       if (enemy._saleBossCd3 <= 0) {
         enemy._saleBossCd3 = Math.max(3.5, 5.8 - ph * 0.5);
         if (ph >= 2) {
-          this.saleBossGraveRing(p.x, p.y, ph, { underPlayer: true, radius: 55, warn: 1.05, r: 40, killName: 'Ценник' });
+          this.saleBossGraveRing(p.x, p.y, ph, {
+            underPlayer: true, radius: 55, warn: 1.05, r: 40, killName: 'Ценник',
+            color: SALE_BOSS_DEFS.discount_king.color,
+          });
         } else {
           this.saleBossVolley(enemy, 3, { speed: 280, spread: 0.9, killName: 'Ценник' });
         }
       }
       if (enemy._salePhaseSpike && ph === 3) {
         enemy._salePhaseSpike = false;
-        this.saleBossVolley(enemy, 12, { speed: 220, spread: Math.PI * 2, killName: 'Распродажа' });
-        this.saleBossGraveRing(p.x, p.y, 6, { radius: 100, warn: 0.95, r: 36, killName: '−90%' });
+        this.saleBossVolley(enemy, 10, { speed: 220, spread: Math.PI * 2, killName: 'Распродажа' });
+        this.saleBossGraveRing(p.x, p.y, 4, {
+          radius: 100, warn: 1.05, r: 34, killName: '−90%',
+          color: SALE_BOSS_DEFS.discount_king.color,
+        });
       }
     } else if (id === 'security_chief') {
       // рывок · стены · крест линий · свисток-нова
@@ -1704,9 +1742,9 @@
       if (enemy._saleBossCd3 <= 0) {
         enemy._saleBossCd3 = Math.max(4.0, 6.5 - ph * 0.5);
         if (typeof this.spawnBossLineAttack === 'function') {
-          this.spawnBossLineAttack(enemy, p, {
-            lines: ph >= 3 ? 3 : 2, warn: 1.0, length: 500, halfW: 34,
-          });
+          this.spawnBossLineAttack(enemy, p, this.saleBossLineOpts(enemy, {
+            lines: ph >= 3 ? 2 : 2, warn: 1.0, length: 500, halfW: 34,
+          }));
         }
       }
       if (enemy._salePhaseSpike && ph >= 2) {
@@ -1766,7 +1804,10 @@
       }
       if (enemy._salePhaseSpike && ph === 3) {
         enemy._salePhaseSpike = false;
-        this.saleBossGraveRing(enemy.x, enemy.y, 8, { radius: 110, warn: 1.1, r: 38, killName: 'АКЦИЯ' });
+        this.saleBossGraveRing(enemy.x, enemy.y, 5, {
+          radius: 110, warn: 1.15, r: 36, killName: 'АКЦИЯ',
+          color: SALE_BOSS_DEFS.promo_witch.color,
+        });
       }
     } else if (id === 'mall_closing') {
       // сжатие · тьма · орда · линии директора · пожары · врата
@@ -1791,10 +1832,13 @@
       if (enemy._saleBossCd3 <= 0) {
         enemy._saleBossCd3 = Math.max(3.8, 5.8 - ph * 0.4);
         if (typeof this.spawnBossLineAttack === 'function') {
-          this.spawnBossLineAttack(enemy, p, { lines: ph >= 3 ? 3 : 2, warn: 1.05, length: 540, halfW: 38 });
+          this.spawnBossLineAttack(enemy, p, this.saleBossLineOpts(enemy, {
+            lines: ph >= 3 ? 2 : 1, warn: 1.1, length: 520, halfW: 36,
+          }));
         }
-        if (ph >= 2 && typeof this._saleSeedFirePuddles === 'function') {
-          this._saleSeedFirePuddles(2);
+        // пожары реже в фазе 3 — иначе экран весь в красном
+        if (ph >= 2 && typeof this._saleSeedFirePuddles === 'function' && enemy._saleBossCd3 > 2.5) {
+          this._saleSeedFirePuddles(ph >= 3 ? 1 : 2);
         }
       }
       if (!enemy._saleRingAcc) enemy._saleRingAcc = 0;
@@ -1812,8 +1856,11 @@
       }
       if (enemy._salePhaseSpike && ph === 3) {
         enemy._salePhaseSpike = false;
-        this.saleBossGraveRing(p.x, p.y, 8, { radius: 130, warn: 1.2, r: 44, killName: 'CLOSED' });
-        this.lightsOut = Math.max(this.lightsOut || 0, 4);
+        this.saleBossGraveRing(p.x, p.y, 4, {
+          radius: 120, warn: 1.25, r: 40, killName: 'CLOSED',
+          color: SALE_BOSS_DEFS.mall_closing.color,
+        });
+        this.lightsOut = Math.max(this.lightsOut || 0, 3.2);
       }
     }
   };
@@ -1839,9 +1886,12 @@
         if (!h.boom && h.life <= 0) {
           h.boom = true;
           h.life = 0.28;
-          this.spawnAnimFx('afx_bigburst', h.x, h.y, { life: 0.4, scale: 0.9, scaleEnd: 1.6 });
-          this.spawnParticles(h.x, h.y, 16, '#c0392b', 180, 0.4);
-          this.screenShake = Math.max(this.screenShake || 0, 0.25);
+          const col = h.color || '#f59e0b';
+          this.spawnAnimFx('afx_ring', h.x, h.y, {
+            life: 0.35, scale: 0.55, scaleEnd: 1.35, tint: col, alpha: 0.75,
+          });
+          this.spawnParticles(h.x, h.y, 12, col, 140, 0.35);
+          this.screenShake = Math.max(this.screenShake || 0, 0.18);
           if (p && dist(p.x, p.y, h.x, h.y) < p.r + h.r) {
             if (this.saleBossHurtPlayer(h.x, h.y, h.killName || 'Взрыв')) return true;
           }
@@ -1902,10 +1952,12 @@
       // уникальный босс ТЦ — гарантированная посылка + магнит (+ bomb/heal в onSaleBossKilled)
       this.spawnSalePowerup(enemy.x - 22, enemy.y, 'chest');
       this.spawnSalePowerup(enemy.x + 22, enemy.y, 'magnet');
+      this.spawnSalePowerup(enemy.x, enemy.y - 26, 'heart');
       return;
     }
     if (enemy._saleElite) {
       this.spawnSalePowerup(enemy.x, enemy.y, 'chest');
+      if (Math.random() < 0.55) this.spawnSalePowerup(enemy.x + rand(-16, 16), enemy.y - 18, 'heart');
       return;
     }
     const elite = enemy.type === 'boss' || enemy.type === 'director' || enemy.type === 'miniboss';
@@ -1914,6 +1966,23 @@
     const r = Math.random();
     const kind = r < 0.45 ? 'bomb' : r < 0.8 ? 'magnet' : 'chest';
     this.spawnSalePowerup(enemy.x, enemy.y, kind);
+  };
+
+  /** LN-style: хил с мобов; чаще при низком HP / с аптечкой (у LN ~0.2%, у нас щедрее — HP мало). */
+  Game.prototype.dropSaleHeart = function (enemy) {
+    if (!enemy || enemy.saleBossId || enemy._saleElite) return; // уже в dropSalePowerup
+    const p = this.player;
+    if (!p) return;
+    let chance = 0.03;
+    if (p.hp < p.maxHp) chance = 0.08;
+    if (p.hp <= Math.max(1, Math.ceil(p.maxHp * 0.4))) chance = 0.13;
+    if (p.hp >= p.maxHp) chance *= 0.2; // почти не мусорим пол при фулл HP
+    const med = this.salePassives.medkit || this.salePassives.regen || 0;
+    chance += med * 0.02;
+    if (enemy.type === 'fatty' || enemy.type === 'tank') chance += 0.04;
+    if (enemy.type === 'miniboss' || enemy.type === 'director') chance += 0.12;
+    if (Math.random() >= chance) return;
+    this.spawnSalePowerup(enemy.x + rand(-12, 12), enemy.y + rand(-12, 12), 'heart');
   };
 
   Game.prototype.pickSaleEvoKeyDrop = function () {
@@ -1972,6 +2041,15 @@
         const dmg = e.saleBossId ? 12 : (e.type === 'boss' || e.type === 'director' || e.type === 'miniboss') ? 20 : 999;
         this.saleHitEnemy(e, dmg, p.x, p.y, 300, { impact: 'sp_fwave2', color: '#ff6b00' });
       }
+    } else if (pu.kind === 'heart') {
+      const before = p.hp;
+      p.hp = Math.min(p.maxHp, p.hp + 1);
+      this.spawnAnimFx('afx_heal', p.x, p.y - 10, { life: 0.45, scale: 0.75, vy: -18 });
+      this.spawnParticles(p.x, p.y, 10, '#e11d48', 100, 0.35);
+      sfx.pickup();
+      if (p.hp > before) {
+        this.showEventBanner('❤️ +1 HP', 1.1);
+      }
     }
   };
 
@@ -2022,6 +2100,7 @@
     this.waveKills++;
     this.dropSaleXp(enemy);
     this.dropSalePowerup(enemy);
+    this.dropSaleHeart(enemy);
     if (enemy.saleBossId) {
       this.spawnAnimFx('afx_darkburst', enemy.x, enemy.y, { life: 0.9, scale: 2.0, scaleEnd: 2.8 });
       this.spawnAnimFx('afx_ring', enemy.x, enemy.y, { life: 0.6, scale: 1.4, scaleEnd: 4.5 });
@@ -3879,22 +3958,22 @@
       if (!e.saleBossId || e.hp <= 0) continue;
       const def = SALE_BOSS_DEFS[e.saleBossId];
       if (e._saleChargeT > 0) {
-        const len = 220;
-        const col = def ? def.color : '#f87171';
+        const len = 200;
+        const col = def ? def.color : '#f59e0b';
         ctx.save();
         ctx.strokeStyle = col;
-        ctx.globalAlpha = 0.75;
-        ctx.lineWidth = 4;
-        ctx.setLineDash([10, 8]);
+        ctx.globalAlpha = 0.55;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([10, 10]);
         ctx.beginPath();
         ctx.moveTo(e.x, e.y);
         ctx.lineTo(e.x + Math.cos(e._saleChargeAng) * len, e.y + Math.sin(e._saleChargeAng) * len);
         ctx.stroke();
         ctx.setLineDash([]);
         ctx.restore();
-        const flash = 0.45 + Math.sin(performance.now() / 90) * 0.3;
+        const flash = 0.3 + Math.sin(performance.now() / 120) * 0.2;
         drawAnimFxFrame(ctx, 'kfx_slash', e.x + Math.cos(e._saleChargeAng) * len * 0.55, e.y + Math.sin(e._saleChargeAng) * len * 0.55, {
-          scale: 1.6, rot: e._saleChargeAng + Math.PI / 2, alpha: flash, tint: col,
+          scale: 1.35, rot: e._saleChargeAng + Math.PI / 2, alpha: flash, tint: col,
         });
       }
       if (def) {
@@ -3914,24 +3993,37 @@
       }
     }
 
-    // телеграф «могил» / взрывов боссов
+    // телеграф «могил» / взрывов — цвет босса, тонкий контур (без красной заливки)
     for (const h of this.saleBossHazards || []) {
       if (h.kind !== 'grave' || h.boom) continue;
       const t = 1 - h.life / Math.max(0.01, h.warnMax || 1.15);
-      const pulse = 0.4 + Math.abs(Math.sin(performance.now() / 80)) * 0.45;
+      const pulse = 0.55 + Math.abs(Math.sin(performance.now() / 140)) * 0.25;
+      const col = h.color || '#f59e0b';
+      const rr = h.r * (0.72 + 0.28 * t);
       ctx.save();
-      ctx.globalAlpha = 0.35 + 0.4 * pulse;
-      ctx.strokeStyle = '#ef4444';
-      ctx.lineWidth = 3;
-      ctx.setLineDash([8, 6]);
+      ctx.globalAlpha = 0.22 + 0.2 * t;
+      ctx.fillStyle = saleHexRgba(col, 0.14 + 0.1 * t);
       ctx.beginPath();
-      ctx.arc(h.x, h.y, h.r * (0.7 + 0.3 * t), 0, Math.PI * 2);
+      ctx.arc(h.x, h.y, rr * 0.85, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.45 + 0.35 * pulse * t;
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([6, 8]);
+      ctx.beginPath();
+      ctx.arc(h.x, h.y, rr, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle = `rgba(220,38,38,${0.12 + 0.18 * t})`;
+      // крест «зона» вместо кровавого пятна
+      ctx.globalAlpha = 0.35 + 0.25 * t;
+      ctx.lineWidth = 2;
+      const cross = rr * 0.45;
       ctx.beginPath();
-      ctx.arc(h.x, h.y, h.r * (0.55 + 0.2 * t), 0, Math.PI * 2);
-      ctx.fill();
+      ctx.moveTo(h.x - cross, h.y);
+      ctx.lineTo(h.x + cross, h.y);
+      ctx.moveTo(h.x, h.y - cross);
+      ctx.lineTo(h.x, h.y + cross);
+      ctx.stroke();
       ctx.restore();
     }
 
@@ -4380,6 +4472,7 @@
 
   // expose for debugging / hub
   window.SALE_WEAPONS = SALE_WEAPONS;
+  window.SALE_BOSS_DEFS = SALE_BOSS_DEFS;
   window.SALE_PASSIVES = SALE_PASSIVES;
   window.SALE_HEROES = SALE_HEROES;
   window.SALE_DURATION = SALE_DURATION;
@@ -4626,7 +4719,8 @@
       R(
         bq('powerup', 'chest', '📦 посылка') +
           bq('powerup', 'magnet', '🧲 магнит') +
-          bq('powerup', 'bomb', '🧨 хлопушка'),
+          bq('powerup', 'bomb', '🧨 хлопушка') +
+          bq('powerup', 'heart', '❤️ сердце'),
       ) +
       H('Оружие +1') +
       R(wepIds.map((id) => bq('wpn', id, SALE_WEAPONS[id].ico + ' ' + SALE_WEAPONS[id].name)).join(''));
