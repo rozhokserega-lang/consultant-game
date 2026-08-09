@@ -1,0 +1,226 @@
+/**
+ * Pixel button — BEM block `.button`
+ * Подключение: <link rel="stylesheet" href="shared/ui/button/button.css">
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap&subset=cyrillic');
+
+.button {
+  --button-font: 'Press Start 2P', 'Courier New', monospace;
+  --button-face-light: #7b8794;
+  --button-face-dark: #525c68;
+  --button-edge: #0d0d0f;
+  --button-highlight: #aeb8c4;
+  --button-shadow-inner: #2f3844;
+  --button-text: #ffffff;
+  --button-text-shadow: #000000;
+  --button-padding-y: 12px;
+  --button-padding-x: 28px;
+  --button-font-size: 11px;
+  --button-letter-spacing: 0.04em;
+  --button-min-height: 44px;
+  --button-depth: 4px;
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: var(--button-min-height);
+  padding: var(--button-padding-y) var(--button-padding-x);
+  border: 2px solid var(--button-edge);
+  border-radius: 0;
+  background: linear-gradient(
+    180deg,
+    var(--button-face-light) 0%,
+    var(--button-face-light) 50%,
+    var(--button-face-dark) 50%,
+    var(--button-face-dark) 100%
+  );
+  box-shadow:
+    inset 2px 2px 0 var(--button-highlight),
+    inset -2px -2px 0 var(--button-shadow-inner),
+    0 var(--button-depth) 0 var(--button-edge);
+  color: var(--button-text);
+  font-family: var(--button-font);
+  font-size: var(--button-font-size);
+  font-weight: 400;
+  line-height: 1.35;
+  letter-spacing: var(--button-letter-spacing);
+  text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  image-rendering: pixelated;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.12s ease;
+}
+
+.button::before,
+.button::after {
+  content: '';
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: var(--button-highlight);
+  pointer-events: none;
+}
+
+.button::before {
+  top: 2px;
+  left: 2px;
+}
+
+.button::after {
+  top: 2px;
+  right: 2px;
+}
+
+.button__label {
+  position: relative;
+  z-index: 1;
+  text-shadow:
+    -1px -1px 0 var(--button-text-shadow),
+    0 -1px 0 var(--button-text-shadow),
+    1px -1px 0 var(--button-text-shadow),
+    -1px 0 0 var(--button-text-shadow),
+    1px 0 0 var(--button-text-shadow),
+    -1px 1px 0 var(--button-text-shadow),
+    0 1px 0 var(--button-text-shadow),
+    1px 1px 0 var(--button-text-shadow);
+}
+
+.button__icon {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  font-size: 1.1em;
+  line-height: 1;
+  text-shadow:
+    -1px -1px 0 var(--button-text-shadow),
+    1px -1px 0 var(--button-text-shadow),
+    -1px 1px 0 var(--button-text-shadow),
+    1px 1px 0 var(--button-text-shadow);
+}
+
+/* --- Variants --- */
+
+.button--primary {
+  /* default palette — см. референс «Продолжить» */
+}
+
+.button--accent {
+  --button-face-light: #f5d04a;
+  --button-face-dark: #c9a020;
+  --button-highlight: #fff0a8;
+  --button-shadow-inner: #8a6a10;
+  --button-text: #1a1408;
+  --button-text-shadow: #5a4208;
+}
+
+.button--ghost {
+  --button-face-light: rgba(255, 255, 255, 0.08);
+  --button-face-dark: rgba(255, 255, 255, 0.03);
+  --button-highlight: rgba(255, 255, 255, 0.18);
+  --button-shadow-inner: rgba(0, 0, 0, 0.35);
+  --button-edge: #666;
+  --button-depth: 3px;
+}
+
+.button--danger {
+  --button-face-light: #e06a5a;
+  --button-face-dark: #a83228;
+  --button-highlight: #ffb0a4;
+  --button-shadow-inner: #601810;
+}
+
+.button--success {
+  --button-face-light: #5ecf82;
+  --button-face-dark: #2e9a52;
+  --button-highlight: #b8f0c8;
+  --button-shadow-inner: #1a6034;
+}
+
+/* Меню стартового экрана — фиолетовый по умолчанию, жёлтый при hover/active */
+.button--menu {
+  --button-face-light: #5a585c;
+  --button-face-dark: #3a2e46;
+  --button-edge: #3c3c3d;
+  --button-highlight: #222222;
+  --button-shadow-inner: #180828;
+  --button-text: #f8e8ff;
+  --button-text-shadow: #000000;
+}
+
+.button--menu:hover:not(:disabled):not(.button--disabled),
+.button--menu:focus-visible:not(:disabled):not(.button--disabled),
+.button--menu:active:not(:disabled):not(.button--disabled),
+.button--menu.button--pressed:not(:disabled):not(.button--disabled) {
+  --button-face-light: #ffe000;
+  --button-face-dark: #e6c200;
+  --button-edge: #c9a020;
+  --button-highlight: #fff0a8;
+  --button-shadow-inner: #8a6a10;
+  --button-text: #1a1408;
+  --button-text-shadow: #5a4208;
+  filter: none;
+}
+
+/* --- Sizes --- */
+
+.button--sm {
+  --button-padding-y: 8px;
+  --button-padding-x: 16px;
+  --button-font-size: 8px;
+  --button-min-height: 32px;
+  --button-depth: 3px;
+}
+
+.button--md {
+  /* default */
+}
+
+.button--lg {
+  --button-padding-y: 14px;
+  --button-padding-x: 36px;
+  --button-font-size: 12px;
+  --button-min-height: 52px;
+  --button-depth: 5px;
+}
+
+.button--full {
+  display: flex;
+  width: 100%;
+}
+
+.button--icon-only {
+  --button-padding-x: 12px;
+  aspect-ratio: 1;
+}
+
+/* --- States --- */
+
+.button:hover:not(:disabled):not(.button--disabled) {
+  filter: brightness(1.08);
+}
+
+.button:focus-visible {
+  outline: 2px solid #f1c40f;
+  outline-offset: 3px;
+}
+
+.button:active:not(:disabled):not(.button--disabled),
+.button.button--pressed:not(:disabled):not(.button--disabled) {
+  transform: translateY(calc(var(--button-depth) - 1px));
+  box-shadow:
+    inset 2px 2px 0 var(--button-shadow-inner),
+    inset -2px -2px 0 var(--button-highlight),
+    0 1px 0 var(--button-edge);
+}
+
+.button:disabled,
+.button.button--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.35);
+  transform: none;
+}

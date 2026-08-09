@@ -735,6 +735,24 @@
     el.textContent = ico || '?';
   }
 
+  function saleChoiceToCard(up) {
+    if (typeof LevelUpPopup === 'undefined') {
+      return {
+        title: up.ttl || '?',
+        description: up.desc || '',
+        icon: up.ico || '?',
+        level: null,
+        isUpgrade: false,
+      };
+    }
+    const card = LevelUpPopup.formatChoice(up);
+    if (!up.ico) {
+      if (up.kind === 'passive' && SALE_PASSIVES[up.id]) card.icon = SALE_PASSIVES[up.id].ico;
+      else if (SALE_WEAPONS[up.id]) card.icon = SALE_WEAPONS[up.id].ico;
+    }
+    return card;
+  }
+
   function saleXpToNext(level) {
     // к середине забега уровни дороже — пул апгрейдов не кончается на 10-й минуте
     const late = Math.max(0, level - 10);
@@ -818,7 +836,7 @@
   const _resize = Game.prototype.resize;
   Game.prototype.resize = function () {
     _resize.call(this);
-    if (this.gameMode === 'sale' && !this.inHub) {
+    if (this.gameMode === 'sale' && !this.isBoostersOpen() && !this.inMainMenu) {
       this.worldW = Math.max(2800, Math.floor(this.viewW() * SALE_WORLD_MUL));
       this.worldH = Math.max(2000, Math.floor(this.viewH() * SALE_WORLD_MUL));
     }
@@ -828,7 +846,11 @@
     return this.updateSale(dt);
   };
 
+  const _updateHUD = Game.prototype.updateHUD;
   Game.prototype.updateHUD = function () {
+    if (this.isBoostersOpen() || this.inMainMenu || !this.saleWeapons) {
+      return _updateHUD.call(this);
+    }
     return this.updateSaleHUD();
   };
 
@@ -2396,35 +2418,19 @@
       this.showEventBanner(`❤️ Нечего брать — +${Math.min(3, n)} HP`, 1.6);
       return;
     }
-    const wrap = document.getElementById('upgrade-cards');
-    wrap.innerHTML = '';
-    wrap.classList.toggle('banish-mode', !!this._saleBanishMode);
-    const title = document.querySelector('#upgrade-overlay h2');
-    const sub = document.getElementById('upgrade-sub') || document.querySelector('#upgrade-overlay p');
     const branchOnly = this.upgradeChoices.length >= 2
       && this.upgradeChoices.every((u) => u.kind === 'evolve' && u.branch);
-    if (title) {
-      title.textContent = branchOnly
-        ? `✨ Выбери ветку эволюции`
-        : `⬆ Уровень ${this.saleLevel}!`;
+    const headerTitle = branchOnly
+      ? 'Выбери ветку'
+      : `Уровень ${this.saleLevel}`;
+    if (typeof LevelUpPopup !== 'undefined') {
+      LevelUpPopup.open({
+        title: headerTitle,
+        cards: this.upgradeChoices.map((up) => saleChoiceToCard(up)),
+        banishMode: !!this._saleBanishMode,
+        onPick: (i) => (this._saleBanishMode ? this.banSaleUpgrade(i) : this.pickSaleUpgrade(i)),
+      });
     }
-    if (sub) {
-      sub.textContent = this._saleBanishMode
-        ? '🚫 Выбери карту, которую забанить до конца забега'
-        : branchOnly
-          ? 'Две ветки готовы — выбери одну (вторая станет недоступна)'
-          : 'Оружие / пассивка / эволюция · можно перебросить выбор';
-    }
-    this.upgradeChoices.forEach((up, i) => {
-      const el = document.createElement('button');
-      el.className = 'card';
-      el.type = 'button';
-      el.innerHTML = `<div class="ico"></div><div class="ttl">${i + 1}. ${up.ttl}</div><div class="desc">${up.desc}</div>`;
-      paintSaleChoiceIcon(el.querySelector('.ico'), up);
-      el.onclick = () => (this._saleBanishMode ? this.banSaleUpgrade(i) : this.pickSaleUpgrade(i));
-      wrap.appendChild(el);
-    });
-    document.getElementById('upgrade-overlay').classList.add('show');
     this.updateUpgradeRerollBtn();
     this.refreshMusicState();
     if (!this._saleRerolling && !this._saleKeepBanishMode) sfx.level();
@@ -2466,7 +2472,7 @@
   Game.prototype.skipSaleUpgrade = function () {
     if (!this.choosingUpgrade) return;
     sfx.click();
-    document.getElementById('upgrade-overlay').classList.remove('show');
+    if (typeof LevelUpPopup !== 'undefined') LevelUpPopup.close();
     this.choosingUpgrade = false;
     this._saleBanishMode = false;
     this.pendingUpgrades = Math.max(0, this.pendingUpgrades - 1);
@@ -2520,7 +2526,7 @@
       }
     }
     sfx.click();
-    document.getElementById('upgrade-overlay').classList.remove('show');
+    if (typeof LevelUpPopup !== 'undefined') LevelUpPopup.close();
     this.choosingUpgrade = false;
     this._saleBanishMode = false;
     this.updateUpgradeRerollBtn();
@@ -2530,22 +2536,6 @@
       this.paused = false;
       this.refreshMusicState();
     }
-  };
-
-  // расширяем управление кнопками апгрейда: бан + скип
-  const _updateRerollBtn = Game.prototype.updateUpgradeRerollBtn;
-  Game.prototype.updateUpgradeRerollBtn = function () {
-    _updateRerollBtn.call(this);
-    const banBtn = document.getElementById('btn-upgrade-banish');
-    if (banBtn) {
-      const left = this.saleBanishesLeft | 0;
-      banBtn.textContent = this._saleBanishMode ? '🚫 Выбери карту…' : `🚫 Бан (${left})`;
-      banBtn.disabled = (left <= 0 && !this._saleBanishMode) || !this.choosingUpgrade;
-      banBtn.style.display = this.choosingUpgrade ? '' : 'none';
-      banBtn.classList.toggle('active', !!this._saleBanishMode);
-    }
-    const skipBtn = document.getElementById('btn-upgrade-skip');
-    if (skipBtn) skipBtn.style.display = this.choosingUpgrade ? '' : 'none';
   };
 
   Game.prototype.saleHitEnemy = function (e, dmg, srcX, srcY, knock, opts) {
@@ -3605,7 +3595,7 @@
   };
 
   Game.prototype.updateSale = function (dt) {
-    if (this.inHub || this.paused || this.choosingUpgrade || this.shopping || this.gameOver || this.won) return;
+    if (this.isBoostersOpen() || this.paused || this.choosingUpgrade || this.shopping || this.gameOver || this.won) return;
     if (this.__saleDevOpen) return;
     const scale = this.__saleTimeScale || 1;
     const realDt = Math.min(dt, 0.1) * scale;
@@ -3864,7 +3854,7 @@
 
   Game.prototype.updateSaleHUD = function () {
     const p = this.player;
-    if (!p) return;
+    if (!p || !this.saleWeapons) return;
     this.$hpFill.style.width = (100 * p.hp / p.maxHp) + '%';
     this.$hpText.textContent = `${p.hp}/${p.maxHp}`;
     this.$xpFill.style.width = (100 * this.saleXp / this.saleXpNext) + '%';
@@ -3872,6 +3862,7 @@
     this.$level.textContent = this.saleLevel;
     this.$score.textContent = '🛒 ' + this.score;
     if (this.$coins) this.$coins.textContent = '🪙 ' + this.coins;
+    this.updateBattleBar();
 
     const left = Math.max(0, SALE_DURATION - this.saleTime);
     const m = Math.floor(left / 60);
@@ -3910,7 +3901,7 @@
 
     const tags = [];
     // слоты: базовое + эволюции считаются занятыми слотами билда
-    const wepSlots = Object.keys(this.saleWeapons).filter((id) => (this.saleWeapons[id] || 0) > 0).length;
+    const wepSlots = Object.keys(this.saleWeapons || {}).filter((id) => (this.saleWeapons[id] || 0) > 0).length;
     const maxSlots = this.saleMaxWeaponSlots();
     tags.push(`<span class="buff-tag good">⚔ ${wepSlots}/${maxSlots}</span>`);
     for (const syn of this.getActiveSaleSynergies()) {
@@ -3953,7 +3944,7 @@
       for (const e of this.enemies) {
         if (e.hp > 0 && e.saleBossId && (!boss || e.maxHp > boss.maxHp)) boss = e;
       }
-      const show = !!boss && !this.inHub && !this.gameOver && !this.won;
+      const show = !!boss && !this.isBoostersOpen() && !this.gameOver && !this.won;
       this.$bossBar.classList.toggle('show', show);
       if (show) {
         const def = SALE_BOSS_DEFS[boss.saleBossId];
@@ -4445,7 +4436,7 @@
 
   /** Экранные оверлеи Sale (после restore камеры): стрелка на босса за экраном */
   Game.prototype.renderSaleScreenUI = function () {
-    if (this.inHub || this.gameOver || this.won || !this.player) return;
+    if (this.isBoostersOpen() || this.gameOver || this.won || !this.player) return;
     const cam = this._renderCam;
     if (!cam) return;
     for (const e of this.enemies || []) {
@@ -4718,7 +4709,7 @@
   function saleDevEnsureRun() {
     const g = window.game;
     if (!g) return null;
-    if (g.inHub || g.gameMode !== 'sale' || !g.player) {
+    if ((g.isBoostersOpen && g.isBoostersOpen()) || g.inMainMenu || g.gameMode !== 'sale' || !g.player) {
       g.gameMode = 'sale';
       g.startShiftFromHub();
       g.__god = true;
@@ -4744,7 +4735,7 @@
       `<h3>DEV · Распродажа · v${SALE_VERSION}</h3>` +
       `<div id="sale-dev-info">${info}</div>` +
       H('Старт') +
-      R(bq('start', null, 'старт / рестарт') + bq('hub', null, 'в хаб')) +
+      R(bq('start', null, 'старт / рестарт') + bq('hub', null, 'усилители')) +
       H('Время') +
       R(
         bq('warp', 60, '+1 мин') +
@@ -4796,7 +4787,7 @@
       case 'hub':
         if (g) {
           g.__saleDevOpen = false;
-          g.openHub();
+          g.openBoosters();
         }
         toggleSaleDev(false);
         break;
@@ -4838,7 +4829,7 @@
         if (!g) break;
         g.bankCoins = (g.bankCoins || 0) + (+arg || 0);
         g.persist && g.persist();
-        g.renderHub && g.inHub && g.renderHub();
+        g.renderHub && g.isBoostersOpen && g.isBoostersOpen() && g.renderHub();
         info(`банк ${g.bankCoins}`);
         break;
       }
@@ -4923,7 +4914,7 @@
       panel.setAttribute('aria-hidden', 'false');
       if (g) {
         g.__saleDevOpen = true;
-        g.__saleDevPaused = !g.paused && !g.inHub;
+        g.__saleDevPaused = !g.paused && !(g.isBoostersOpen && g.isBoostersOpen()) && !g.inMainMenu;
         if (g.__saleDevPaused) g.paused = true;
       }
     } else {
@@ -4972,18 +4963,6 @@
       });
     }
     window.toggleSaleDev = toggleSaleDev;
-
-    // кнопки бан / скип на левел-апе
-    const banBtn = document.getElementById('btn-upgrade-banish');
-    if (banBtn) banBtn.onclick = () => {
-      const g = window.game;
-      if (g && typeof g.toggleSaleBanish === 'function') g.toggleSaleBanish();
-    };
-    const skipBtn = document.getElementById('btn-upgrade-skip');
-    if (skipBtn) skipBtn.onclick = () => {
-      const g = window.game;
-      if (g && typeof g.skipSaleUpgrade === 'function') g.skipSaleUpgrade();
-    };
 
     // кнопка скорости ×1.5 в HUD
     const speedBtn = document.getElementById('btn-speed');
@@ -5036,7 +5015,7 @@
       g.coins = Math.max(0, Number(n) || 0);
       g.bankCoins = Math.max(g.bankCoins || 0, g.coins);
       g.persist && g.persist();
-      g.renderHub && g.inHub && g.renderHub();
+      g.renderHub && g.isBoostersOpen && g.isBoostersOpen() && g.renderHub();
     },
     clearEnemies: () => saleDevAction('killall'),
     count: () => {

@@ -8,6 +8,10 @@
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="shared/ui/button/button.css">
+<link rel="stylesheet" href="shared/ui/battle-bar/battle-bar.css">
+<link rel="stylesheet" href="widgets/game-menu/game-menu.css">
+<link rel="stylesheet" href="widgets/level-up-popup/level-up-popup.css">
 <title>🛒 Распродажа</title>
 <style>
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -17,19 +21,17 @@
     font-family: 'Segoe UI', system-ui, sans-serif;
     display: flex; flex-direction: column;
   }
+  /* Legacy HUD — logic-only, visually hidden */
   #hud {
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    padding: 5px 8px 4px;
-    background: linear-gradient(180deg, #1e1e30, #161625);
-    border-bottom: 2px solid #333; color: #fff; font-size: 12px;
-    z-index: 20;
-    height: 78px;
-    max-height: 78px;
-    overflow: hidden;
-    box-sizing: border-box;
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
   }
   .hud-main {
     display: grid;
@@ -147,17 +149,6 @@
   }
   .panel h2 { font-size: 22px; margin-bottom: 8px; }
   .panel p { color: #bbb; font-size: 14px; margin-bottom: 14px; line-height: 1.4; }
-  .cards { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-  .card {
-    flex: 1 1 130px; max-width: 160px; min-height: 120px;
-    background: rgba(255,255,255,0.06); border: 2px solid #666;
-    border-radius: 12px; padding: 12px 10px; cursor: pointer;
-    transition: transform 0.12s, border-color 0.12s, background 0.12s;
-  }
-  .card:hover, .card:active { transform: translateY(-3px); border-color: #f1c40f; background: rgba(241,196,15,0.12); }
-  .card .ico { font-size: 28px; margin-bottom: 6px; }
-  .card .ttl { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
-  .card .desc { font-size: 11px; color: #aaa; }
   .pause-loadout {
     text-align: left;
     margin: 0 0 12px;
@@ -186,11 +177,6 @@
   .pause-chip .lv { color: #f1c40f; font-weight: 700; font-size: 11px; }
   .pause-chip .nm { color: #ccc; font-size: 11px; }
   .pause-empty { font-size: 12px; color: #888; }
-  #upgrade-overlay .panel { max-width: 560px; }
-  #btn-upgrade-reroll:disabled, #btn-upgrade-banish:disabled { opacity: 0.4; cursor: not-allowed; }
-  #btn-upgrade-banish.active { border-color: #e74c3c; color: #e74c3c; }
-  .cards.banish-mode .card { border-color: #e74c3c; background: rgba(231,76,60,0.1); }
-  .cards.banish-mode .card:hover, .cards.banish-mode .card:active { border-color: #ff6b5b; background: rgba(231,76,60,0.22); }
   .row-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
   .btn {
     background: #f1c40f; color: #222; border: none; border-radius: 10px;
@@ -213,7 +199,7 @@
     pointer-events: none; max-width: 90%;
   }
   #sale-boss-bar {
-    position: absolute; top: 34px; left: 50%; transform: translateX(-50%);
+    position: absolute; top: 62px; left: 50%; transform: translateX(-50%);
     z-index: 15; width: min(420px, 72%); pointer-events: none;
     display: none; flex-direction: column; align-items: center; gap: 2px;
   }
@@ -327,40 +313,62 @@
   .wep-card.locked { opacity: 0.45; cursor: default; }
   .perk-row { display:flex; gap:6px; flex-wrap:wrap; justify-content:stretch; margin:6px 0; }
   .perk-row .hub-card { flex:1 1 90px; min-width:0; }
-  #hub-overlay {
-    position: fixed; inset: 0; z-index: 100;
-    align-items: stretch; justify-content: center;
+  #boosters-overlay {
+    position: fixed; inset: 0; z-index: 110;
+    display: none; align-items: stretch; justify-content: center;
+    background: rgba(8, 8, 16, 0.94);
     padding: max(8px, env(safe-area-inset-top, 0px)) 10px max(10px, env(safe-area-inset-bottom, 0px));
     overflow: hidden;
     touch-action: pan-y;
-    background: rgba(8,8,16,0.94);
   }
-  #hub-overlay .hub-panel {
+  #boosters-overlay.show { display: flex; }
+  #boosters-overlay .boosters-panel {
     max-width: 640px; width: 100%; max-height: 100%;
-    display: flex; flex-direction: column;
-    padding: 12px; margin: 0 auto; overflow: hidden;
+    display: flex; flex-direction: column; text-align: center; overflow: hidden;
+    padding: 12px; margin: 0 auto;
   }
-  #hub-overlay .hub-panel h2 { font-size: 18px; margin-bottom: 4px; }
-  #hub-overlay .hub-panel > p { font-size: 12px; margin-bottom: 6px; }
-  #hub-overlay .hub-sec { font-size: 13px; margin: 6px 0 2px; font-weight: 700; text-align: left; }
+  #boosters-overlay .boosters-panel h2 { font-size: 18px; margin-bottom: 4px; }
+  #boosters-overlay .boosters-panel > p { font-size: 12px; margin-bottom: 6px; }
+  #boosters-overlay .hub-scroll { text-align: left; flex: 1 1 auto; min-height: 0; }
+  .hub-sec { font-size: 13px; margin: 6px 0 2px; font-weight: 700; text-align: left; }
   .hub-scroll {
     flex: 1 1 auto; min-height: 0;
     overflow-y: auto; -webkit-overflow-scrolling: touch;
     touch-action: pan-y; overscroll-behavior: contain;
   }
-  .hub-footer {
-    flex-shrink: 0; padding-top: 8px; margin-top: 4px;
-    border-top: 1px solid #444;
+  #boosters-overlay .boosters-footer {
+    flex-shrink: 0; padding-top: 8px; margin-top: 4px; border-top: 1px solid #444;
   }
-  .hub-footer .btn {
-    width: 100%; padding: 14px 16px; font-size: 16px;
+  #main-menu-overlay {
+    position: fixed; inset: 0; z-index: 110;
+    display: none; align-items: flex-end; justify-content: center;
+    background: #0a0612 url('assets/start_screen.jpg') center center / cover no-repeat;
+    padding: max(8px, env(safe-area-inset-top, 0px)) 16px max(20px, env(safe-area-inset-bottom, 0px));
   }
-  body.hub-mode #hud,
-  body.hub-mode #buff-bar,
-  body.hub-mode #sale-boss-bar,
-  body.hub-mode #desktop-hint,
-  body.hub-mode .mobile-only { display: none !important; }
-  body.hub-mode #game-container { padding-bottom: 0 !important; }
+  #main-menu-overlay::after {
+    content: '';
+    position: absolute; inset: auto 0 0 0; height: 50%;
+    background: linear-gradient(transparent, rgba(10, 6, 18, 0.88));
+    pointer-events: none;
+  }
+  #main-menu-overlay.show { display: flex; }
+  .main-menu-panel {
+    position: relative; z-index: 1;
+    max-width: 360px; width: min(92vw, 360px);
+    text-align: center; color: #fff;
+  }
+  .main-menu-title,
+  .main-menu-sub { display: none; }
+  .main-menu-actions {
+    display: flex; flex-direction: column; gap: 10px; width: 100%;
+  }
+  body.sale-mode:not(.hub-mode) #sale-ver-corner { display: block; }
+  body.main-menu-mode #battle-bar,
+  body.main-menu-mode #buff-bar,
+  body.main-menu-mode #sale-boss-bar,
+  body.main-menu-mode #desktop-hint,
+  body.main-menu-mode .mobile-only { display: none !important; }
+  body.main-menu-mode #game-container { padding-bottom: 0 !important; }
   body.sale-mode #attack-zone,
   body.sale-mode #desktop-hint { display: none !important; }
   body.sale-mode #joystick-zone {
@@ -455,7 +463,7 @@
   .hub-back:hover { border-color: #f1c40f; color: #fff; }
   @media (max-height: 720px) {
     .hub-card .desc { display: none; }
-    #hub-overlay .hub-panel { padding: 10px; }
+    #boosters-overlay .boosters-panel { padding: 10px; }
   }
   #dash-btn.pressed, #skill-btn.pressed { transform: scale(0.9); }
 </style>
@@ -492,7 +500,31 @@
 </head>
 <body>
 
-<header id="hud">
+<header id="battle-bar" class="battle-bar" aria-label="Статус боя">
+  <div class="battle-bar__inner">
+    <div class="battle-bar__coins battle-bar__panel">
+      <div class="battle-bar__coin-icon" aria-hidden="true"></div>
+      <div class="battle-bar__coins-text">
+        <span class="battle-bar__label">МОНЕТЫ:</span>
+        <span class="battle-bar__value battle-bar__value--coins" id="battle-coins">0</span>
+      </div>
+    </div>
+    <div class="battle-bar__timer battle-bar__panel">
+      <span class="battle-bar__label">ВРЕМЯ ИГРЫ:</span>
+      <span class="battle-bar__value battle-bar__value--time" id="battle-time">00:00</span>
+    </div>
+    <div class="battle-bar__actions">
+      <button class="battle-bar__btn" id="btn-battle-pause" type="button" title="Пауза" aria-label="Пауза">
+        <span class="battle-bar__pause-icon" aria-hidden="true"></span>
+      </button>
+      <button class="battle-bar__btn" id="btn-battle-menu" type="button" title="Меню" aria-label="Меню">
+        <span class="battle-bar__gear-icon" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<header id="hud" aria-hidden="true">
   <div class="hud-main">
     <div>
       <span style="font-size:15px;">⭐<b id="hud-level">1</b></span>
@@ -555,32 +587,12 @@
   </div>
   <div id="desktop-hint">WASD — ход · ЛКМ/Пробел удерж. — заряд · Shift — дэш · F — обед · P — пауза</div>
 
-  <!-- Выбор апгрейда -->
-  <div class="overlay" id="upgrade-overlay">
-    <div class="panel">
-      <h2>⬆ Повышение!</h2>
-      <p id="upgrade-sub">Выбери бонус смены</p>
-      <div class="cards" id="upgrade-cards"></div>
-      <div class="row-btns">
-        <button class="btn ghost" id="btn-upgrade-reroll" type="button">🔄 Другие варианты (3)</button>
-        <button class="btn ghost" id="btn-upgrade-banish" type="button">🚫 Бан (2)</button>
-        <button class="btn ghost" id="btn-upgrade-skip" type="button">⏭ Пропустить</button>
-      </div>
-    </div>
-  </div>
+  <!-- Выбор апгрейда (виджет level-up-popup) -->
+  <div id="upgrade-overlay"></div>
 
-  <!-- Пауза -->
-  <div class="overlay" id="pause-overlay">
-    <div class="panel" style="max-width:520px;">
-      <h2>⏸ Пауза</h2>
-      <p id="pause-sub">Распродажа на паузе.</p>
-      <div class="pause-loadout" id="pause-loadout"></div>
-      <div class="row-btns">
-        <button class="btn" id="btn-resume" type="button">Продолжить</button>
-        <button class="btn ghost" id="btn-pause-settings" type="button">Настройки</button>
-        <button class="btn ghost" id="btn-restart" type="button">Заново</button>
-      </div>
-    </div>
+  <!-- Игровое меню (пауза / шестерёнка) -->
+  <div class="game-menu-overlay" id="game-menu-overlay">
+    <div id="game-menu-root"></div>
   </div>
 
   <!-- Настройки -->
@@ -608,24 +620,30 @@
       <div class="stat-line">Рекорд: <b id="end-record">0</b> <span id="end-newrec" style="display:none;color:#2ecc71;">★ НОВЫЙ РЕКОРД!</span></div>
       <div class="stat-line" id="end-challenge-line"></div>
       <div class="row-btns">
-        <button class="btn" id="btn-again" type="button">В хаб смены</button>
+        <button class="btn" id="btn-again" type="button">В меню</button>
       </div>
     </div>
   </div>
 </div>
 
-  <!-- Хаб между сменами (вне game-container — на весь экран) -->
-    <div class="overlay" id="hub-overlay">
-    <div class="panel hub-panel">
+  <!-- Усилители и подготовка к забегу -->
+  <div id="boosters-overlay">
+    <div class="panel boosters-panel">
+      <h2>⚡ Усилители</h2>
+      <p>Банк: <b id="boosters-bank">0</b> 🪙 · Рекорд: <b id="boosters-record">0</b> · <span id="hub-version" title="Дев-панель">v?</span></p>
       <div class="hub-scroll">
-        <h2>🛒 Распродажа</h2>
-        <p>Банк: <b id="hub-bank">0</b> 🪙 · Рекорд: <b id="hub-record">0</b> · <span id="hub-version" title="Дев-панель">v?</span></p>
-
         <div class="hub-pane on" id="hub-pane-prep">
           <div class="hub-tabs">
             <button type="button" class="hub-tab on" data-hub-tab="prep" id="hub-tab-prep">Подготовка · Распродажа</button>
             <button type="button" class="hub-tab" data-hub-tab="book" id="hub-tab-book">📖 Книга жалоб</button>
           </div>
+
+          <div class="hub-sec">Мета-перки</div>
+          <p style="font-size:11px;color:#aaa;margin:0 0 6px;">Постоянные бонусы между сменами.</p>
+          <div class="hub-grid" id="boosters-meta"></div>
+          <div class="hub-sec">Способности</div>
+          <p style="font-size:11px;color:#aaa;margin:0 0 6px;">Дэш, обед и сильный удар.</p>
+          <div class="hub-grid" id="boosters-abilities"></div>
 
           <div id="hub-sale-loadout">
             <div class="hub-sec">Консультант</div>
@@ -655,9 +673,18 @@
           <div class="book-list" id="hub-book"></div>
         </div>
       </div>
-      <div class="hub-footer">
-        <button class="btn" id="btn-hub-start" type="button">Начать распродажу 🛒</button>
+      <div class="boosters-footer">
+        <div class="main-menu-actions" id="boosters-back-wrap"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- Главное меню -->
+  <div id="main-menu-overlay">
+    <div class="main-menu-panel">
+      <h1 class="main-menu-title">🛒 Распродажа</h1>
+      <p class="main-menu-sub">Выживи смену в торговом центре</p>
+      <div class="main-menu-actions" id="main-menu-actions"></div>
     </div>
   </div>
 
@@ -1050,7 +1077,7 @@ const enemyMobImg = new Image();
 let enemyMobReady = false;
 enemyMobImg.onload = () => {
   enemyMobReady = true;
-  if (window.game && typeof window.game.renderComplaintBook === 'function' && window.game.inHub) {
+  if (window.game && typeof window.game.renderComplaintBook === 'function' && window.game.isBoostersOpen && window.game.isBoostersOpen()) {
     window.game.renderComplaintBook();
   }
 };
@@ -2951,7 +2978,8 @@ class Game {
     this.fireAlarm = 0;
     this.eventCooldown = 0;
     this._eventBanner = null;
-    this.inHub = true;
+    this.inHub = false;
+    this.inMainMenu = false;
     const owned = this.save.ownedWeapons || ['hammer'];
     const validIds = new Set(WEAPONS.map(w => w.id));
     this.ownedWeapons = Array.from(new Set(['hammer', ...owned.filter(id => validIds.has(id))]));
@@ -3020,7 +3048,7 @@ class Game {
     this.resize();
     this.setupInput();
     this.prepareIdleWorld();
-    this.openHub();
+    this.openMainMenu();
     window.game = this;
     this.loop(this.lastTime);
   }
@@ -3069,37 +3097,66 @@ class Game {
     this.$enemies = document.getElementById('hud-enemies');
     this.$combo = document.getElementById('hud-combo');
     this.$buffBar = document.getElementById('buff-bar');
+    this.$battleCoins = document.getElementById('battle-coins');
+    this.$battleTime = document.getElementById('battle-time');
+  }
+
+  formatBattleCoins(n) {
+    return Math.floor(n || 0).toLocaleString('ru-RU');
+  }
+
+  formatBattleElapsed(sec) {
+    sec = Math.max(0, Math.floor(sec || 0));
+    const m = String(Math.floor(sec / 60)).padStart(2, '0');
+    const s = String(sec % 60).padStart(2, '0');
+    return m + ':' + s;
+  }
+
+  updateBattleBar() {
+    if (this.$battleCoins) {
+      this.$battleCoins.textContent = this.formatBattleCoins(this.coins);
+    }
+    if (this.$battleTime) {
+      const elapsed = this.saleTime || 0;
+      this.$battleTime.textContent = this.formatBattleElapsed(elapsed);
+    }
   }
 
   bindUI() {
+    this.buildMainMenuButtons();
+    this.buildGameMenu();
+    this.buildLevelUpPopup();
     document.getElementById('btn-pause').onclick = () => this.togglePause();
-    document.getElementById('btn-resume').onclick = () => this.togglePause(false);
-    document.getElementById('btn-restart').onclick = () => { this.hideOverlays(); this.openHub(); };
-    const rerollBtn = document.getElementById('btn-upgrade-reroll');
-    if (rerollBtn) rerollBtn.onclick = () => this.rerollUpgradeChoices();
-    document.getElementById('btn-again').onclick = () => { this.hideOverlays(); this.openHub(); };
-    document.getElementById('btn-hub-start').onclick = () => this.startShiftFromHub();
+    const battlePause = document.getElementById('btn-battle-pause');
+    if (battlePause) battlePause.onclick = () => this.togglePause();
+    const battleMenu = document.getElementById('btn-battle-menu');
+    if (battleMenu) battleMenu.onclick = () => this.openGameMenu();
+    document.getElementById('btn-again').onclick = () => { this.hideOverlays(); this.openMainMenu(); };
     document.getElementById('hub-tab-prep').onclick = () => this.setHubTab('prep');
     document.getElementById('hub-tab-book').onclick = () => this.setHubTab('book');
     const backBook = document.getElementById('hub-back-modes-book');
     if (backBook) backBook.onclick = () => this.setHubTab('prep');
     document.getElementById('btn-settings').onclick = () => this.openSettings();
-    document.getElementById('btn-pause-settings').onclick = () => this.openSettings();
     document.getElementById('btn-settings-close').onclick = () => this.closeSettings();
     document.getElementById('tog-sound').onclick = () => {
       sfx.enabled = !sfx.enabled;
       this.persist();
       this.refreshSettingsUI();
+      this.refreshGameMenuUI();
       sfx.click();
     };
     document.getElementById('tog-music').onclick = () => {
       music.setEnabled(!music.enabled);
       this.persist();
       this.refreshSettingsUI();
+      this.refreshGameMenuUI();
       sfx.click();
     };
     document.getElementById('tog-vibro').onclick = () => {
-      this.vibro = !this.vibro; this.persist(); this.refreshSettingsUI();
+      this.vibro = !this.vibro;
+      this.persist();
+      this.refreshSettingsUI();
+      this.refreshGameMenuUI();
     };
     const togDmg = document.getElementById('tog-dmgnum');
     if (togDmg) togDmg.onclick = () => {
@@ -3108,6 +3165,68 @@ class Game {
       this.refreshSettingsUI();
       sfx.click();
     };
+  }
+
+  buildLevelUpPopup() {
+    const overlay = document.getElementById('upgrade-overlay');
+    if (!overlay || typeof LevelUpPopup === 'undefined') return;
+
+    LevelUpPopup.init(overlay, {
+      onReroll: () => this.rerollUpgradeChoices(),
+      onBanish: () => {
+        if (this.gameMode === 'sale' && typeof this.toggleSaleBanish === 'function') {
+          this.toggleSaleBanish();
+        }
+      },
+      onSkip: () => {
+        if (this.gameMode === 'sale' && typeof this.skipSaleUpgrade === 'function') {
+          this.skipSaleUpgrade();
+        }
+      },
+    });
+  }
+
+  buildGameMenu() {
+    const root = document.getElementById('game-menu-root');
+    if (!root || typeof GameMenu === 'undefined') return;
+
+    GameMenu.mount(root, {
+      resume: () => this.closeGameMenu(),
+      restart: () => {
+        this.hideOverlays();
+        this.startGame();
+      },
+      abilities: () => {
+        this.renderPauseLoadout('game-menu-loadout');
+        GameMenu.showView(root, 'abilities');
+        sfx.click();
+      },
+      exit: () => {
+        this.hideOverlays();
+        this.openMainMenu();
+      },
+      toggleSound: () => {
+        sfx.enabled = !sfx.enabled;
+        this.persist();
+        this.refreshGameMenuUI();
+        this.refreshSettingsUI();
+        sfx.click();
+      },
+      toggleMusic: () => {
+        music.setEnabled(!music.enabled);
+        this.persist();
+        this.refreshGameMenuUI();
+        this.refreshSettingsUI();
+        sfx.click();
+      },
+      toggleVibro: () => {
+        this.vibro = !this.vibro;
+        this.persist();
+        this.refreshGameMenuUI();
+        this.refreshSettingsUI();
+      },
+    });
+    this.refreshGameMenuUI();
   }
 
   persist() {
@@ -3135,14 +3254,20 @@ class Game {
     });
   }
 
-  /** Музыка: хаб/бой — on; пауза/настройки/магазин/апгрейд/конец — mute */
+  isBoostersOpen() {
+    return document.getElementById('boosters-overlay')?.classList.contains('show');
+  }
+
+  /** Музыка: меню/усилители — on; пауза/настройки/магазин/апгрейд/конец — mute */
   refreshMusicState() {
     const settingsOpen = document.getElementById('settings-overlay')?.classList.contains('show');
-    if (settingsOpen || this.gameOver || this.won || this.choosingUpgrade || this.shopping) {
+    const gameMenuOpen = document.getElementById('game-menu-overlay')?.classList.contains('show');
+    const boostersOpen = this.isBoostersOpen();
+    if (settingsOpen || gameMenuOpen || this.gameOver || this.won || this.choosingUpgrade || this.shopping) {
       music.setMuted(true);
       return;
     }
-    if (this.inHub) {
+    if (this.inMainMenu || boostersOpen) {
       music.setIntensity('calm');
       music.setMuted(false);
       return;
@@ -3155,9 +3280,12 @@ class Game {
   }
 
   hideOverlays() {
-    ['upgrade-overlay','pause-overlay','settings-overlay','end-overlay','hub-overlay'].forEach(id => {
-      document.getElementById(id).classList.remove('show');
+    ['upgrade-overlay','game-menu-overlay','settings-overlay','end-overlay','main-menu-overlay','boosters-overlay'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('show');
     });
+    const gameMenuRoot = document.getElementById('game-menu-root');
+    if (gameMenuRoot && typeof GameMenu !== 'undefined') GameMenu.showView(gameMenuRoot, 'main');
     this.choosingUpgrade = false;
     this.shopping = false;
     this.paused = false;
@@ -3168,25 +3296,62 @@ class Game {
     this.refreshSettingsUI();
     document.getElementById('settings-overlay').classList.add('show');
     if (!this.gameOver && !this.won) this.paused = true;
-    document.getElementById('pause-overlay').classList.remove('show');
-    document.getElementById('hub-overlay').classList.remove('show');
+    document.getElementById('game-menu-overlay')?.classList.remove('show');
     this.refreshMusicState();
   }
 
   closeSettings() {
     document.getElementById('settings-overlay').classList.remove('show');
-    if (this.inHub) {
+    if (this.inMainMenu) {
       this.paused = true;
-      document.getElementById('hub-overlay').classList.add('show');
+      document.getElementById('main-menu-overlay').classList.add('show');
+      this.refreshMusicState();
+      return;
+    }
+    if (this.isBoostersOpen()) {
+      this.paused = true;
       this.refreshMusicState();
       return;
     }
     if (!this.gameOver && !this.won && this.paused) {
-      document.getElementById('pause-overlay').classList.add('show');
-    } else if (!this.gameOver && !this.won) {
+      this.openGameMenu();
+      return;
+    }
+    if (!this.gameOver && !this.won) {
       this.paused = false;
     }
     this.refreshMusicState();
+  }
+
+  openGameMenu() {
+    if (this.isBoostersOpen() || this.inMainMenu || this.gameOver || this.won || this.choosingUpgrade || this.shopping) return;
+    this.refreshGameMenuUI();
+    const root = document.getElementById('game-menu-root');
+    if (root && typeof GameMenu !== 'undefined') GameMenu.showView(root, 'main');
+    document.getElementById('game-menu-overlay').classList.add('show');
+    document.getElementById('settings-overlay')?.classList.remove('show');
+    this.paused = true;
+    this.refreshMusicState();
+    sfx.click();
+  }
+
+  closeGameMenu() {
+    document.getElementById('game-menu-overlay').classList.remove('show');
+    const root = document.getElementById('game-menu-root');
+    if (root && typeof GameMenu !== 'undefined') GameMenu.showView(root, 'main');
+    if (!this.gameOver && !this.won) this.paused = false;
+    this.refreshMusicState();
+    sfx.click();
+  }
+
+  refreshGameMenuUI() {
+    const root = document.getElementById('game-menu-root');
+    if (!root || typeof GameMenu === 'undefined') return;
+    GameMenu.refreshToggles(root, {
+      sound: sfx.enabled,
+      music: music.enabled,
+      vibro: this.vibro,
+    });
   }
 
   refreshSettingsUI() {
@@ -3202,21 +3367,23 @@ class Game {
   }
 
   togglePause(force) {
-    if (this.inHub || this.gameOver || this.won || this.choosingUpgrade || this.shopping) return;
-    this.paused = force !== undefined ? force : !this.paused;
-    document.getElementById('pause-overlay').classList.toggle('show', this.paused);
-    if (this.paused) {
-      this.renderPauseLoadout();
-      sfx.click();
+    if (this.isBoostersOpen() || this.inMainMenu || this.gameOver || this.won || this.choosingUpgrade || this.shopping) return;
+    const gameMenuOpen = document.getElementById('game-menu-overlay')?.classList.contains('show');
+    if (force === true) {
+      if (!gameMenuOpen) this.openGameMenu();
+      return;
     }
-    this.refreshMusicState();
+    if (force === false) {
+      if (gameMenuOpen) this.closeGameMenu();
+      return;
+    }
+    if (gameMenuOpen) this.closeGameMenu();
+    else this.openGameMenu();
   }
 
-  renderPauseLoadout() {
-    const box = document.getElementById('pause-loadout');
-    const sub = document.getElementById('pause-sub');
+  renderPauseLoadout(containerId = 'game-menu-loadout') {
+    const box = document.getElementById(containerId);
     if (!box) return;
-    if (sub) sub.textContent = 'Распродажа на паузе. Твой текущий билд:';
     const weps = Object.entries(this.saleWeapons || {})
       .filter(([, lv]) => lv > 0)
       .map(([id, lv]) => {
@@ -3238,12 +3405,15 @@ class Game {
   }
 
   updateUpgradeRerollBtn() {
-    const btn = document.getElementById('btn-upgrade-reroll');
-    if (!btn) return;
-    const left = this.upgradeRerollsLeft | 0;
-    btn.textContent = left > 0 ? `🔄 Другие варианты (${left})` : '🔄 Рероллы закончились';
-    btn.disabled = left <= 0 || !this.choosingUpgrade;
-    btn.style.display = this.choosingUpgrade ? '' : 'none';
+    if (typeof LevelUpPopup === 'undefined') return;
+    LevelUpPopup.updateFooter({
+      rerollsLeft: this.upgradeRerollsLeft | 0,
+      banishesLeft: this.saleBanishesLeft | 0,
+      banishMode: !!this._saleBanishMode,
+      choosingUpgrade: !!this.choosingUpgrade,
+      showBan: this.gameMode === 'sale',
+      showSkip: this.gameMode === 'sale',
+    });
   }
 
   rerollUpgradeChoices() {
@@ -3313,26 +3483,172 @@ class Game {
     this.camera.x = this.player.x - this.viewW() / 2;
     this.camera.y = this.player.y - this.viewH() / 2;
     this.paused = true;
-    this.inHub = true;
+    this.inHub = false;
     this.gameOver = false; this.won = false;
   }
 
-  openHub() {
+  buildMainMenuButtons() {
+    const box = document.getElementById('main-menu-actions');
+    if (!box || typeof UiButton === 'undefined') return;
+    box.innerHTML = '';
+    ['Играть', 'Усилители', 'Выход'].forEach((label, i) => {
+      const actions = [
+        () => this.startGame(),
+        () => this.openBoosters(),
+        () => this.exitGame(),
+      ];
+      box.appendChild(UiButton.create({
+        text: label,
+        variant: 'menu',
+        size: 'lg',
+        full: true,
+        onClick: actions[i],
+      }));
+    });
+
+    const backWrap = document.getElementById('boosters-back-wrap');
+    if (backWrap) {
+      backWrap.innerHTML = '';
+      backWrap.appendChild(UiButton.create({
+        text: '← Назад',
+        variant: 'menu',
+        size: 'md',
+        full: true,
+        onClick: () => this.openMainMenu(),
+      }));
+    }
+  }
+
+  openMainMenu() {
     this.hideOverlays();
-    this.inHub = true;
+    this.inMainMenu = true;
+    this.inHub = false;
     this.paused = true;
     this.shopping = false;
     this.choosingUpgrade = false;
     this.gameOver = false;
     this.won = false;
     this.gameMode = 'sale';
-    document.body.classList.remove('sale-mode');
+    document.body.classList.remove('sale-mode', 'hub-mode');
+    document.body.classList.add('main-menu-mode');
+    this.prepareIdleWorld();
+    document.getElementById('main-menu-overlay').classList.add('show');
+    this.refreshMusicState();
+  }
+
+  openBoosters() {
+    this.hideOverlays();
+    this.inMainMenu = false;
+    this.inHub = false;
+    this.paused = true;
     this.hubScreen = 'prep';
     this.hubTab = 'prep';
-    this.prepareIdleWorld();
+    document.body.classList.remove('hub-mode', 'sale-mode');
+    document.body.classList.add('main-menu-mode');
+    this.renderBoosters();
+    document.getElementById('boosters-overlay').classList.add('show');
+    this.refreshMusicState();
+    sfx.click();
+  }
+
+  renderBoosters() {
+    const bankEl = document.getElementById('boosters-bank');
+    const recordEl = document.getElementById('boosters-record');
+    if (bankEl) bankEl.textContent = this.bankCoins;
+    if (recordEl) recordEl.textContent = this.highScore;
+
+    const metaBox = document.getElementById('boosters-meta');
+    if (metaBox) {
+      metaBox.innerHTML = '';
+      for (const def of META_PERKS) {
+        const lv = this.metaPerks[def.id] || 0;
+        const nextCost = lv >= def.max ? null : def.cost[lv];
+        const el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'hub-card' + (lv > 0 ? ' sel' : '') + (nextCost == null ? ' locked' : '');
+        el.innerHTML = `<div class="ttl">${def.ico} ${def.name} · ${lv}/${def.max}</div>
+          <div class="desc">${def.desc}</div>
+          <div class="meta">${nextCost == null ? 'Макс' : 'Купить 🪙 ' + nextCost}</div>`;
+        if (nextCost != null) el.onclick = () => this.buyMetaPerk(def.id);
+        metaBox.appendChild(el);
+      }
+    }
+
+    const abBox = document.getElementById('boosters-abilities');
+    if (abBox) {
+      abBox.innerHTML = '';
+      for (const def of ABILITY_DEFS) {
+        const lv = this.abilityLevels[def.id] || 0;
+        const nextCost = abilityUpgradeCost(lv);
+        const el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'hub-card' + (lv > 0 ? ' sel' : '') + (nextCost == null ? ' locked' : '');
+        el.innerHTML = `<div class="ttl">${def.ico} ${def.name} · ${lv}/${ABILITY_MAX_LEVEL}</div>
+          <div class="desc">${def.desc}</div>
+          <div class="meta">${nextCost == null ? 'Макс' : 'Купить 🪙 ' + nextCost}</div>`;
+        if (nextCost != null) el.onclick = () => this.buyAbilityUpgrade(def.id);
+        abBox.appendChild(el);
+      }
+    }
+
     this.renderHub();
-    document.body.classList.add('hub-mode');
-    document.getElementById('hub-overlay').classList.add('show');
+  }
+
+  buyMetaPerk(id) {
+    const def = META_PERKS.find((p) => p.id === id);
+    if (!def) return;
+    const lv = this.metaPerks[id] || 0;
+    if (lv >= def.max) return;
+    const cost = def.cost[lv];
+    if (this.bankCoins < cost) { sfx.hurt(); return; }
+    this.bankCoins -= cost;
+    this.metaPerks[id] = lv + 1;
+    this.persist();
+    this.renderBoosters();
+    sfx.shop();
+  }
+
+  buyAbilityUpgrade(id) {
+    const lv = this.abilityLevels[id] || 0;
+    if (lv >= ABILITY_MAX_LEVEL) return;
+    const cost = abilityUpgradeCost(lv);
+    if (cost == null || this.bankCoins < cost) { sfx.hurt(); return; }
+    this.bankCoins -= cost;
+    this.abilityLevels[id] = lv + 1;
+    this.persist();
+    this.renderBoosters();
+    sfx.shop();
+  }
+
+  exitGame() {
+    sfx.click();
+    const tg = window.Telegram && Telegram.WebApp;
+    if (tg && typeof tg.close === 'function') {
+      tg.close();
+      return;
+    }
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    alert('Закройте вкладку, чтобы выйти из игры.');
+  }
+
+  startGame() {
+    this.hideOverlays();
+    this.inMainMenu = false;
+    this.inHub = false;
+    this.paused = false;
+    this.shopping = false;
+    this.choosingUpgrade = false;
+    this.gameOver = false;
+    this.won = false;
+    this.gameMode = 'sale';
+    document.body.classList.remove('hub-mode', 'main-menu-mode');
+    document.body.classList.add('sale-mode');
+    this.resize();
+    this.resetSaleGame();
+    requestAnimationFrame(() => this.resize());
     this.refreshMusicState();
     sfx.click();
   }
@@ -3389,8 +3705,10 @@ class Game {
 
 
   renderHub() {
-    document.getElementById('hub-bank').textContent = this.bankCoins;
-    document.getElementById('hub-record').textContent = this.highScore;
+    const bankEl = document.getElementById('boosters-bank');
+    const recordEl = document.getElementById('boosters-record');
+    if (bankEl) bankEl.textContent = this.bankCoins;
+    if (recordEl) recordEl.textContent = this.highScore;
     const verEl = document.getElementById('hub-version');
     if (verEl) verEl.textContent = typeof SALE_VERSION !== 'undefined' ? 'v' + SALE_VERSION : '';
     this.gameMode = 'sale';
@@ -3410,12 +3728,6 @@ class Game {
       tabPrep.textContent = 'Подготовка · Распродажа';
     }
     if (tabBook) tabBook.classList.toggle('on', onBook);
-
-    const startBtn = document.getElementById('btn-hub-start');
-    if (startBtn) {
-      startBtn.style.display = onPrep ? '' : 'none';
-      startBtn.textContent = 'Начать распродажу 🛒';
-    }
 
     const saleBox = document.getElementById('hub-sale-loadout');
     if (saleBox) saleBox.style.display = '';
@@ -3464,15 +3776,7 @@ class Game {
   }
 
   startShiftFromHub() {
-    document.getElementById('hub-overlay').classList.remove('show');
-    document.body.classList.remove('hub-mode');
-    this.inHub = false;
-    this.gameMode = 'sale';
-    document.body.classList.add('sale-mode');
-    this.resize();
-    this.resetSaleGame();
-    requestAnimationFrame(() => this.resize());
-    this.refreshMusicState();
+    this.startGame();
   }
 
   resetGame() {
@@ -4161,19 +4465,14 @@ class Game {
       const idx = randi(0, pool.length - 1);
       this.upgradeChoices.push(pool.splice(idx, 1)[0]);
     }
-    const wrap = document.getElementById('upgrade-cards');
-    wrap.innerHTML = '';
-    const sub = document.getElementById('upgrade-sub');
-    if (sub) sub.textContent = 'Выбери бонус смены';
-    this.upgradeChoices.forEach((up, i) => {
-      const el = document.createElement('button');
-      el.className = 'card';
-      el.type = 'button';
-      el.innerHTML = `<div class="ico">${up.ico}</div><div class="ttl">${i + 1}. ${up.ttl}</div><div class="desc">${up.desc}</div>`;
-      el.onclick = () => this.pickUpgrade(i);
-      wrap.appendChild(el);
-    });
-    document.getElementById('upgrade-overlay').classList.add('show');
+    if (typeof LevelUpPopup !== 'undefined') {
+      LevelUpPopup.open({
+        title: `Уровень ${this.player?.level || 1}`,
+        cards: this.upgradeChoices.map((up) => LevelUpPopup.formatChoice(up)),
+        banishMode: false,
+        onPick: (i) => this.pickUpgrade(i),
+      });
+    }
     this.updateUpgradeRerollBtn();
     this.refreshMusicState();
     if (!this._shiftRerolling) sfx.level();
@@ -4184,7 +4483,7 @@ class Game {
     if (!up) return;
     up.apply(this.player, this);
     sfx.click();
-    document.getElementById('upgrade-overlay').classList.remove('show');
+    if (typeof LevelUpPopup !== 'undefined') LevelUpPopup.close();
     this.choosingUpgrade = false;
     this.updateUpgradeRerollBtn();
     this.pendingUpgrades = Math.max(0, this.pendingUpgrades - 1);
@@ -4243,7 +4542,7 @@ class Game {
       if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
       if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') this.togglePause();
       if (e.key === 'r' || e.key === 'R') {
-        if (this.gameOver || this.won) { this.hideOverlays(); this.openHub(); }
+        if (this.gameOver || this.won) { this.hideOverlays(); this.openMainMenu(); }
       }
       if (this.choosingUpgrade && ['1','2','3'].includes(e.key)) {
         this.pickUpgrade(Number(e.key) - 1);
@@ -4444,6 +4743,7 @@ class Game {
     this.$level.textContent = p.level;
     this.$score.textContent = '🔨 ' + this.score;
     if (this.$coins) this.$coins.textContent = '🪙 ' + this.coins;
+    this.updateBattleBar();
     const sk = document.getElementById('hud-skill-fill');
     const ch = document.getElementById('hud-charge-fill');
     if (sk) sk.style.width = (100 * p.skill / p.skillMax) + '%';
@@ -4510,7 +4810,7 @@ class Game {
   }
 
   update(dt) {
-    if (this.inHub || this.paused || this.choosingUpgrade || this.shopping || this.gameOver || this.won) return;
+    if (this.isBoostersOpen() || this.paused || this.choosingUpgrade || this.shopping || this.gameOver || this.won) return;
     const realDt = Math.min(dt, 0.1);
     music.setIntensity(this.wavePhase === 'boss' ? 'boss' : (this.isChaseMode ? 'rush' : 'calm'));
 
@@ -5139,6 +5439,9 @@ class Game {
 <div id="sale-ver-corner" title="Дев-панель">v?</div>
 <div id="sale-dev-panel" aria-hidden="true"></div>
 <script src="sale_mode.js"></script>
+<script src="shared/ui/button/button.js"></script>
+<script src="widgets/level-up-popup/level-up-popup.js"></script>
+<script src="widgets/game-menu/game-menu.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
