@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const SALE_VERSION = '0.7.0-sale';
+  const SALE_VERSION = '0.8.0-sale';
   const SALE_DURATION = 20 * 60; // 20 минут
   const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
   const SALE_WORLD_MUL = 2.75;
@@ -30,7 +30,7 @@
       id: 'lena',
       name: 'Лена',
       ico: '👩‍💼',
-      desc: 'Старший консультант. Баланс и +1 HP. Старт: Чек.',
+      desc: 'Старший консультант. Баланс и +1 HP. Старт: Чек (орбита).',
       hue: 0,
       maxHpBonus: 1,
       dmgMul: 1.06,
@@ -43,7 +43,7 @@
       id: 'igor',
       name: 'Игорь',
       ico: '🧔',
-      desc: 'Охрана зала. Толще, чуть медленнее. Старт: Швабра.',
+      desc: 'Охрана зала. Толще, чуть медленнее. Старт: Швабра (авто-сик).',
       hue: 195,
       maxHpBonus: 2,
       dmgMul: 0.95,
@@ -56,7 +56,7 @@
       id: 'masha',
       name: 'Маша',
       ico: '💁‍♀️',
-      desc: 'Касса экспресс. Быстрее и больше XP. Старт: Смартфон.',
+      desc: 'Касса экспресс. Быстрее и больше XP. Старт: Смартфон (цепь).',
       hue: 310,
       maxHpBonus: 0,
       dmgMul: 1,
@@ -168,167 +168,114 @@
   window.SALE_VERSION = SALE_VERSION;
 
   /**
-   * Оружия Распродажи — вещи из ТЦ + вампирская ветка.
-   * type: swing | orbit | projectile | ricochet | beam | spray | aura | charge | seek | puddle
+   * Оружия Распродажи — карта ролей как в LONG NIGHT (9 баз + эво).
+   * LN: bolt / orbit / chain / aura / scythe / mortar / bell / lantern / sword
+   * type: projectile | orbit | ricochet | aura | boomerang | puddle | nova | beam | sword | charge | spray
    */
   const SALE_WEAPONS = {
+    // bolt → ценник: залп в ближайших (id не scanner — тот в сейвах = старый чек)
+    tagger: {
+      id: 'tagger', name: 'Сканер цен', ico: '📟', max: 5,
+      desc: 'Пилит ценники в ближайших покупателей',
+      type: 'projectile', evolve: 'black_friday',
+      baseCd: 0.95, dmg: [1, 1, 2, 2, 3], count: [1, 2, 2, 3, 4], speed: 520,
+      visual: 'bloody_price', impact: 'sp_elec2',
+    },
+    // orbit → чек
     receipt: {
       id: 'receipt', name: 'Чек', ico: '🧾', max: 5,
-      desc: 'Чеки крутятся вокруг и режут покупателей',
+      desc: 'Чеки крутятся вокруг и режут толпу',
       type: 'orbit', evolve: 'endless_receipt',
       baseCd: 0.1, dmg: [1, 1, 1, 2, 2], count: [3, 4, 5, 6, 8], radius: [58, 68, 78, 90, 105],
       spin: 3.4, visual: 'receipt',
     },
+    // chain → смартфон
     phone: {
       id: 'phone', name: 'Смартфон', ico: '📱', max: 5,
-      desc: 'Кидает телефон — рикошет между врагами',
+      desc: 'Телефон рикошетит по цепочке врагов',
       type: 'ricochet', evolve: 'phone5g',
       baseCd: 1.05, dmg: [1, 1, 2, 2, 3], count: [1, 1, 1, 2, 2], speed: 420, bounces: [2, 3, 4, 5, 6],
       visual: 'phone', impact: 'sp_elec3',
     },
-    cart: {
-      id: 'cart', name: 'Тележка', ico: '🛒', max: 5,
-      desc: 'Тележка летит вперёд и сбивает толпу',
-      type: 'charge', evolve: 'mag_cart',
-      baseCd: 1.55, dmg: [2, 2, 3, 3, 4], speed: 340, range: [220, 250, 280, 320, 380],
-      visual: 'cart', impact: 'sp_quake2',
+    // aura → громкоговоритель (единственная body-aura в базе)
+    speaker: {
+      id: 'speaker', name: 'Громкоговоритель', ico: '📢', max: 5,
+      desc: 'Постоянный круг «акция!» вокруг тебя',
+      type: 'aura', evolve: 'ultrasound',
+      baseCd: 0.45, dmg: [1, 1, 1, 2, 2], radius: [64, 78, 94, 112, 132],
+      visual: 'speaker', impact: 'sp_elec2', promo: true,
     },
-    mop: {
-      id: 'mop', name: 'Швабра', ico: '🧹', max: 5,
-      desc: 'Швабра крутится вокруг и бьёт по кругу',
-      type: 'orbit', evolve: 'cleaner',
-      baseCd: 0.1, dmg: [1, 1, 2, 2, 3], count: [1, 1, 2, 2, 3], radius: [50, 58, 66, 76, 90],
-      spin: 4.2, visual: 'mop', size: 1.25,
-    },
-    extinguisher: {
-      id: 'extinguisher', name: 'Огнетушитель', ico: '🧯', max: 5,
-      desc: 'Струя пены/огня перед тобой',
-      type: 'spray',
-      baseCd: 0.55, dmg: [1, 1, 2, 2, 3], range: [90, 100, 115, 130, 150], arc: 0.7,
-      visual: 'extinguisher', impact: 'sp_fwave2',
-    },
-    coffee: {
-      id: 'coffee', name: 'Кофе', ico: '☕', max: 5,
-      desc: 'Бросок кофе + горячая лужа',
-      type: 'puddle', evolve: 'caffeine',
-      baseCd: 1.25, dmg: [1, 2, 2, 3, 3], speed: 300, count: [1, 1, 2, 2, 3],
-      visual: 'coffee', impact: 'sp_fire2',
-    },
+    // scythe → карта
     card: {
       id: 'card', name: 'Банковская карта', ico: '💳', max: 5,
       desc: 'Карта-бумеранг через зал',
       type: 'boomerang', evolve: 'black_card',
-      baseCd: 1.2, dmg: [1, 2, 2, 3, 3], speed: 360, range: [160, 190, 220, 260, 300],
+      baseCd: 1.15, dmg: [1, 2, 2, 3, 3], speed: 360, range: [160, 190, 220, 260, 300],
       visual: 'card',
     },
-    speaker: {
-      id: 'speaker', name: 'Громкоговоритель', ico: '📢', max: 5,
-      desc: 'Звуковая волна вокруг',
-      type: 'aura', evolve: 'ultrasound',
-      baseCd: 0.85, dmg: [1, 1, 2, 2, 3], radius: [75, 90, 105, 125, 150],
-      visual: 'speaker', impact: 'sp_elec2',
+    // mortar → кофе
+    coffee: {
+      id: 'coffee', name: 'Кофе', ico: '☕', max: 5,
+      desc: 'Бросок кофе — горячие лужи на полу',
+      type: 'puddle', evolve: 'caffeine',
+      baseCd: 1.35, dmg: [1, 2, 2, 3, 3], speed: 300, count: [1, 1, 2, 2, 3],
+      visual: 'coffee', impact: 'sp_fire2',
     },
+    // bell → сирена
+    siren: {
+      id: 'siren', name: 'Пожарная сирена', ico: '🚨', max: 5,
+      desc: 'Кольцо тревоги: волна урона от тебя наружу',
+      type: 'nova', evolve: 'mall_fire',
+      baseCd: 1.9, dmg: [2, 2, 3, 3, 4], radius: [110, 130, 155, 180, 210],
+      visual: 'siren', knock: 220, impact: 'sp_fwave2',
+    },
+    // lantern → фонарик (луч в ближайшего)
     flashlight: {
       id: 'flashlight', name: 'Фонарик', ico: '🔦', max: 5,
-      desc: 'Вращающийся луч постоянный урон',
+      desc: 'Луч света сам ловит ближайшего врага',
       type: 'beam', evolve: 'hunter',
-      baseCd: 0.08, dmg: [1, 1, 1, 2, 2], length: [110, 125, 140, 160, 185], width: 28,
-      spin: 2.1, visual: 'flashlight',
+      baseCd: 0.1, dmg: [1, 1, 1, 2, 2], length: [130, 150, 170, 195, 220], width: 30,
+      spin: 0, aimNearest: true, turn: 9, visual: 'flashlight',
     },
-    bag: {
-      id: 'bag', name: 'Пакет', ico: '🛍️', max: 5,
-      desc: 'Пакет на голову — враг бежит хаотично',
-      type: 'projectile',
-      baseCd: 1.4, dmg: [1, 1, 1, 2, 2], speed: 280, count: [1, 1, 2, 2, 3], confuse: 1.6,
-      visual: 'bag', impact: 'sp_poison2',
+    // sword → швабра (авто-сик, НЕ орбита)
+    mop: {
+      id: 'mop', name: 'Швабра', ico: '🧹', max: 5,
+      desc: 'Швабра сама догоняет покупателей рядом',
+      type: 'sword', evolve: 'cleaner',
+      baseCd: 0.05, dmg: [1, 1, 2, 2, 3], count: [1, 1, 2, 2, 3],
+      range: [140, 155, 170, 190, 215], speed: 175, visual: 'mop', size: 1.2,
     },
-    chair: {
-      id: 'chair', name: 'Стул', ico: '🪑', max: 5,
-      desc: 'Бросок стула по прямой с отскоком',
-      type: 'ricochet',
-      baseCd: 1.35, dmg: [2, 2, 3, 3, 4], count: [1, 1, 1, 2, 2], speed: 380, bounces: [1, 2, 2, 3, 4],
-      visual: 'chair', impact: 'sp_quake1',
-    },
-    axe: {
-      id: 'axe', name: 'Топор из хозмага', ico: '🪓', max: 5,
-      desc: 'Мощный топор по дуге',
-      type: 'boomerang',
-      baseCd: 1.5, dmg: [2, 3, 3, 4, 5], speed: 300, range: [140, 160, 180, 210, 240],
-      visual: 'axe', impact: 'sp_quake2',
-    },
-    magnet: {
-      id: 'magnet', name: 'Магнит', ico: '🧲', max: 5,
-      desc: 'Притягивает врагов и взрывается',
-      type: 'charge',
-      baseCd: 2.0, dmg: [2, 2, 3, 3, 4], speed: 220, range: [180, 200, 230, 260, 300],
-      visual: 'magnet', size: 1.2, pull: 140, impact: 'sp_elec2',
-    },
-    spray_wep: {
-      id: 'spray_wep', name: 'Спрей', ico: '🧴', max: 5,
-      desc: 'Облако химии перед героем',
-      type: 'spray',
-      baseCd: 0.7, dmg: [1, 1, 2, 2, 3], range: [80, 95, 110, 125, 145], arc: 0.75,
-      visual: 'spray', impact: 'sp_poison2',
-    },
-    box: {
-      id: 'box', name: 'Коробка', ico: '📦', max: 5,
-      desc: 'Коробка падает на врага и оглушает',
-      type: 'projectile',
-      baseCd: 1.5, dmg: [2, 2, 3, 3, 4], speed: 260, count: [1, 1, 1, 2, 2],
-      visual: 'bag', impact: 'sp_quake2',
-    },
-    bloody_price: {
-      id: 'bloody_price', name: 'Кровавый прайс', ico: '🩸', max: 5,
-      desc: 'Красные листки; шанс хила только с убийства',
-      type: 'projectile', evolve: 'black_friday',
-      baseCd: 0.95, dmg: [1, 1, 2, 2, 3], speed: 360, count: [2, 2, 3, 4, 5], lifesteal: 0.18,
-      visual: 'bloody_price', impact: 'sp_bleed2',
-    },
-    bats: {
-      id: 'bats', name: 'Стая мышей', ico: '🦇', max: 5,
-      desc: 'Летучие мыши сами ищут покупателей',
-      type: 'seek', evolve: 'hunter',
-      baseCd: 1.6, dmg: [1, 1, 2, 2, 3], count: [2, 3, 3, 4, 5], speed: 260,
-      visual: 'bats', impact: 'sp_bat2',
-    },
-    graveyard: {
-      id: 'graveyard', name: 'Кладбище отдела', ico: '🪦', max: 5,
-      desc: 'На карте появляются плиты с руками',
-      type: 'aura',
-      baseCd: 2.2, dmg: [2, 2, 3, 3, 4], radius: [90, 100, 115, 130, 150],
-      visual: 'graveyard', impact: 'sp_curse3',
-    },
-    bloody_aura: {
-      id: 'bloody_aura', name: 'Кровавая скидка', ico: '🩸', max: 5,
-      desc: 'Круг урона; редкий хил только с убийства',
-      type: 'aura', evolve: 'black_friday',
-      baseCd: 0.45, dmg: [1, 1, 1, 2, 2], radius: [70, 82, 95, 110, 130], lifesteal: 0.1,
-      visual: 'bloody_aura', impact: 'sp_bleed2',
-    },
-    // Эволюции (не в пуле новых, только через evolve)
+
+    // ── эволюции ──
     endless_receipt: {
       id: 'endless_receipt', name: 'Бесконечный чек', ico: '📜', max: 1,
-      desc: 'Длинная лента чеков вокруг тебя',
+      desc: 'Плотная лента чеков вокруг',
       type: 'orbit', evolved: true,
       baseCd: 0.08, dmg: [3], count: [12], radius: [100], spin: 5.5, visual: 'endless_receipt', size: 1.15,
     },
     phone5g: {
-      id: 'phone5g', name: 'Смартфон 5G', ico: '📱', max: 1,
-      desc: 'Быстрые телефоны + молнии между врагами',
+      id: 'phone5g', name: 'Смартфон 5G', ico: '📶', max: 1,
+      desc: 'Быстрая цепь рикошетов по залу',
       type: 'ricochet', evolved: true,
       baseCd: 0.55, dmg: [3], count: [3], speed: 520, bounces: [8], visual: 'phone5g', impact: 'sp_elec3',
     },
-    mag_cart: {
-      id: 'mag_cart', name: 'Магнитная тележка', ico: '🛒', max: 1,
-      desc: 'Огромная тележка притягивает врагов',
-      type: 'charge', evolved: true,
-      baseCd: 1.1, dmg: [5], speed: 300, range: [450], visual: 'mag_cart', size: 1.6, pull: 180, impact: 'sp_quake3',
+    ultrasound: {
+      id: 'ultrasound', name: 'Ультразвук', ico: '🔊', max: 1,
+      desc: 'Огромная звуковая волна-кольцо',
+      type: 'nova', evolved: true,
+      baseCd: 1.1, dmg: [4], radius: [280], visual: 'ultrasound', knock: 340, impact: 'sp_elec3',
     },
-    cleaner: {
-      id: 'cleaner', name: 'Оружие уборщицы', ico: '🧹', max: 1,
-      desc: 'Швабра + ядовитый след',
+    black_card: {
+      id: 'black_card', name: 'Чёрная карта', ico: '🖤', max: 1,
+      desc: 'Огромная карта на орбите',
       type: 'orbit', evolved: true,
-      baseCd: 0.08, dmg: [3], count: [4], radius: [95], spin: 5.0, visual: 'cleaner', trail: true, size: 1.3,
+      baseCd: 0.1, dmg: [4], count: [1], radius: [72], spin: 6.5, visual: 'black_card', size: 2.2,
+    },
+    vip: {
+      id: 'vip', name: 'VIP-клиент', ico: '⭐', max: 1,
+      desc: 'Золотая карта-бумеранг + магнит XP',
+      type: 'boomerang', evolved: true,
+      baseCd: 0.75, dmg: [4], speed: 420, range: [340], visual: 'vip', magnetBonus: 50,
     },
     caffeine: {
       id: 'caffeine', name: 'КОФЕИН', ico: '⚡', max: 1,
@@ -336,60 +283,47 @@
       type: 'puddle', evolved: true,
       baseCd: 0.7, dmg: [3], speed: 380, count: [3], visual: 'caffeine', impact: 'sp_bolt3', buffSpeed: 1.3,
     },
-    black_card: {
-      id: 'black_card', name: 'Чёрная карта', ico: '🖤', max: 1,
-      desc: 'Огромная вращающаяся карта',
-      type: 'orbit', evolved: true,
-      baseCd: 0.1, dmg: [4], count: [1], radius: [70], spin: 6.5, visual: 'black_card', size: 2.2,
-    },
-    ultrasound: {
-      id: 'ultrasound', name: 'Ультразвук', ico: '🔊', max: 1,
-      desc: 'Экранная звуковая волна',
-      type: 'aura', evolved: true,
-      baseCd: 1.8, dmg: [4], radius: [260], visual: 'ultrasound', impact: 'sp_elec3', knock: 320,
-    },
-    hunter: {
-      id: 'hunter', name: 'Охотник на покупателей', ico: '🔦', max: 1,
-      desc: 'Прожектор + мыши на цель луча',
-      type: 'beam', evolved: true,
-      baseCd: 0.06, dmg: [2], length: [220], width: 40, spin: 2.6, visual: 'hunter', summonBats: true,
-    },
-    black_friday: {
-      id: 'black_friday', name: 'Чёрная пятница', ico: '💀', max: 1,
-      desc: 'Убитые взрываются; слабый хил с убийств',
-      type: 'aura', evolved: true,
-      baseCd: 0.35, dmg: [3], radius: [120], lifesteal: 0.16, visual: 'black_friday', explodeOnKill: true,
-    },
-    furniture_ram: {
-      id: 'furniture_ram', name: 'Таран мебели', ico: '🪑', max: 1,
-      desc: 'Стулья таранят толпу и отскакивают',
-      type: 'ricochet', evolved: true,
-      baseCd: 0.85, dmg: [4], count: [3], speed: 440, bounces: [5], visual: 'furniture_ram', impact: 'sp_quake3',
-    },
     mall_fire: {
       id: 'mall_fire', name: 'Пожар в ТЦ', ico: '🔥', max: 1,
-      desc: 'Широкая струя огня и горящие лужи',
+      desc: 'Широкая струя огня перед тобой',
       type: 'spray', evolved: true,
       baseCd: 0.4, dmg: [3], range: [180], arc: 1.05, visual: 'mall_fire', impact: 'sp_fwave3',
     },
-    logistics: {
-      id: 'logistics', name: 'Логистика', ico: '📦', max: 1,
-      desc: 'Пачки коробок сыпятся и путают очередь',
+    hunter: {
+      id: 'hunter', name: 'Охотник на покупателей', ico: '💡', max: 1,
+      desc: 'Прожектор 180° + вспышки по лучу',
+      type: 'beam', evolved: true,
+      baseCd: 0.08, dmg: [2], length: [240], width: 48, spin: 0, aimNearest: true, turn: 12,
+      visual: 'hunter', summonBats: true, cone: 0.55,
+    },
+    cleaner: {
+      id: 'cleaner', name: 'Оружие уборщицы', ico: '🧼', max: 1,
+      desc: 'Несколько швабр + ядовитый след',
+      type: 'sword', evolved: true,
+      baseCd: 0.05, dmg: [3], count: [3], range: [200], speed: 210, visual: 'cleaner', trail: true, size: 1.35,
+    },
+    black_friday: {
+      id: 'black_friday', name: 'Чёрная пятница', ico: '💀', max: 1,
+      desc: 'Ливень ценников; убитые взрываются',
       type: 'projectile', evolved: true,
-      baseCd: 0.9, dmg: [3], speed: 320, count: [5], confuse: 2.2, visual: 'logistics', impact: 'sp_quake2',
+      baseCd: 0.55, dmg: [3], count: [5], speed: 480, lifesteal: 0.14,
+      visual: 'bloody_price', impact: 'sp_bleed2', explodeOnKill: true,
     },
-    sleepless: {
-      id: 'sleepless', name: 'Бессонница отдела', ico: '👻', max: 1,
-      desc: 'Кладбище бьёт чаще и шире',
-      type: 'aura', evolved: true,
-      baseCd: 1.2, dmg: [4], radius: [190], visual: 'sleepless', impact: 'sp_curse3',
+    mag_cart: {
+      id: 'mag_cart', name: 'Магнитная тележка', ico: '🛒', max: 1,
+      desc: 'Тележка несётся и притягивает толпу',
+      type: 'charge', evolved: true,
+      baseCd: 1.1, dmg: [5], speed: 300, range: [450], visual: 'mag_cart', size: 1.6, pull: 180, impact: 'sp_quake3',
     },
-    vip: {
-      id: 'vip', name: 'VIP-клиент', ico: '⭐', max: 1,
-      desc: 'Карта + золотой магнит XP',
-      type: 'boomerang', evolved: true,
-      baseCd: 0.75, dmg: [4], speed: 420, range: [340], visual: 'vip', magnetBonus: 50,
-    },
+  };
+
+  /** Старые id из сейвов/хаба → новая карта */
+  const SALE_WEAPON_MIGRATE = {
+    cart: 'tagger', extinguisher: 'siren', spray_wep: 'siren',
+    bag: 'tagger', box: 'tagger', chair: 'card', axe: 'card',
+    magnet: 'tagger', bloody_price: 'tagger', bats: 'flashlight',
+    graveyard: 'coffee', bloody_aura: 'speaker',
+    furniture_ram: 'vip', logistics: 'black_friday', sleepless: 'ultrasound',
   };
 
   const SALE_PASSIVES = {
@@ -422,42 +356,42 @@
   SALE_PASSIVES.regen = SALE_PASSIVES.medkit;
   SALE_PASSIVES.wallet = SALE_PASSIVES.money;
 
-  /** Эволюции: оружие max + пассивка/второе оружие → новое оружие */
+  /** Эволюции: база max + пассивка → эво (как LN partner) */
   const SALE_EVOLUTIONS = [
     { from: 'receipt', needPassive: 'printer', into: 'endless_receipt', name: 'Бесконечный чек' },
-    { from: 'phone', needPassive: 'charger', into: 'phone5g', name: 'Смартфон 5G' },
-    { from: 'cart', needPassive: 'magnet_pass', into: 'mag_cart', name: 'Магнитная тележка' },
     { from: 'mop', needPassive: 'spray', into: 'cleaner', name: 'Оружие уборщицы' },
-    { from: 'coffee', needPassive: 'energy', into: 'caffeine', name: 'КОФЕИН' },
-    { from: 'card', needPassive: 'money', into: 'black_card', name: 'Чёрная карта' },
+    { from: 'phone', needPassive: 'charger', into: 'phone5g', name: 'Смартфон 5G' },
     { from: 'speaker', needPassive: 'headphones', into: 'ultrasound', name: 'Ультразвук' },
-    { from: 'flashlight', into: 'hunter', name: 'Охотник', needWeapon: 'bats' },
-    { from: 'bloody_price', into: 'black_friday', name: 'Чёрная пятница', needWeapon: 'bloody_aura' },
-    { from: 'chair', needPassive: 'gloves', into: 'furniture_ram', name: 'Таран мебели' },
-    { from: 'extinguisher', needPassive: 'map', into: 'mall_fire', name: 'Пожар в ТЦ' },
-    { from: 'bag', needPassive: 'pouch', into: 'logistics', name: 'Логистика' },
-    { from: 'graveyard', needPassive: 'medkit', into: 'sleepless', name: 'Бессонница отдела' },
+    { from: 'card', needPassive: 'money', into: 'black_card', name: 'Чёрная карта' },
     { from: 'card', needPassive: 'badge', into: 'vip', name: 'VIP-клиент' },
+    { from: 'coffee', needPassive: 'energy', into: 'caffeine', name: 'КОФЕИН' },
+    { from: 'siren', needPassive: 'map', into: 'mall_fire', name: 'Пожар в ТЦ' },
+    { from: 'flashlight', needPassive: 'headlamp', into: 'hunter', name: 'Охотник' },
+    { from: 'tagger', needPassive: 'discount', into: 'black_friday', name: 'Чёрная пятница' },
+    { from: 'tagger', needPassive: 'magnet_pass', into: 'mag_cart', name: 'Магнитная тележка' },
   ];
 
   const SALE_HUB_WEAPON_COST = {
-    phone: 80, mop: 90, cart: 120, extinguisher: 110, coffee: 100,
-    card: 130, speaker: 140, flashlight: 150, bag: 95,
-    chair: 100, axe: 125, magnet: 135, spray_wep: 105, box: 100,
-    bloody_price: 160, bats: 170, bloody_aura: 180, graveyard: 175,
+    // 9 баз LN-карты (чек всегда бесплатен)
+    mop: 70, phone: 80, tagger: 100, coffee: 100,
+    card: 120, speaker: 130, flashlight: 140, siren: 150,
   };
 
   const SALE_HUB_PASSIVES = [
     { id: 'mug', ico: '☕', name: 'Кружка', max: 3, cost: [40, 80, 130], desc: 'Старт с +HP' },
-    { id: 'charger', ico: '🔌', name: 'Зарядка', max: 3, cost: [45, 85, 140], desc: 'Старт с меньшей КД' },
+    { id: 'charger', ico: '🔌', name: 'Зарядка', max: 3, cost: [45, 85, 140], desc: 'Старт с меньшей КД / эво телефона' },
     { id: 'shoes', ico: '👟', name: 'Кроссовки', max: 3, cost: [40, 75, 120], desc: 'Старт быстрее' },
     { id: 'radio', ico: '📻', name: 'Рация', max: 3, cost: [35, 65, 110], desc: 'Старт с магнитом XP' },
     { id: 'gloves', ico: '🧤', name: 'Перчатки', max: 3, cost: [40, 75, 120], desc: 'Старт с большей зоной' },
-    { id: 'money', ico: '💰', name: 'Деньги', max: 2, cost: [55, 100], desc: 'Старт с бонусом монет' },
-    { id: 'printer', ico: '🖨️', name: 'Принтер', max: 1, cost: [120], desc: 'Для эволюции чека' },
-    { id: 'spray', ico: '🧴', name: 'Спрей', max: 1, cost: [120], desc: 'Для эволюции швабры' },
-    { id: 'magnet_pass', ico: '🧲', name: 'Магнит', max: 1, cost: [120], desc: 'Для эволюции тележки' },
-    { id: 'energy', ico: '🥤', name: 'Энергетик', max: 1, cost: [130], desc: 'Для КОФЕИНа' },
+    { id: 'money', ico: '💰', name: 'Деньги', max: 2, cost: [55, 100], desc: 'Монеты / эво карты' },
+    { id: 'printer', ico: '🖨️', name: 'Принтер', max: 1, cost: [120], desc: 'Эво чека' },
+    { id: 'spray', ico: '🧴', name: 'Спрей', max: 1, cost: [120], desc: 'Эво швабры' },
+    { id: 'magnet_pass', ico: '🧲', name: 'Магнит', max: 1, cost: [120], desc: 'Эво сканера → тележка' },
+    { id: 'energy', ico: '🥤', name: 'Энергетик', max: 1, cost: [130], desc: 'Эво кофе' },
+    { id: 'headphones', ico: '🎧', name: 'Наушники', max: 1, cost: [130], desc: 'Эво громкоговорителя' },
+    { id: 'map', ico: '🗺️', name: 'План ТЦ', max: 1, cost: [130], desc: 'Эво сирены' },
+    { id: 'headlamp', ico: '💡', name: 'Налобник', max: 1, cost: [130], desc: 'Эво фонарика' },
+    { id: 'discount', ico: '🏷️', name: 'Скидка', max: 1, cost: [140], desc: 'Эво сканера → Чёрная пятница' },
   ];
 
   /** visual id в атласе оружия (wp_<id>1/2/3) */
@@ -772,6 +706,9 @@
     this.salePuddles = [];
     this.saleCharges = [];
     this.saleSeekers = [];
+    this.saleSwords = [];
+    this.saleRings = [];
+    this._salePromoAuraR = 0;
     Object.keys(SALE_WEAPONS).forEach((id) => { this.saleWeaponCd[id] = 0.25; });
 
     this.applyMetaToPlayer();
@@ -1583,13 +1520,18 @@
     }
   };
 
+  Game.prototype.migrateSaleWeaponId = function (id) {
+    return SALE_WEAPON_MIGRATE[id] || id;
+  };
+
   /** Оружие доступно в пуле забега (хаб-разблокировка = ассортимент). */
   Game.prototype.saleWeaponInCatalog = function (id) {
+    id = this.migrateSaleWeaponId(id);
+    if (!SALE_WEAPONS[id] || SALE_WEAPONS[id].evolved) return false;
     if (id === 'receipt') return true;
-    // стартер героя всегда можно взять снова, если слот свободен и его нет
     const hero = getSaleHero(this.saleHeroId || this.selectedHeroId);
     if (hero.starterWeapon === id) return true;
-    const unlocked = this.saleUnlockedWeapons || ['receipt'];
+    const unlocked = (this.saleUnlockedWeapons || ['receipt']).map((x) => this.migrateSaleWeaponId(x));
     return unlocked.includes(id);
   };
 
@@ -1918,51 +1860,88 @@
         const len = (def.length[level] || def.length[0] || 120) * area;
         this.saleBeams = this.saleBeams.filter((b) => b.weaponId !== id);
         this.saleBeams.push({
-          weaponId: id, angle: this._saleBeamAng || 0, length: len,
-          width: (def.width || 28) * area, dmg, spin: def.spin || 2, summonBats: !!def.summonBats,
+          weaponId: id,
+          angle: this._saleBeamAng || p.angle || 0,
+          length: len,
+          width: (def.width || 28) * area,
+          dmg,
+          spin: def.spin || 0,
+          aimNearest: !!def.aimNearest,
+          turn: def.turn || 8,
+          cone: def.cone || 0,
+          summonBats: !!def.summonBats,
           tick: 0,
         });
         continue;
       }
 
+      if (def.type === 'sword') {
+        // LN sword: авто-сик рядом — тик каждый кадр
+        this.saleWeaponCd[id] = 0;
+        const need = def.count[level] || def.count[0] || 1;
+        const range = (def.range[level] || def.range[0] || 150) * area;
+        const speed = def.speed || 175;
+        this.saleSwords = this.saleSwords || [];
+        let list = this.saleSwords.filter((s) => s.weaponId === id);
+        while (list.length < need) {
+          const s = {
+            weaponId: id, x: p.x, y: p.y, ang: 0, cd: 0,
+            ico: def.ico, visual: def.visual || id, size: def.size || 1,
+            trail: !!def.trail, dmg, range, speed, hitR: 16 + (def.size || 1) * 4,
+          };
+          this.saleSwords.push(s);
+          list.push(s);
+        }
+        while (list.length > need) {
+          const drop = list.pop();
+          this.saleSwords = this.saleSwords.filter((s) => s !== drop);
+        }
+        for (const s of list) {
+          s.dmg = dmg; s.range = range; s.speed = speed; s.ico = def.ico;
+          s.visual = def.visual || id; s.trail = !!def.trail; s.size = def.size || 1;
+        }
+        continue;
+      }
+
+      if (def.type === 'nova') {
+        const maxR = (def.radius[level] || def.radius[0] || 120) * area;
+        this.saleRings = this.saleRings || [];
+        this.saleRings.push({
+          x: p.x, y: p.y, r: 18, maxR, dmg, hit: new Set(),
+          knock: def.knock || 200, ico: def.ico, visual: def.visual || id,
+        });
+        this._saleNova = { r: maxR, t: 0.38 };
+        this.spawnAnimFx('afx_ring', p.x, p.y, {
+          life: 0.45, scale: 0.6, scaleEnd: Math.max(1.2, maxR / 70), tint: '#f59e0b', alpha: 0.85,
+        });
+        if (def.impact) {
+          this.spawnSpriteFx(def.impact, p.x, p.y, { scale: Math.min(0.55, maxR / 240), life: 0.28, vy: 0 });
+        }
+        continue;
+      }
+
       if (def.type === 'aura') {
         const radius = (def.radius[level] || def.radius[0] || 80) * area;
-        const isBlood = def.visual === 'bloody_aura' || def.visual === 'black_friday';
-        const pulseT = isBlood ? 0.48 : 0.22;
+        const isPromo = !!def.promo || def.visual === 'speaker';
+        const pulseT = isPromo ? 0.4 : 0.22;
         this._saleAura = {
           r: radius, t: pulseT, max: pulseT,
-          ico: isBlood ? null : def.ico,
+          ico: isPromo ? null : def.ico,
           visual: def.visual,
-          blood: isBlood,
-          black: def.visual === 'black_friday',
+          blood: false,
+          promo: isPromo,
         };
-        if (isBlood) this._saleBloodAuraR = radius;
+        if (isPromo) this._salePromoAuraR = radius;
         for (const e of this.enemies) {
           if (e.hp <= 0) continue;
           if (dist(p.x, p.y, e.x, e.y) < radius + e.r) {
-            this.saleHitEnemy(e, dmg, p.x, p.y, def.knock || 90, {
-              lifesteal: def.lifesteal, impact: def.impact, explodeOnKill: def.explodeOnKill, color: '#c0392b',
+            this.saleHitEnemy(e, dmg, p.x, p.y, def.knock || 70, {
+              lifesteal: def.lifesteal, impact: def.impact, explodeOnKill: def.explodeOnKill, color: '#9b59b6',
             });
           }
         }
-        if (isBlood) {
-          const pulseSc = Math.max(0.55, radius / 95);
-          const tint = def.visual === 'black_friday' ? '#2b0a12' : '#8b0000';
-          this.spawnAnimFx('afx_ring', p.x, p.y, {
-            life: 0.42, scale: pulseSc * 0.5, scaleEnd: pulseSc * 1.4, tint, alpha: 0.8,
-          });
-          this.spawnAnimFx('afx_darkburst', p.x, p.y, {
-            life: 0.32, scale: pulseSc * 0.35, scaleEnd: pulseSc * 0.85, tint: '#c0392b', alpha: 0.5,
-          });
-          this.spawnParticles(p.x, p.y, 12, '#c0392b', 150, 0.45);
-          this.spawnParticles(p.x, p.y, 6, '#5c0a0a', 90, 0.55);
-          if (def.impact) {
-            this.spawnSpriteFx(def.impact, p.x, p.y + 4, {
-              scale: Math.min(0.55, radius / 180), life: 0.28, vy: 0,
-            });
-          }
-        } else if (def.impact) {
-          this.spawnSpriteFx(def.impact, p.x, p.y, { scale: Math.min(0.45, radius / 220), life: 0.2, vy: 0 });
+        if (def.impact) {
+          this.spawnSpriteFx(def.impact, p.x, p.y, { scale: Math.min(0.4, radius / 220), life: 0.18, vy: 0 });
         }
         continue;
       }
@@ -2044,6 +2023,7 @@
             puddle: def.type === 'puddle',
             confuse: def.confuse || 0,
             lifesteal: def.lifesteal || 0,
+            explodeOnKill: !!def.explodeOnKill,
             impact: def.impact,
             hit: new Set(),
             born: performance.now(),
@@ -2111,7 +2091,8 @@
         if (dist(pr.x, pr.y, e.x, e.y) < e.r + pr.r) {
           pr.hit.add(e);
           this.saleHitEnemy(e, pr.dmg, pr.x, pr.y, 160, {
-            confuse: pr.confuse, lifesteal: pr.lifesteal, impact: pr.impact, color: '#f1c40f',
+            confuse: pr.confuse, lifesteal: pr.lifesteal, impact: pr.impact,
+            explodeOnKill: pr.explodeOnKill, color: '#f1c40f',
           });
           if (pr.impact) this.spawnSpriteFx(pr.impact, pr.x, pr.y, { scale: 0.45, life: 0.2, vy: 0 });
           if (pr.puddle) {
@@ -2189,35 +2170,128 @@
 
   Game.prototype.updateSaleBeams = function (dt) {
     this._saleBeamAng = (this._saleBeamAng || 0);
+    const p = this.player;
     for (const b of this.saleBeams) {
       if (!this.saleWeapons[b.weaponId]) { b.dead = true; continue; }
-      b.angle += dt * (b.spin || 2);
+      if (b.aimNearest) {
+        const n = this.nearestSaleEnemy(p.x, p.y, b.length * 1.15);
+        if (n) {
+          const targetA = angleTo(p.x, p.y, n.x, n.y);
+          let da = targetA - b.angle;
+          while (da > Math.PI) da -= Math.PI * 2;
+          while (da < -Math.PI) da += Math.PI * 2;
+          const maxTurn = (b.turn || 8) * dt;
+          b.angle += Math.abs(da) <= maxTurn ? da : Math.sign(da) * maxTurn;
+        }
+      } else if (b.spin) {
+        b.angle += dt * b.spin;
+      }
       this._saleBeamAng = b.angle;
       b.tick += dt;
-      const x2 = this.player.x + Math.cos(b.angle) * b.length;
-      const y2 = this.player.y + Math.sin(b.angle) * b.length;
+      const x2 = p.x + Math.cos(b.angle) * b.length;
+      const y2 = p.y + Math.sin(b.angle) * b.length;
       b.x2 = x2; b.y2 = y2;
-      if (b.tick < 0.08) continue;
+      if (b.tick < 0.1) continue;
       b.tick = 0;
+      const halfCone = b.cone || 0;
       for (const e of this.enemies) {
         if (e.hp <= 0) continue;
-        // расстояние до отрезка луча
-        const ax = this.player.x, ay = this.player.y;
-        const bx = x2 - ax, by = y2 - ay;
-        const t = Math.max(0, Math.min(1, ((e.x - ax) * bx + (e.y - ay) * by) / (bx * bx + by * by || 1)));
-        const px = ax + bx * t, py = ay + by * t;
-        if (dist(px, py, e.x, e.y) < e.r + b.width * 0.35) {
-          this.saleHitEnemy(e, b.dmg, px, py, 60, { color: '#f1c40f', spark: 'sp_fire1' });
-          if (b.summonBats && Math.random() < 0.12) {
-            this.saleSeekers.push({
-              x: this.player.x, y: this.player.y, vx: 0, vy: 0,
-              speed: 280, life: 2.2, dmg: b.dmg, ico: '🦇', target: e, hit: new Set(),
-            });
+        const d = dist(p.x, p.y, e.x, e.y);
+        if (d > b.length + e.r) continue;
+        if (halfCone > 0) {
+          let da = angleTo(p.x, p.y, e.x, e.y) - b.angle;
+          while (da > Math.PI) da -= Math.PI * 2;
+          while (da < -Math.PI) da += Math.PI * 2;
+          if (Math.abs(da) > halfCone) continue;
+          this.saleHitEnemy(e, b.dmg, e.x, e.y, 50, { color: '#f1c40f', spark: 'sp_fire1' });
+        } else {
+          const ax = p.x, ay = p.y;
+          const bx = x2 - ax, by = y2 - ay;
+          const t = Math.max(0, Math.min(1, ((e.x - ax) * bx + (e.y - ay) * by) / (bx * bx + by * by || 1)));
+          const px = ax + bx * t, py = ay + by * t;
+          if (dist(px, py, e.x, e.y) < e.r + b.width * 0.35) {
+            this.saleHitEnemy(e, b.dmg, px, py, 60, { color: '#f1c40f', spark: 'sp_fire1' });
+            if (b.summonBats && Math.random() < 0.1) {
+              this.saleSeekers.push({
+                x: p.x, y: p.y, vx: 0, vy: 0,
+                speed: 280, life: 2.0, dmg: b.dmg, ico: '🦇', visual: 'bats', target: e, hit: new Set(),
+              });
+            }
           }
         }
       }
     }
     this.saleBeams = this.saleBeams.filter((b) => !b.dead && this.saleWeapons[b.weaponId]);
+  };
+
+  /** LN sword: швабры догоняют цель в радиусе, иначе орбита ожидания. */
+  Game.prototype.updateSaleSwords = function (dt) {
+    const p = this.player;
+    if (!p) return;
+    this.saleSwords = this.saleSwords || [];
+    for (const sw of this.saleSwords) {
+      if (!this.saleWeapons[sw.weaponId]) { sw.dead = true; continue; }
+      if (sw.cd > 0) sw.cd -= dt;
+      const R = sw.range || 160;
+      let tgt = null; let bd = R * R;
+      for (const e of this.enemies) {
+        if (e.hp <= 0 || (e._saleSwordIframe || 0) > 0) continue;
+        const dx = e.x - p.x, dy = e.y - p.y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 < bd) { bd = d2; tgt = e; }
+      }
+      if (tgt) {
+        const dx = tgt.x - sw.x, dy = tgt.y - sw.y;
+        const d = Math.sqrt(dx * dx + dy * dy) || 1;
+        const step = (sw.speed || 175) * dt;
+        sw.x += (dx / d) * step;
+        sw.y += (dy / d) * step;
+        sw.ang = Math.atan2(dy, dx);
+        if (d < (sw.hitR || 18) + tgt.r && sw.cd <= 0) {
+          this.saleHitEnemy(tgt, sw.dmg, sw.x, sw.y, 80, { color: '#27ae60', spark: 'fx_slash' });
+          tgt._saleSwordIframe = 0.4;
+          sw.cd = 0.22;
+          if (sw.trail) {
+            this.salePuddles.push({
+              x: sw.x, y: sw.y, r: 20, life: 1.1, dmg: 1, tick: 0, color: '#27ae60', poison: true,
+            });
+          }
+        }
+      } else {
+        const oa = performance.now() * 0.002 + (sw.weaponId.length || 0);
+        const ox = p.x + Math.cos(oa) * (R * 0.55);
+        const oy = p.y + Math.sin(oa) * (R * 0.55);
+        const dx = ox - sw.x, dy = oy - sw.y;
+        const d = Math.sqrt(dx * dx + dy * dy) || 1;
+        const step = Math.min(d, (sw.speed || 175) * dt);
+        sw.x += (dx / d) * step;
+        sw.y += (dy / d) * step;
+        if (d > 2) sw.ang = Math.atan2(dy, dx);
+      }
+    }
+    for (const e of this.enemies) {
+      if (e._saleSwordIframe > 0) e._saleSwordIframe -= dt;
+    }
+    this.saleSwords = this.saleSwords.filter((s) => !s.dead && this.saleWeapons[s.weaponId]);
+  };
+
+  /** LN bell: расширяющееся кольцо урона. */
+  Game.prototype.updateSaleRings = function (dt) {
+    this.saleRings = this.saleRings || [];
+    for (const ring of this.saleRings) {
+      ring.r += Math.max(140, ring.maxR) * dt * 1.35;
+      for (const e of this.enemies) {
+        if (e.hp <= 0 || ring.hit.has(e)) continue;
+        const d = dist(ring.x, ring.y, e.x, e.y);
+        if (Math.abs(d - ring.r) < e.r + 14) {
+          ring.hit.add(e);
+          this.saleHitEnemy(e, ring.dmg, ring.x, ring.y, ring.knock || 200, {
+            color: '#f39c12', impact: 'sp_fwave1',
+          });
+        }
+      }
+    }
+    this.saleRings = this.saleRings.filter((r) => r.r < r.maxR);
   };
 
   Game.prototype.updateSalePuddles = function (dt) {
@@ -2741,6 +2815,8 @@
     // auto weapons (орбиты, снаряды, лучи…)
     this.updateSaleWeapons(realDt);
     this.updateSaleOrbits(realDt);
+    this.updateSaleSwords(realDt);
+    this.updateSaleRings(realDt);
     this.updateSaleBoomerangs(realDt);
     this.updateSaleProjectiles(realDt);
     this.updateSaleCharges(realDt);
@@ -3056,91 +3132,83 @@
       }
     }
 
-    // кровавая скидка / чёрная пятница — постоянный пол + мягкая волна (не мигающий круг)
-    const hasBloodAura = this.saleWeapons && (this.saleWeapons.bloody_aura || this.saleWeapons.black_friday);
-    if (hasBloodAura && this.player && this._saleBloodAuraR > 0) {
+    // громкоговоритель — постоянный «акционный» пол (LN censer)
+    if (this.saleWeapons && this.saleWeapons.speaker && this.player && this._salePromoAuraR > 0) {
       const px = this.player.x;
       const py = this.player.y;
-      const r = this._saleBloodAuraR;
+      const r = this._salePromoAuraR;
       const t = performance.now() / 1000;
-      const isBlack = !!this.saleWeapons.black_friday;
       ctx.save();
-      const g = ctx.createRadialGradient(px, py, r * 0.12, px, py, r);
-      if (isBlack) {
-        g.addColorStop(0, 'rgba(40,8,14,0.28)');
-        g.addColorStop(0.5, 'rgba(90,12,24,0.14)');
-        g.addColorStop(1, 'rgba(0,0,0,0)');
-      } else {
-        g.addColorStop(0, 'rgba(160,30,40,0.20)');
-        g.addColorStop(0.55, 'rgba(120,20,28,0.10)');
-        g.addColorStop(1, 'rgba(80,0,0,0)');
-      }
+      const g = ctx.createRadialGradient(px, py, r * 0.1, px, py, r);
+      g.addColorStop(0, 'rgba(155,89,186,0.18)');
+      g.addColorStop(0.55, 'rgba(120,60,160,0.08)');
+      g.addColorStop(1, 'rgba(80,40,120,0)');
       ctx.fillStyle = g;
       ctx.beginPath();
       ctx.arc(px, py, r, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = 'rgba(241,196,15,0.35)';
       ctx.lineWidth = 2;
-      ctx.strokeStyle = isBlack ? 'rgba(220,60,70,0.32)' : 'rgba(231,76,60,0.38)';
-      ctx.setLineDash([7, 11]);
-      ctx.lineDashOffset = -t * 48;
+      ctx.setLineDash([6, 10]);
+      ctx.lineDashOffset = -t * 40;
       ctx.beginPath();
-      ctx.arc(px, py, r * 0.93, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.setLineDash([3, 14]);
-      ctx.lineDashOffset = t * 32;
-      ctx.strokeStyle = 'rgba(255,170,170,0.22)';
-      ctx.beginPath();
-      ctx.arc(px, py, r * (0.52 + Math.sin(t * 2.4) * 0.03), 0, Math.PI * 2);
+      ctx.arc(px, py, r * 0.92, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.font = 'bold 11px "Segoe UI",sans-serif';
-      ctx.fillStyle = isBlack ? 'rgba(255,230,230,0.5)' : 'rgba(255,210,210,0.55)';
+      ctx.fillStyle = 'rgba(255,230,150,0.55)';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      for (let i = 0; i < 4; i++) {
-        const a = t * 1.15 + (i * Math.PI) / 2;
-        const rr = r * (0.76 + Math.sin(t * 3.2 + i) * 0.05);
-        ctx.fillText(isBlack ? '−90%' : '−%', px + Math.cos(a) * rr, py + Math.sin(a) * rr);
+      for (let i = 0; i < 3; i++) {
+        const a = t * 1.1 + (i * Math.PI * 2) / 3;
+        ctx.fillText('АКЦИЯ', px + Math.cos(a) * r * 0.72, py + Math.sin(a) * r * 0.72);
       }
       ctx.restore();
     }
 
-    // аура / новы (пульс урона)
+    // пульс ауры / волна новы
     if (this._saleAura) {
-      if (this._saleAura.blood) {
-        const max = this._saleAura.max || 0.48;
-        const k = 1 - Math.max(0, this._saleAura.t) / max;
-        const wave = Math.sin(Math.min(1, Math.max(0, k)) * Math.PI);
-        const rr = this._saleAura.r * (0.5 + 0.55 * k);
+      const max = this._saleAura.max || 0.4;
+      const k = 1 - Math.max(0, this._saleAura.t) / max;
+      const wave = Math.sin(Math.min(1, Math.max(0, k)) * Math.PI);
+      if (this._saleAura.promo) {
         ctx.save();
-        ctx.globalAlpha = 0.55 * wave;
-        ctx.strokeStyle = this._saleAura.black ? '#7f1d1d' : '#e74c3c';
-        ctx.lineWidth = 3.5;
+        ctx.globalAlpha = 0.45 * wave;
+        ctx.strokeStyle = '#9b59b6';
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.arc(this.player.x, this.player.y, rr, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.strokeStyle = 'rgba(255,120,120,0.45)';
-        ctx.lineWidth = 7;
-        ctx.beginPath();
-        ctx.arc(this.player.x, this.player.y, rr * 0.82, 0, Math.PI * 2);
+        ctx.arc(this.player.x, this.player.y, this._saleAura.r * (0.55 + 0.5 * k), 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
       } else {
         const alpha = Math.min(0.9, this._saleAura.t * 5);
-        const sc = Math.min(0.5, (this._saleAura.r / 180));
-        if (!(typeof drawSpell === 'function' && drawSpell(ctx, 'sp_heal3', this.player.x, this.player.y + 4, {
-          scale: sc, anchorY: 0.55, alpha,
-        }))) {
-          ctx.strokeStyle = `rgba(155,89,186,${0.35 * alpha})`;
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(this.player.x, this.player.y, this._saleAura.r, 0, Math.PI * 2);
-          ctx.stroke();
-        }
+        ctx.strokeStyle = `rgba(155,89,186,${0.35 * alpha})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(this.player.x, this.player.y, this._saleAura.r, 0, Math.PI * 2);
+        ctx.stroke();
         if (this._saleAura.ico) {
           drawSaleIcon(ctx, this._saleAura.ico, this.player.x, this.player.y - this._saleAura.r * 0.25, 0.7, 0);
         }
       }
+    }
+
+    // кольца сирены
+    for (const ring of this.saleRings || []) {
+      const a = 1 - ring.r / Math.max(1, ring.maxR);
+      ctx.save();
+      ctx.globalAlpha = 0.55 * a;
+      ctx.strokeStyle = '#f39c12';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(ring.x, ring.y, ring.r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // швабры (sword)
+    for (const sw of this.saleSwords || []) {
+      drawSaleIcon(ctx, sw.ico || '🧹', sw.x, sw.y, (sw.size || 1) * 0.85, sw.ang || 0);
     }
     if (this._saleNova) {
       const alpha = Math.min(1, this._saleNova.t * 4);
@@ -3452,6 +3520,7 @@
   window.SALE_HUB_WEAPON_COST = SALE_HUB_WEAPON_COST;
   window.SALE_EVENT_POOLS = SALE_EVENT_POOLS;
   window.SALE_HUB_PASSIVES = SALE_HUB_PASSIVES;
+  window.SALE_WEAPON_MIGRATE = SALE_WEAPON_MIGRATE;
 
   Game.prototype.renderSaleHubLoadout = function () {
     const heroBox = document.getElementById('hub-sale-heroes');

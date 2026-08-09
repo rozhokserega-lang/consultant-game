@@ -2926,7 +2926,11 @@ class Game {
     this.selectedArena = this.save.selectedArena || 'food';
     this.selectedChallenge = 'none';
     const saleWeps = Array.isArray(this.save.saleUnlockedWeapons) ? this.save.saleUnlockedWeapons : [];
-    const migratedSale = saleWeps.map((id) => (id === 'hammer' || id === 'tags' || id === 'scanner' ? 'receipt' : id));
+    const migratedSale = saleWeps.map((id) => {
+      if (id === 'hammer' || id === 'tags' || id === 'scanner') return 'receipt';
+      if (typeof SALE_WEAPON_MIGRATE !== 'undefined' && SALE_WEAPON_MIGRATE[id]) return SALE_WEAPON_MIGRATE[id];
+      return id;
+    }).filter((id) => typeof SALE_WEAPONS === 'undefined' || SALE_WEAPONS[id]);
     this.saleUnlockedWeapons = Array.from(new Set(['receipt', ...migratedSale]));
     this.saleStartPassives = Object.assign({}, this.save.saleStartPassives || {});
     this.selectedHeroId = this.save.selectedHeroId || 'lena';
