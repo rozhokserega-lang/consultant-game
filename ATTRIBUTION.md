@@ -44,7 +44,8 @@
 
 ## Графические ассеты (skill_icon_atlas.png)
 
-Атлас собран скриптом `assets_src/build_skill_icons.py`:
-- Pixel Mart (CC0) — предметные пассивки
-- CodeManu Free Pixel Effects + Kenney Particle Pack (CC0) — ореолы эволюций/аур
-- простые пиксельные силуэты — для предметов без спрайта в паках
+Атлас собран скриптом `assets_src/build_skill_icons.py` в стиле боевых VFX игры:
+- кадры из `spell_atlas.png` / `vfx_atlas.png` / `pickup_fx_atlas.png` — эволюции и ауры
+- **496 pixel art icons for medieval/fantasy RPG** — Henrique Lazarini (7Soul1), CC0
+  https://opengameart.org/content/496-pixel-art-icons-for-medievalfantasy-rpg
+  — предметные пассивки (ключи, медали, зелья, свитки, обувь…)
