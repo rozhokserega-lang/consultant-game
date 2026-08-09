@@ -6,11 +6,12 @@
 (function () {
   'use strict';
 
-  const SALE_VERSION = '0.5.4-sale';
+  const SALE_VERSION = '0.6.0-sale';
   const SALE_DURATION = 20 * 60; // 20 минут
   const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
   const SALE_WORLD_MUL = 2.75;
-  const SALE_MAX_WEAPONS = 6;
+  /** LN-style: жёсткий потолок слотов — билд, а не «собери всё» */
+  const SALE_MAX_WEAPONS = 4;
   const SALE_MAX_PASSIVES = 6;
   const SALE_LIFESTEAL_CD = 2.2; // сек между хилами от вампиризма
   /** LN-style: враги слабее в начале, к 6:00 выходят на baseline */
@@ -22,37 +23,40 @@
       id: 'lena',
       name: 'Лена',
       ico: '👩‍💼',
-      desc: 'Старший консультант. Баланс и +1 HP.',
+      desc: 'Старший консультант. Баланс и +1 HP. Старт: Чек.',
       hue: 0,
       maxHpBonus: 1,
       dmgMul: 1.06,
       speedMul: 1,
       xpMul: 1,
       magnetBonus: 0,
+      starterWeapon: 'receipt',
     },
     igor: {
       id: 'igor',
       name: 'Игорь',
       ico: '🧔',
-      desc: 'Охрана зала. Толще, чуть медленнее.',
+      desc: 'Охрана зала. Толще, чуть медленнее. Старт: Швабра.',
       hue: 195,
       maxHpBonus: 2,
       dmgMul: 0.95,
       speedMul: 0.9,
       xpMul: 1,
       magnetBonus: 0,
+      starterWeapon: 'mop',
     },
     masha: {
       id: 'masha',
       name: 'Маша',
       ico: '💁‍♀️',
-      desc: 'Касса экспресс. Быстрее и больше XP.',
+      desc: 'Касса экспресс. Быстрее и больше XP. Старт: Смартфон.',
       hue: 310,
       maxHpBonus: 0,
       dmgMul: 1,
       speedMul: 1.14,
       xpMul: 1.22,
       magnetBonus: 35,
+      starterWeapon: 'phone',
     },
   };
 
@@ -737,14 +741,12 @@
       const n = Math.max(0, lv | 0);
       if (n > 0) this.salePassives[id] = n;
     }
-    this.saleWeapons = { receipt: 1 };
-    const unlocked = this.saleUnlockedWeapons || ['receipt'];
-    for (const id of unlocked) {
-      if (SALE_WEAPONS[id] && !SALE_WEAPONS[id].evolved) {
-        this.saleWeapons[id] = Math.max(this.saleWeapons[id] || 0, 1);
-      }
-    }
-    // миграция старых сейвов
+    // LN-style: в руки только стартер героя. Купленное в хабе — ассортимент пула, не инвентарь.
+    const heroStart = getSaleHero(this.selectedHeroId);
+    let starter = heroStart.starterWeapon || 'receipt';
+    if (!SALE_WEAPONS[starter] || SALE_WEAPONS[starter].evolved) starter = 'receipt';
+    this.saleWeapons = { [starter]: 1 };
+    // миграция старых id на всякий случай (если дев-панель подсунула)
     if (this.saleWeapons.hammer) { delete this.saleWeapons.hammer; this.saleWeapons.receipt = this.saleWeapons.receipt || 1; }
     if (this.saleWeapons.tags) { this.saleWeapons.receipt = Math.max(this.saleWeapons.receipt || 0, this.saleWeapons.tags); delete this.saleWeapons.tags; }
     if (this.saleWeapons.scanner) { this.saleWeapons.phone = Math.max(this.saleWeapons.phone || 0, this.saleWeapons.scanner); delete this.saleWeapons.scanner; }
@@ -1291,23 +1293,40 @@
     }
   };
 
-  Game.prototype.buildSaleUpgradeChoices = function () {
-    const pool = [];
-    const ownedW = Object.keys(this.saleWeapons).filter((id) => (this.saleWeapons[id] || 0) > 0 && !SALE_WEAPONS[id]?.evolved);
-    const ownedP = Object.keys(this.salePassives).filter((id) => (this.salePassives[id] || 0) > 0);
-    const canNewWeapon = ownedW.length < SALE_MAX_WEAPONS;
+  /** Оружие доступно в пуле забега (хаб-разблокировка = ассортимент). */
+  Game.prototype.saleWeaponInCatalog = function (id) {
+    if (id === 'receipt') return true;
+    // стартер героя всегда можно взять снова, если слот свободен и его нет
+    const hero = getSaleHero(this.saleHeroId || this.selectedHeroId);
+    if (hero.starterWeapon === id) return true;
+    const unlocked = this.saleUnlockedWeapons || ['receipt'];
+    return unlocked.includes(id);
+  };
 
+  Game.prototype.buildSaleUpgradeChoices = function () {
+    const candidates = [];
+    // слот занимает любое оружие, включая эволюции (evo заменяет базу, слот тот же)
+    const slotCount = Object.keys(this.saleWeapons).filter((id) => (this.saleWeapons[id] || 0) > 0).length;
+    const ownedP = Object.keys(this.salePassives).filter((id) => (this.salePassives[id] || 0) > 0);
+    const canNewWeapon = slotCount < SALE_MAX_WEAPONS;
     const banned = this.saleBanned || {};
+
     for (const def of Object.values(SALE_WEAPONS)) {
       if (def.evolved) continue;
       if (banned['w:' + def.id]) continue;
       const lv = this.saleWeapons[def.id] || 0;
       if (lv <= 0) {
-        if (canNewWeapon) pool.push({ kind: 'weapon_new', id: def.id, ico: def.ico, ttl: def.name, desc: def.desc });
+        if (!canNewWeapon) continue;
+        if (!this.saleWeaponInCatalog(def.id)) continue;
+        candidates.push({
+          kind: 'weapon_new', id: def.id, ico: def.ico, ttl: def.name, desc: def.desc,
+          weight: 2.2,
+        });
       } else if (lv < def.max) {
-        pool.push({
+        candidates.push({
           kind: 'weapon_up', id: def.id, ico: def.ico,
           ttl: `${def.name} ур.${lv + 1}`, desc: `Улучшить до ${lv + 1}/${def.max}`,
+          weight: 3,
         });
       }
     }
@@ -1320,42 +1339,59 @@
       const lv = this.salePassives[def.id] || 0;
       if (lv <= 0 && !canNewPassive) continue;
       if (lv < def.max) {
-        pool.push({
+        candidates.push({
           kind: 'passive', id: def.id, ico: def.ico,
           ttl: `${def.name} ур.${lv + 1}`, desc: def.desc,
+          weight: 2,
         });
       }
     }
-    // эволюции
+
+    // эволюции — гарантированные слоты (как в LN)
+    const guaranteed = [];
     for (const ev of SALE_EVOLUTIONS) {
       const haveFrom = (this.saleWeapons[ev.from] || 0) >= (SALE_WEAPONS[ev.from]?.max || 5);
       if (!haveFrom) continue;
       if (this.saleWeapons[ev.into]) continue;
-      let ok = true;
-      if (ev.needPassive && !(this.salePassives[ev.needPassive] > 0)) ok = false;
-      if (ev.needWeapon && !(this.saleWeapons[ev.needWeapon] > 0)) ok = false;
-      if (ok) {
-        const into = SALE_WEAPONS[ev.into];
-        pool.unshift({
-          kind: 'evolve', id: ev.into, from: ev.from, ico: into.ico,
-          ttl: `✨ ${ev.name}`, desc: into.desc,
-        });
-      }
+      if (ev.needPassive && !(this.salePassives[ev.needPassive] > 0)) continue;
+      if (ev.needWeapon && !(this.saleWeapons[ev.needWeapon] > 0)) continue;
+      const into = SALE_WEAPONS[ev.into];
+      guaranteed.push({
+        kind: 'evolve', id: ev.into, from: ev.from, ico: into.ico,
+        ttl: `✨ ${ev.name}`, desc: into.desc,
+      });
     }
     if (this.player.hp < this.player.maxHp) {
-      pool.push({ kind: 'heal', id: 'heal', ico: '❤️', ttl: 'Аптечка', desc: '+2 HP сейчас' });
+      candidates.push({ kind: 'heal', id: 'heal', ico: '❤️', ttl: 'Аптечка', desc: '+2 HP сейчас', weight: 1 });
     }
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = randi(0, i);
-      const t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+
+    const picked = [];
+    const used = new Set();
+    for (const g of guaranteed) {
+      if (picked.length >= 3) break;
+      picked.push(g);
+      used.add(g.kind + ':' + g.id);
     }
-    const ownedCount = ownedW.length;
-    if (ownedCount < 4) {
-      const news = pool.filter((c) => c.kind === 'weapon_new' || c.kind === 'evolve');
-      const rest = pool.filter((c) => c.kind !== 'weapon_new' && c.kind !== 'evolve');
-      return [...news.slice(0, 2), ...rest].slice(0, 3);
+    while (picked.length < 3 && candidates.length) {
+      let total = 0;
+      const avail = [];
+      for (const c of candidates) {
+        const key = c.kind + ':' + c.id;
+        if (used.has(key)) continue;
+        avail.push(c);
+        total += c.weight || 1;
+      }
+      if (!avail.length || total <= 0) break;
+      let r = Math.random() * total;
+      let choice = avail[avail.length - 1];
+      for (const c of avail) {
+        r -= c.weight || 1;
+        if (r <= 0) { choice = c; break; }
+      }
+      picked.push(choice);
+      used.add(choice.kind + ':' + choice.id);
     }
-    return pool.slice(0, 3);
+    return picked;
   };
 
   Game.prototype.openSaleUpgradeUI = function () {
@@ -2503,8 +2539,9 @@
     if (this.$combo) this.$combo.style.display = 'none';
 
     const tags = [];
-    const weps = Object.keys(this.saleWeapons);
-    tags.push(`<span class="buff-tag good">⚔ ${weps.length} ор.</span>`);
+    // слоты: базовое + эволюции считаются занятыми слотами билда
+    const wepSlots = Object.keys(this.saleWeapons).filter((id) => (this.saleWeapons[id] || 0) > 0).length;
+    tags.push(`<span class="buff-tag good">⚔ ${wepSlots}/${SALE_MAX_WEAPONS}</span>`);
     if (p.lunchTimer > 0) tags.push(`<span class="buff-tag good">☕ ${p.lunchTimer.toFixed(0)}с</span>`);
     if (this.saleActiveEvent) {
       const left = Math.max(0, this.saleActiveEvent.t);
@@ -3046,12 +3083,12 @@
         if (def.id === 'receipt') {
           el.innerHTML = `<div class="ttl">${def.ico} ${def.name}</div>
             <div class="desc">${def.desc}</div>
-            <div class="meta">Всегда со старта</div>`;
+            <div class="meta">Всегда в ассортименте</div>`;
           el.disabled = true;
         } else {
           el.innerHTML = `<div class="ttl">${def.ico} ${def.name}</div>
             <div class="desc">${def.desc}</div>
-            <div class="meta">${owned ? 'Разблокировано' : ('Купить 🪙 ' + cost)}</div>`;
+            <div class="meta">${owned ? 'В ассортименте забега' : ('Купить в ассортимент 🪙 ' + cost)}</div>`;
           if (!owned) {
             el.onclick = () => this.buySaleWeaponUnlock(def.id);
           }

@@ -3,7 +3,11 @@
 > Миграция: механики/баланс в духе [LONG NIGHT](https://github.com/emorozoff/long-night) (MIT), атмосфера — ТЦ / консультант.
 > Режим «Смена» отключён. Живая версия в UI: `SALE_VERSION` (`sale_mode.js`).
 
-## Сейчас (v0.5.4-sale)
+## Сейчас (v0.6.0-sale)
+- [x] LN-гейтинг билда: старт только со стартером героя; хаб = ассортимент пула; макс 4 оружия; взвешенный левел-ап
+- [x] UI-иконки всего оружия + пассивок: `skill_icon_atlas.png` (spell/vfx/pickup + 7Soul1 CC0)
+
+## v0.5.4
 - [x] UI-иконки всего оружия (базовое 1–3 + эволюции + ауры) + пассивок: `skill_icon_atlas.png` (spell/vfx/pickup + 7Soul1 CC0)
 - [x] Pixel Mart (CC0): XP-дропы = товары (3 тира по ценности), посылка = бумажный пакет (`mart_atlas.png`)
 - [x] Атлас анимированных эффектов `anim_fx_atlas.png` (CC0: CodeManu + Kenney)
