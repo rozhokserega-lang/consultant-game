@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const SALE_VERSION = '0.6.0-sale';
+  const SALE_VERSION = '0.7.0-sale';
   const SALE_DURATION = 20 * 60; // 20 минут
   const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
   const SALE_WORLD_MUL = 2.75;
@@ -16,6 +16,13 @@
   const SALE_LIFESTEAL_CD = 2.2; // сек между хилами от вампиризма
   /** LN-style: враги слабее в начале, к 6:00 выходят на baseline */
   const SALE_WARM_MINUTES = 6;
+  /** LN-style директор: босс каждые 180с, волны ~42с, элиты ~70с */
+  const SALE_BOSS_INTERVAL = 180;
+  const SALE_BOSS_GAP_AFTER_KILL = 45;
+  const SALE_WAVE_FIRST = 55;
+  const SALE_WAVE_INTERVAL = 42;
+  const SALE_ELITE_START = 115;
+  const SALE_ELITE_INTERVAL = 70;
 
   /** Герои-консультанты (выбор в хабе) */
   const SALE_HEROES = {
@@ -64,25 +71,45 @@
     return SALE_HEROES[id] || SALE_HEROES.lena;
   }
 
-  /** Уникальные боссы ТЦ — расписание 5 / 10 / 15 мин */
+  /** Уникальные боссы ТЦ — LN-позвоночник каждые ~3 мин (порядок = SALE_BOSS_ORDER) */
   const SALE_BOSS_DEFS = {
+    floor_manager: {
+      id: 'floor_manager',
+      name: 'Старший смены',
+      hp: 140,
+      speed: 62,
+      r: 26,
+      color: '#94a3b8',
+      tag: 'СМЕНА',
+      xpReward: 16,
+      coinDrop: 12,
+    },
+    cart_horde: {
+      id: 'cart_horde',
+      name: 'Король тележек',
+      hp: 180,
+      speed: 68,
+      r: 28,
+      color: '#a78bfa',
+      tag: 'ТЕЛЕЖКИ',
+      xpReward: 20,
+      coinDrop: 14,
+    },
     discount_king: {
       id: 'discount_king',
       name: 'Король скидок',
-      atSec: 5 * 60,
-      hp: 220,
+      hp: 240,
       speed: 58,
       r: 30,
       color: '#f59e0b',
       tag: '−70%',
-      xpReward: 24,
+      xpReward: 26,
       coinDrop: 18,
     },
     security_chief: {
       id: 'security_chief',
       name: 'Начальник охраны',
-      atSec: 10 * 60,
-      hp: 340,
+      hp: 320,
       speed: 72,
       r: 28,
       color: '#38bdf8',
@@ -90,19 +117,34 @@
       xpReward: 32,
       coinDrop: 22,
     },
+    promo_witch: {
+      id: 'promo_witch',
+      name: 'Промо-ведьма',
+      hp: 380,
+      speed: 55,
+      r: 30,
+      color: '#e879f9',
+      tag: 'АКЦИЯ',
+      xpReward: 38,
+      coinDrop: 26,
+    },
     mall_closing: {
       id: 'mall_closing',
       name: 'Закрытие ТЦ',
-      atSec: 15 * 60,
-      hp: 480,
+      hp: 520,
       speed: 50,
-      r: 34,
+      r: 36,
       color: '#fb923c',
       tag: 'CLOSED',
-      xpReward: 45,
-      coinDrop: 30,
+      xpReward: 50,
+      coinDrop: 34,
+      final: true,
     },
   };
+  const SALE_BOSS_ORDER = [
+    'floor_manager', 'cart_horde', 'discount_king',
+    'security_chief', 'promo_witch', 'mall_closing',
+  ];
 
   /** Пауэрапы с элиток/боссов (LN-style: chest / magnet / bomb) */
   const SALE_POWERUPS = {
@@ -719,6 +761,11 @@
     this.saleTempWalls = [];
     this.saleVipRef = null;
     this.saleBossSpawned = {};
+    this.saleBossIdx = 0;
+    this.saleBossT = SALE_BOSS_INTERVAL;
+    this.saleWaveT = SALE_WAVE_FIRST;
+    this.saleEliteT = SALE_ELITE_START;
+    this.saleLastWaveKind = null;
     this.saleBossHazards = [];
     this.saleArenaShrink = 0;
     this.salePowerups = [];
@@ -922,23 +969,175 @@
     e._saleBossCd2 = 3.5;
     e._saleChargeT = 0;
     e._saleChargeAng = 0;
-    e.hueRotate = def.id === 'discount_king' ? 35 : def.id === 'security_chief' ? 200 : 15;
+    e.hueRotate = def.id === 'discount_king' ? 35
+      : def.id === 'security_chief' ? 200
+      : def.id === 'promo_witch' ? 280
+      : def.id === 'cart_horde' ? 260
+      : def.id === 'floor_manager' ? 0
+      : 15;
+    e._saleFinalBoss = !!def.final;
     this.saleBossSpawned = this.saleBossSpawned || {};
     this.saleBossSpawned[def.id] = true;
-    this._eventBanner = { t: 4.2, text: '⚠ ' + def.name.toUpperCase() + '!', sub: def.tag };
+    const n = Math.min(SALE_BOSS_ORDER.length, (this.saleBossIdx || 0) + 1);
+    this._eventBanner = {
+      t: 4.2,
+      text: (def.final ? '⚠ ФИНАЛ: ' : '⚠ ') + def.name.toUpperCase() + '!',
+      sub: def.tag + ' · босс ' + n + '/' + SALE_BOSS_ORDER.length,
+    };
     this.spawnAnimFx('afx_darkburst', e.x, e.y, { life: 0.75, scale: 1.6, scaleEnd: 2.2 });
     this.spawnAnimFx('afx_ring', e.x, e.y, { life: 0.5, scale: 1.0, scaleEnd: 3.0 });
     if (typeof sfx !== 'undefined' && sfx.alarm) sfx.alarm();
     return e;
   };
 
+  Game.prototype.saleBossAlive = function () {
+    return (this.enemies || []).some((e) => e.hp > 0 && e.saleBossId);
+  };
+
+  /** LN-директор боссов: один за раз, интервал 180с, после килла — gap. */
   Game.prototype.tickSaleBossSchedule = function () {
-    this.saleBossSpawned = this.saleBossSpawned || {};
-    for (const def of Object.values(SALE_BOSS_DEFS)) {
-      if (this.saleBossSpawned[def.id]) continue;
-      if ((this.saleTime || 0) < def.atSec) continue;
-      this.spawnSaleBoss(def.id);
+    if (this.saleBossIdx == null) this.saleBossIdx = 0;
+    if (this.saleBossT == null) this.saleBossT = SALE_BOSS_INTERVAL;
+    if (this.saleBossIdx >= SALE_BOSS_ORDER.length) return;
+    if (this.saleBossAlive()) return;
+    if ((this.saleTime || 0) < this.saleBossT) return;
+    const id = SALE_BOSS_ORDER[this.saleBossIdx];
+    const b = this.spawnSaleBoss(id);
+    if (!b) return;
+    this.saleBossIdx++;
+    this.saleBossT = (this.saleTime || 0) + SALE_BOSS_INTERVAL;
+  };
+
+  Game.prototype.onSaleBossKilled = function (enemy) {
+    // LN kill-kit: хил + магнит + хлопушка (+ посылка уже в dropSalePowerup)
+    if (this.player && this.player.hp < this.player.maxHp) {
+      this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);
     }
+    this.spawnSalePowerup(enemy.x, enemy.y - 18, 'bomb');
+    // не стакать следующего босса сразу после долгого боя
+    const now = this.saleTime || 0;
+    this.saleBossT = Math.max(this.saleBossT || 0, now + SALE_BOSS_GAP_AFTER_KILL);
+    if (enemy._saleFinalBoss || enemy.saleBossId === 'mall_closing') {
+      this.saleArenaShrink = 0;
+      // финал ночи ТЦ — победа сразу после килла (не ждать таймер 20:00)
+      this.showEventBanner('🏆 ТЦ СДАЛСЯ! Закрытие отменено', 2.5);
+      setTimeout(() => {
+        if (!this.gameOver && !this.won && this.gameMode === 'sale') this.endSaleGame(true);
+      }, 900);
+    }
+  };
+
+  /** LN-пакеты: конечная угроза, не вечный тип. */
+  Game.prototype.doSaleWave = function (t) {
+    const p = this.player;
+    if (!p) return;
+    const opts = ['crowd'];
+    if (t > 45) opts.push('ring_fast');
+    if (t > 70) opts.push('queue');
+    if (t > 95) opts.push('fatty');
+    if (t > 120) opts.push('managers');
+    if (t > 150) opts.push('tanks');
+    if (t > 185) opts.push('directors');
+    if (t > 220) opts.push('mixed_horde');
+    // не повторять ту же волну подряд
+    let kind = opts[randi(0, opts.length - 1)];
+    if (opts.length > 1 && kind === this.saleLastWaveKind) {
+      kind = opts[randi(0, opts.length - 1)];
+    }
+    this.saleLastWaveKind = kind;
+
+    const ring = (type, n, extra) => {
+      for (let i = 0; i < n; i++) {
+        const a = (Math.PI * 2 * i) / n;
+        const R = 220 + (i % 3) * 18;
+        this.spawnSaleEnemyNear(p.x + Math.cos(a) * R, p.y + Math.sin(a) * R, type, Object.assign({ overCap: 16 }, extra || {}));
+      }
+    };
+    const labels = {
+      crowd: 'ТОЛПА',
+      ring_fast: 'КОЛЬЦО БЫСТРЫХ',
+      queue: 'ОЧЕРЕДЬ',
+      fatty: 'ЖИРНЫЕ ПАКЕТЫ',
+      managers: 'МЕНЕДЖЕРЫ',
+      tanks: 'ОХРАНА ЗАЛА',
+      directors: 'ДИРЕКТОРА',
+      mixed_horde: 'ЧЁРНАЯ ПЯТНИЦА',
+    };
+
+    switch (kind) {
+      case 'crowd':
+        for (let i = 0; i < randi(9, 14); i++) this.spawnSaleEnemy('normal');
+        break;
+      case 'ring_fast':
+        ring('fast', 16, { nameTag: 'Спринтер' });
+        break;
+      case 'queue':
+        for (let i = 0; i < randi(7, 11); i++) this.spawnSaleEnemy('queue');
+        break;
+      case 'fatty':
+        for (let i = 0; i < randi(5, 8); i++) this.spawnSaleEnemy('fatty');
+        break;
+      case 'managers':
+        for (let i = 0; i < randi(4, 6); i++) this.spawnSaleEnemy('manager');
+        break;
+      case 'tanks':
+        for (let i = 0; i < randi(3, 5); i++) this.spawnSaleEnemy('tank');
+        break;
+      case 'directors':
+        for (let i = 0; i < randi(1, 2); i++) {
+          const e = this.spawnSaleEnemy('director');
+          if (e) {
+            e.maxHp = Math.max(1, Math.round(e.maxHp * 0.85));
+            e.hp = e.maxHp;
+            e.xpReward = Math.max(e.xpReward || 0, 10);
+          }
+        }
+        break;
+      case 'mixed_horde':
+        for (let i = 0; i < 8; i++) this.spawnSaleEnemy(pick(['fast', 'queue', 'returner', 'normal']));
+        for (let i = 0; i < 3; i++) this.spawnSaleEnemy(pick(['fatty', 'tank', 'manager']));
+        break;
+      default:
+        for (let i = 0; i < 10; i++) this.spawnSaleEnemy();
+    }
+
+    this.showEventBanner('🌊 ВОЛНА: ' + (labels[kind] || kind), 2.0);
+    this.spawnAnimFx('afx_ring', p.x, p.y, { life: 0.45, scale: 1.2, scaleEnd: 3.5 });
+  };
+
+  Game.prototype.tickSaleElites = function (dt) {
+    const t = this.saleTime || 0;
+    if (t < SALE_ELITE_START) return;
+    if (this.saleEliteT == null) this.saleEliteT = SALE_ELITE_START;
+    this.saleEliteT -= dt;
+    if (this.saleEliteT > 0) return;
+    this.saleEliteT = SALE_ELITE_INTERVAL;
+    const n = 1 + Math.floor(t / 420);
+    const pool = ['miniboss'];
+    if (t > 200) pool.push('director');
+    if (t > 300) pool.push('boss');
+    for (let i = 0; i < n; i++) {
+      const type = pool[randi(0, pool.length - 1)];
+      const e = this.spawnSaleEnemy(type);
+      if (!e) continue;
+      e._saleElite = true;
+      e.nameTag = (e.nameTag || 'Элита') + ' ★';
+      e.maxHp = Math.max(1, Math.round(e.maxHp * 1.35));
+      e.hp = e.maxHp;
+      e.xpReward = Math.max(e.xpReward || 0, 12);
+    }
+    this.showEventBanner('⭐ Элита со склада…', 1.6);
+  };
+
+  /** LN-директор волн/элит (боссы — отдельно в tickSaleBossSchedule). */
+  Game.prototype.tickSaleDirector = function (dt) {
+    if (this.saleWaveT == null) this.saleWaveT = SALE_WAVE_FIRST;
+    this.saleWaveT -= dt;
+    if (this.saleWaveT <= 0) {
+      this.saleWaveT = SALE_WAVE_INTERVAL;
+      this.doSaleWave(this.saleTime || 0);
+    }
+    this.tickSaleElites(dt);
   };
 
   Game.prototype.tickSaleBossAI = function (enemy, dt) {
@@ -951,7 +1150,83 @@
     enemy._saleBossCd = (enemy._saleBossCd || 0) - dt;
     enemy._saleBossCd2 = (enemy._saleBossCd2 || 0) - dt;
 
-    if (id === 'discount_king') {
+    if (id === 'floor_manager') {
+      // ранний танк: короткий рывок + вызов менеджеров
+      if (enemy._saleChargeT > 0) {
+        enemy._saleChargeT -= dt;
+        if (enemy._saleChargeT <= 0) {
+          const spd = 300 + enemy.bossPhase * 30;
+          enemy.knockback.x = Math.cos(enemy._saleChargeAng) * spd * 0.5;
+          enemy.knockback.y = Math.sin(enemy._saleChargeAng) * spd * 0.5;
+          enemy.mobPose = 'attack';
+          this.spawnAnimFx('afx_slash', enemy.x + Math.cos(enemy._saleChargeAng) * 36, enemy.y + Math.sin(enemy._saleChargeAng) * 36, {
+            life: 0.3, scale: 1.1, rot: enemy._saleChargeAng + Math.PI / 2,
+          });
+        } else {
+          enemy._saleChargeAng = angleTo(enemy.x, enemy.y, p.x, p.y);
+          enemy.angle = enemy._saleChargeAng;
+        }
+      } else if (enemy._saleBossCd <= 0) {
+        enemy._saleBossCd = Math.max(2.8, 5 - enemy.bossPhase * 0.5);
+        enemy._saleChargeT = 0.7;
+        enemy._saleChargeAng = angleTo(enemy.x, enemy.y, p.x, p.y);
+        if (typeof SpeechBubble === 'function') {
+          enemy.bubble = new SpeechBubble(enemy, pick(['Кто на смене?!', 'Отчёт на стол!', 'Опоздание!']));
+        }
+      }
+      if (enemy._saleBossCd2 <= 0) {
+        enemy._saleBossCd2 = Math.max(5.5, 8 - enemy.bossPhase);
+        const n = 1 + (enemy.bossPhase > 1 ? 1 : 0);
+        for (let i = 0; i < n; i++) {
+          const a = (Math.PI * 2 * i) / n + rand(0, 1);
+          this.spawnSaleEnemyNear(
+            enemy.x + Math.cos(a) * 70,
+            enemy.y + Math.sin(a) * 70,
+            'manager',
+            { nameTag: 'Подсмена', hpMul: 0.9, overCap: 4 },
+          );
+        }
+      }
+    } else if (id === 'cart_horde') {
+      // чардж + орда тележек (fast/queue)
+      if (enemy._saleChargeT > 0) {
+        enemy._saleChargeT -= dt;
+        if (enemy._saleChargeT <= 0) {
+          const spd = 380 + enemy.bossPhase * 35;
+          enemy.x += Math.cos(enemy._saleChargeAng) * spd * 0.18;
+          enemy.y += Math.sin(enemy._saleChargeAng) * spd * 0.18;
+          enemy.knockback.x = Math.cos(enemy._saleChargeAng) * spd * 0.5;
+          enemy.knockback.y = Math.sin(enemy._saleChargeAng) * spd * 0.5;
+          enemy.mobPose = 'attack';
+          this.spawnAnimFx('afx_slash', enemy.x + Math.cos(enemy._saleChargeAng) * 40, enemy.y + Math.sin(enemy._saleChargeAng) * 40, {
+            life: 0.32, scale: 1.25, rot: enemy._saleChargeAng + Math.PI / 2,
+          });
+        } else {
+          enemy._saleChargeAng = angleTo(enemy.x, enemy.y, p.x, p.y);
+          enemy.angle = enemy._saleChargeAng;
+        }
+      } else if (enemy._saleBossCd <= 0) {
+        enemy._saleBossCd = Math.max(2.4, 4.2 - enemy.bossPhase * 0.45);
+        enemy._saleChargeT = 0.75;
+        enemy._saleChargeAng = angleTo(enemy.x, enemy.y, p.x, p.y);
+        if (typeof SpeechBubble === 'function') {
+          enemy.bubble = new SpeechBubble(enemy, pick(['Тележки в проход!', 'Разгон!', 'Не стой!']));
+        }
+      }
+      if (enemy._saleBossCd2 <= 0) {
+        enemy._saleBossCd2 = Math.max(4, 6.5 - enemy.bossPhase * 0.6);
+        const n = 3 + enemy.bossPhase;
+        for (let i = 0; i < n; i++) {
+          const a = (Math.PI * 2 * i) / n;
+          this.spawnSaleEnemyNear(
+            enemy.x + Math.cos(a) * 85,
+            enemy.y + Math.sin(a) * 85,
+            i % 2 ? 'fast' : 'queue',
+            { nameTag: 'Тележка', hpMul: 0.8, overCap: 8 },
+          );
+        }
+      }
+    } else if (id === 'discount_king') {
       // ценники-лужи + мини-охотники за скидками
       if (enemy._saleBossCd <= 0) {
         enemy._saleBossCd = Math.max(1.4, 3.2 - enemy.bossPhase * 0.45);
@@ -1043,6 +1318,51 @@
         };
         this.obstacles.push(obs2);
         this.saleTempWalls.push(obs2);
+      }
+    } else if (id === 'promo_witch') {
+      // пулы промо + «проклятие» (slow) + мини-фаст
+      if (enemy._saleBossCd <= 0) {
+        enemy._saleBossCd = Math.max(1.6, 3.4 - enemy.bossPhase * 0.4);
+        this.salePuddles = this.salePuddles || [];
+        for (let i = 0; i < 1 + enemy.bossPhase; i++) {
+          const a = rand(0, Math.PI * 2);
+          const d = rand(50, 160);
+          this.salePuddles.push({
+            x: enemy.x + Math.cos(a) * d,
+            y: enemy.y + Math.sin(a) * d,
+            r: 28 + enemy.bossPhase * 4,
+            life: 5.5,
+            dmg: 1,
+            tick: 0,
+            color: '#c026d3',
+            slow: 0.5,
+            poison: true,
+          });
+        }
+        this.spawnAnimFx('afx_ring', enemy.x, enemy.y, { life: 0.4, scale: 0.8, scaleEnd: 2.2 });
+        if (typeof SpeechBubble === 'function') {
+          enemy.bubble = new SpeechBubble(enemy, pick(['АКЦИЯ НАВСЕГДА!', 'Промо-проклятие!', 'Ценник живой!']));
+        }
+      }
+      if (enemy._saleBossCd2 <= 0) {
+        enemy._saleBossCd2 = Math.max(4.5, 7 - enemy.bossPhase);
+        // «проклятие» — лужа под игроком + фанаты акции
+        this.salePuddles = this.salePuddles || [];
+        this.salePuddles.push({
+          x: p.x, y: p.y, r: 36, life: 3.2, dmg: 1, tick: 0,
+          color: '#a21caf', slow: 0.45, poison: true,
+        });
+        this.spawnAnimFx('afx_darkburst', p.x, p.y, { life: 0.45, scale: 0.9, scaleEnd: 1.4 });
+        const n = 2 + (enemy.bossPhase > 2 ? 1 : 0);
+        for (let i = 0; i < n; i++) {
+          const a = (Math.PI * 2 * i) / n;
+          this.spawnSaleEnemyNear(
+            enemy.x + Math.cos(a) * 80,
+            enemy.y + Math.sin(a) * 80,
+            'fast',
+            { nameTag: 'Промо-фан', hpMul: 0.85, overCap: 6 },
+          );
+        }
       }
     } else if (id === 'mall_closing') {
       // сжатие арены + моргание света + волны покупателей
@@ -1161,9 +1481,13 @@
 
   Game.prototype.dropSalePowerup = function (enemy) {
     if (enemy.saleBossId) {
-      // уникальный босс ТЦ — гарантированная посылка + магнит
+      // уникальный босс ТЦ — гарантированная посылка + магнит (+ bomb/heal в onSaleBossKilled)
       this.spawnSalePowerup(enemy.x - 22, enemy.y, 'chest');
       this.spawnSalePowerup(enemy.x + 22, enemy.y, 'magnet');
+      return;
+    }
+    if (enemy._saleElite) {
+      this.spawnSalePowerup(enemy.x, enemy.y, 'chest');
       return;
     }
     const elite = enemy.type === 'boss' || enemy.type === 'director' || enemy.type === 'miniboss';
@@ -1256,8 +1580,8 @@
     if (enemy.saleBossId) {
       this.spawnAnimFx('afx_darkburst', enemy.x, enemy.y, { life: 0.9, scale: 2.0, scaleEnd: 2.8 });
       this.spawnAnimFx('afx_ring', enemy.x, enemy.y, { life: 0.6, scale: 1.4, scaleEnd: 4.5 });
+      this.onSaleBossKilled(enemy);
     }
-    if (enemy.saleBossId === 'mall_closing') this.saleArenaShrink = 0;
     this.spawnSpriteFx(Math.random() < 0.55 ? 'fx_blood' : 'fx_hit_blood', enemy.x, enemy.y, {
       scale: enemy.saleBossId ? 1.1 : enemy.type === 'fatty' ? 0.85 : 0.55,
       scaleEnd: enemy.saleBossId ? 1.5 : enemy.type === 'fatty' ? 1.2 : 0.9,
@@ -1268,7 +1592,7 @@
       this.spawnSpriteFx('fx_skull', enemy.x, enemy.y - 8, { scale: 0.75, life: 0.4, vy: -35 });
     }
     // монеты реже
-    if (Math.random() < 0.22 || enemy.saleBossId) this.dropCoins(enemy);
+    if (Math.random() < 0.22 || enemy.saleBossId || enemy._saleElite) this.dropCoins(enemy);
   };
 
   Game.prototype.gainSaleXp = function (amount) {
@@ -2349,16 +2673,19 @@
     this.camera.x += (targetCX - this.camera.x) * Math.min(1, realDt * 5);
     this.camera.y += (targetCY - this.camera.y) * Math.min(1, realDt * 5);
 
-    // spawn — пачками, как в Vampire Survivors
+    // spawn — трикл fodder; при живом боссе урезаем burst, чтобы босс читался
     this.saleSpawnAcc += realDt;
     const interval = saleSpawnInterval(this.saleTime) * (this.saleSpawnMul || 1);
+    const bossAlive = this.saleBossAlive();
     while (this.saleSpawnAcc >= interval) {
       this.saleSpawnAcc -= interval;
-      const burst = saleSpawnBurst(this.saleTime);
+      let burst = saleSpawnBurst(this.saleTime);
+      if (bossAlive) burst = Math.max(1, Math.floor(burst * 0.55));
       for (let i = 0; i < burst; i++) this.spawnSaleEnemy();
     }
 
-    // уникальные боссы ТЦ по таймеру
+    // LN-директор: пакетные волны + элиты; боссы one-at-a-time
+    this.tickSaleDirector(realDt);
     this.tickSaleBossSchedule();
 
     // enemies always chase in sale
@@ -2531,9 +2858,29 @@
     this.$mode.textContent = `⏱ ${m}:${s}`;
     this.$mode.className = 'hud-mode ' + (left < 60 ? 'chase' : 'flee');
 
-    this.$wave.textContent = this.saleActiveEvent
-      ? `📣 ${Math.ceil(this.saleActiveEvent.t)}с · мин.${Math.floor(this.saleTime / 60)}`
-      : `🔥 Распродажа · мин.${Math.floor(this.saleTime / 60)}`;
+    // фаза LN-директора: босс N/6 / до следующего босса / волна·элита
+    const bossN = SALE_BOSS_ORDER.length;
+    const idx = this.saleBossIdx || 0;
+    const aliveBoss = (this.enemies || []).find((e) => e.hp > 0 && e.saleBossId);
+    let phaseTxt;
+    if (aliveBoss) {
+      const shown = Math.min(bossN, Math.max(1, idx));
+      phaseTxt = `⚔ Босс ${shown}/${bossN} · ${aliveBoss.nameTag || 'Босс'}`;
+    } else if (idx >= bossN) {
+      phaseTxt = this.saleActiveEvent
+        ? `📣 ${Math.ceil(this.saleActiveEvent.t)}с · финал`
+        : '🔥 Финал забега';
+    } else {
+      const eta = Math.max(0, Math.ceil((this.saleBossT || 0) - (this.saleTime || 0)));
+      const waveEta = Math.max(0, Math.ceil(this.saleWaveT || 0));
+      const eliteReady = (this.saleTime || 0) >= SALE_ELITE_START;
+      phaseTxt = `⏳ Босс ${idx + 1}/${bossN} через ${eta}с · волна ${waveEta}с`
+        + (eliteReady ? ' · элита' : '');
+      if (this.saleActiveEvent) {
+        phaseTxt = `📣 ${Math.ceil(this.saleActiveEvent.t)}с · босс через ${eta}с`;
+      }
+    }
+    this.$wave.textContent = phaseTxt;
     this.$enemies.textContent = `Убито: ${this.waveKills} · Врагов: ${this.enemies.length}`;
 
     if (this.$combo) this.$combo.style.display = 'none';
