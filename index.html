@@ -206,6 +206,7 @@
   }
   .buff-tag.good { background: rgba(46,204,113,0.25); color: #2ecc71; }
   .buff-tag.bad { background: rgba(231,76,60,0.25); color: #e74c3c; }
+  .buff-tag.syn { background: rgba(56,189,248,0.28); color: #7dd3fc; border: 1px solid rgba(125,211,252,0.35); }
   #buff-bar {
     position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
     z-index: 15; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
@@ -280,6 +281,7 @@
   }
   .hub-card:hover { border-color:#f1c40f; }
   .hub-card.sel { border-color:#2ecc71; background:rgba(46,204,113,0.12); }
+  .hub-card.hot { box-shadow: inset 0 0 0 1px rgba(241,196,15,0.45); }
   .hub-card .ttl { font-weight:700; font-size:12px; line-height:1.25; }
   .hub-card .desc { font-size:10px; color:#aaa; margin-top:2px; }
   .hub-card .meta { font-size:10px; color:#f1c40f; margin-top:3px; font-weight:700; }
@@ -629,13 +631,19 @@
             <div class="hub-sec">Консультант</div>
             <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Выбери героя — у каждого свой старт.</p>
             <div class="hub-grid" id="hub-sale-heroes"></div>
+            <div class="hub-sec">Этаж ТЦ</div>
+            <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Ранний пул оружия и бонус этажа. Полный каталог откроется позже в забеге.</p>
+            <div class="hub-grid" id="hub-sale-floors"></div>
+            <div class="hub-sec">Контракт смены</div>
+            <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Ограничения забега за множитель монет в банк.</p>
+            <div class="hub-grid" id="hub-sale-contracts"></div>
             <div class="hub-sec">Ассортимент оружия</div>
-            <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Покупка открывает оружие в пуле левел-апа (не кладёт в руки). В забеге макс. 4 оружия. Старт — оружие героя. Эволюции открываются в забеге.</p>
+            <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Покупка открывает оружие в пуле левел-апа (не кладёт в руки). В забеге макс. 4 оружия (контракт может снизить). Старт — оружие героя. Подсветка — откроет ветку эво при ключе.</p>
             <div class="hub-grid" id="hub-sale-weapons"></div>
             <div class="hub-sec">Стартовые пассивки</div>
             <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Постоянные бонусы к началу забега (за монеты банка).</p>
             <div class="perk-row" id="hub-sale-passives"></div>
-            <div class="hub-sec">Зона ТЦ</div>
+            <div class="hub-sec">Зона ТЦ (арена)</div>
             <div class="hub-grid" id="hub-sale-arenas"></div>
           </div>
         </div>
@@ -2934,6 +2942,8 @@ class Game {
     this.saleUnlockedWeapons = Array.from(new Set(['receipt', ...migratedSale]));
     this.saleStartPassives = Object.assign({}, this.save.saleStartPassives || {});
     this.selectedHeroId = this.save.selectedHeroId || 'lena';
+    this.selectedFloorId = this.save.selectedFloorId || 'grocery';
+    this.selectedContractId = this.save.selectedContractId || 'none';
     this.challengeFailed = false;
     this.tookDamage = false;
     this.playerProjectiles = [];
@@ -3118,6 +3128,8 @@ class Game {
       gameMode: this.gameMode,
       saleUnlockedWeapons: this.saleUnlockedWeapons,
       saleStartPassives: this.saleStartPassives,
+      selectedFloorId: this.selectedFloorId || 'grocery',
+      selectedContractId: this.selectedContractId || 'none',
       selectedHeroId: this.selectedHeroId || 'lena',
       killLog: this.killLog,
     });

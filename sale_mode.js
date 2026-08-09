@@ -6,16 +6,17 @@
 (function () {
   'use strict';
 
-  const SALE_VERSION = '0.9.0-sale';
+  const SALE_VERSION = '0.10.1-sale';
   const SALE_DURATION = 20 * 60; // 20 минут
   const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
   const SALE_WORLD_MUL = 2.75;
   /** LN-style: жёсткий потолок слотов — билд, а не «собери всё» */
   const SALE_MAX_WEAPONS = 4;
   const SALE_MAX_PASSIVES = 8;
-  /** После этого времени/уровня в пул попадают все 9 баз (хаб = ранний ассортимент) */
+  /** После этого времени/уровня в пул попадают все базы (хаб = ранний ассортимент) */
   const SALE_CATALOG_OPEN_SEC = 360; // 6 мин
   const SALE_CATALOG_OPEN_LV = 12;
+  const SALE_ROLE_BAN_SEC = 20;
   const SALE_LIFESTEAL_CD = 2.2; // сек между хилами от вампиризма
   /** LN-style: враги слабее в начале, к 6:00 выходят на baseline */
   const SALE_WARM_MINUTES = 6;
@@ -170,10 +171,106 @@
 
   window.SALE_VERSION = SALE_VERSION;
 
+  /** Подписи ролей для UI */
+  const SALE_ROLE_LABEL = {
+    projectile: 'bolt', orbit: 'orbit', ricochet: 'chain', aura: 'aura',
+    boomerang: 'scythe', puddle: 'mortar', nova: 'bell', beam: 'lantern',
+    sword: 'sword', charge: 'charge', spray: 'spray', shield: 'barrier',
+    radio: 'pulse', mark: 'mark',
+  };
+
+  /** Семья базы ← эво (для синергий и веток) */
+  const SALE_WEAPON_FAMILY = {
+    endless_receipt: 'receipt', receipt_return: 'receipt',
+    phone5g: 'phone', ultrasound: 'speaker',
+    black_card: 'card', vip: 'card',
+    caffeine: 'coffee', cold_latte: 'coffee',
+    mall_fire: 'siren', mall_evac: 'siren',
+    hunter: 'flashlight', cleaner: 'mop', wet_floor: 'mop',
+    black_friday: 'tagger', mag_cart: 'tagger',
+    security_loop: 'turnstile', auto_claimer: 'pricetag',
+    emergency_broadcast: 'mall_radio', party_bags: 'giftbag',
+  };
+
+  function saleWeaponFamily(id) {
+    return SALE_WEAPON_FAMILY[id] || id;
+  }
+
+  function saleHasFamily(weapons, family) {
+    if (!weapons) return false;
+    for (const id of Object.keys(weapons)) {
+      if ((weapons[id] || 0) > 0 && saleWeaponFamily(id) === family) return true;
+    }
+    return false;
+  }
+
+  /** Этажи ТЦ — ранний пул оружия + лёгкий бонус */
+  const SALE_FLOORS = [
+    {
+      id: 'grocery', name: 'Продукты', ico: '🛒',
+      desc: 'Пул: кофе, чек, пакет. +8% урон луж.',
+      weapons: ['coffee', 'receipt', 'giftbag'], puddleMul: 1.08,
+    },
+    {
+      id: 'security', name: 'Охрана', ico: '🛡️',
+      desc: 'Пул: сирена, турникет, фонарик. +8% отталкивание.',
+      weapons: ['siren', 'turnstile', 'flashlight'], knockMul: 1.08,
+    },
+    {
+      id: 'fashion', name: 'Одежда', ico: '👗',
+      desc: 'Пул: карта, громкоговоритель, ценник. +магнит XP.',
+      weapons: ['card', 'speaker', 'pricetag'], magnetBonus: 28,
+    },
+    {
+      id: 'tech', name: 'Техника', ico: '🔌',
+      desc: 'Пул: телефон, сканер, радио. −6% КД оружия.',
+      weapons: ['phone', 'tagger', 'mall_radio'], cdMul: 0.94,
+    },
+  ];
+
+  /** Контракты смены — модификаторы забега за монеты */
+  const SALE_CONTRACTS = [
+    { id: 'none', name: 'Обычная смена', ico: '📋', desc: 'Без ограничений.', coinMul: 1 },
+    {
+      id: 'dual', name: 'Только 2 оружия', ico: '✌️',
+      desc: 'Макс 2 слота оружия. +35% монет в банк.',
+      maxWeapons: 2, coinMul: 1.35,
+    },
+    {
+      id: 'no_orbit', name: 'Без орбит', ico: '🚫',
+      desc: 'Орбитальное оружие недоступно. +25% монет.',
+      banTypes: ['orbit'], coinMul: 1.25,
+    },
+    {
+      id: 'elite', name: 'Элиты ×2', ico: '⭐',
+      desc: 'Элиты чаще и плотнее. +40% монет.',
+      eliteMul: 2, coinMul: 1.4,
+    },
+  ];
+
+  /** Синергии без эволюции */
+  const SALE_SYNERGIES = [
+    {
+      a: 'receipt', b: 'card', orbitBonus: 0.12,
+      label: 'Чек+карта: орбиты шире', short: '🧾💳 орбиты',
+    },
+    {
+      a: 'coffee', b: 'mop', poisonPuddle: true,
+      label: 'Кофе+швабра: яд на лужах', short: '☕🧹 яд',
+    },
+    {
+      a: 'flashlight', b: 'siren', beamBurn: true,
+      label: 'Фонарик+сирена: луч жжёт', short: '🔦🚨 огонь',
+    },
+    {
+      a: 'tagger', b: 'speaker', markAura: true,
+      label: 'Сканер+рупор: аура бьёт меченых сильнее', short: '📟📢 метка',
+    },
+  ];
+
   /**
-   * Оружия Распродажи — карта ролей как в LONG NIGHT (9 баз + эво).
-   * LN: bolt / orbit / chain / aura / scythe / mortar / bell / lantern / sword
-   * type: projectile | orbit | ricochet | aura | boomerang | puddle | nova | beam | sword | charge | spray
+   * Оружия Распродажи — LN-роли + mall extras (турникет/ценник/радио/пакет).
+   * type: projectile | orbit | ricochet | aura | boomerang | puddle | nova | beam | sword | charge | spray | shield | radio | mark
    */
   const SALE_WEAPONS = {
     // bolt → ценник: залп в ближайших (id не scanner — тот в сейвах = старый чек)
@@ -248,6 +345,38 @@
       baseCd: 0.05, dmg: [1, 1, 2, 2, 3], count: [1, 1, 2, 2, 3],
       range: [140, 155, 170, 190, 215], speed: 175, visual: 'mop', size: 1.2,
     },
+    // barrier → турникет (контроль ближней дуги, не основной DPS)
+    turnstile: {
+      id: 'turnstile', name: 'Турникет', ico: '🚧', max: 5,
+      desc: 'Удар щитом перед собой + краткий блок',
+      type: 'shield', evolve: 'security_loop',
+      baseCd: 1.05, dmg: [1, 1, 2, 2, 3], range: [95, 110, 125, 145, 165], arc: 0.8,
+      visual: 'turnstile', knock: 200,
+    },
+    // mark bolt → пистолет-ценник
+    pricetag: {
+      id: 'pricetag', name: 'Пистолет-ценник', ico: '🏷️', max: 5,
+      desc: 'Тяжёлый выстрел; метит врагов (+урон по метке)',
+      type: 'mark', evolve: 'auto_claimer',
+      baseCd: 1.1, dmg: [2, 2, 2, 3, 3], count: [1, 1, 1, 2, 2], speed: 440,
+      visual: 'bloody_price', impact: 'sp_elec2', markSec: 3.5,
+    },
+    // pulse → радио ТЦ (utility: slow; урон слабый)
+    mall_radio: {
+      id: 'mall_radio', name: 'Радио ТЦ', ico: '📻', max: 5,
+      desc: 'Объявление: замедляет толпу вокруг',
+      type: 'radio', evolve: 'emergency_broadcast',
+      baseCd: 2.9, dmg: [1, 1, 1, 1, 2], radius: [120, 140, 160, 185, 210],
+      visual: 'speaker', slow: 0.55, impact: 'sp_elec2',
+    },
+    // orbit bags → пакет «спасибо»
+    giftbag: {
+      id: 'giftbag', name: 'Пакет «спасибо»', ico: '🛍️', max: 5,
+      desc: 'Пакеты на орбите; при касании вспыхивают',
+      type: 'orbit', evolve: 'party_bags',
+      baseCd: 0.12, dmg: [1, 1, 1, 2, 2], count: [2, 2, 3, 3, 4], radius: [68, 78, 88, 98, 110],
+      spin: 2.6, visual: 'giftbag', explodeHit: true, size: 1.05,
+    },
 
     // ── эволюции ──
     endless_receipt: {
@@ -256,67 +385,120 @@
       type: 'orbit', evolved: true,
       baseCd: 0.08, dmg: [3], count: [12], radius: [100], spin: 5.5, visual: 'endless_receipt', size: 1.15,
     },
+    receipt_return: {
+      id: 'receipt_return', name: 'Возврат чека', ico: '↩️', max: 1,
+      desc: 'Орбиты + периодический залп чеков наружу',
+      type: 'orbit', evolved: true,
+      baseCd: 0.1, dmg: [2], count: [7], radius: [92], spin: 4.0, visual: 'endless_receipt',
+      size: 1.08, volleyOut: true, volleyCd: 1.75,
+    },
     phone5g: {
       id: 'phone5g', name: 'Смартфон 5G', ico: '📶', max: 1,
       desc: 'Быстрая цепь рикошетов по залу',
       type: 'ricochet', evolved: true,
-      baseCd: 0.55, dmg: [3], count: [3], speed: 520, bounces: [8], visual: 'phone5g', impact: 'sp_elec3',
+      baseCd: 0.6, dmg: [3], count: [3], speed: 500, bounces: [7], visual: 'phone5g', impact: 'sp_elec3',
     },
     ultrasound: {
       id: 'ultrasound', name: 'Ультразвук', ico: '🔊', max: 1,
-      desc: 'Огромная звуковая волна-кольцо',
-      type: 'nova', evolved: true,
-      baseCd: 1.1, dmg: [4], radius: [280], visual: 'ultrasound', knock: 340, impact: 'sp_elec3',
+      desc: 'Огромный постоянный круг ультразвука (как громкоговоритель, но шире)',
+      type: 'aura', evolved: true,
+      baseCd: 0.38, dmg: [2], radius: [195], visual: 'ultrasound', knock: 140, impact: 'sp_elec3',
     },
     black_card: {
       id: 'black_card', name: 'Чёрная карта', ico: '🖤', max: 1,
-      desc: 'Огромная карта на орбите',
-      type: 'orbit', evolved: true,
-      baseCd: 0.1, dmg: [4], count: [1], radius: [72], spin: 6.5, visual: 'black_card', size: 2.2,
+      desc: 'Огромная карта-бумеранг через весь зал',
+      type: 'boomerang', evolved: true,
+      baseCd: 0.88, dmg: [4], speed: 380, range: [360], visual: 'black_card', size: 1.95,
     },
     vip: {
       id: 'vip', name: 'VIP-клиент', ico: '⭐', max: 1,
       desc: 'Золотая карта-бумеранг + магнит XP',
       type: 'boomerang', evolved: true,
-      baseCd: 0.75, dmg: [4], speed: 420, range: [340], visual: 'vip', magnetBonus: 50,
+      baseCd: 0.78, dmg: [3], speed: 400, range: [320], visual: 'vip', size: 1.3, magnetBonus: 55,
     },
     caffeine: {
       id: 'caffeine', name: 'КОФЕИН', ico: '⚡', max: 1,
       desc: 'Кофе в 3 стороны + ускорение',
       type: 'puddle', evolved: true,
-      baseCd: 0.7, dmg: [3], speed: 380, count: [3], visual: 'caffeine', impact: 'sp_bolt3', buffSpeed: 1.3,
+      baseCd: 0.75, dmg: [3], speed: 360, count: [3], visual: 'caffeine', impact: 'sp_bolt3', buffSpeed: 1.25,
+    },
+    cold_latte: {
+      id: 'cold_latte', name: 'Холодный латте', ico: '🧊', max: 1,
+      desc: 'Холодные лужи: слабый урон, сильный slow',
+      type: 'puddle', evolved: true,
+      baseCd: 0.9, dmg: [1], speed: 290, count: [3], visual: 'coffee', impact: 'sp_bolt1',
+      puddleSlow: 0.38, puddleColor: '#7dd3fc',
     },
     mall_fire: {
       id: 'mall_fire', name: 'Пожар в ТЦ', ico: '🔥', max: 1,
       desc: 'Широкая струя огня перед тобой',
       type: 'spray', evolved: true,
-      baseCd: 0.4, dmg: [3], range: [180], arc: 1.05, visual: 'mall_fire', impact: 'sp_fwave3',
+      baseCd: 0.45, dmg: [3], range: [170], arc: 0.95, visual: 'mall_fire', impact: 'sp_fwave3',
+    },
+    mall_evac: {
+      id: 'mall_evac', name: 'Эвакуация', ico: '🚪', max: 1,
+      desc: 'Мощная волна отталкивания + краткий godframe',
+      type: 'nova', evolved: true,
+      baseCd: 1.85, dmg: [3], radius: [220], visual: 'siren', knock: 380, impact: 'sp_fwave3',
+      iFrames: 0.4,
     },
     hunter: {
       id: 'hunter', name: 'Охотник на покупателей', ico: '💡', max: 1,
       desc: 'Прожектор 180° + вспышки по лучу',
       type: 'beam', evolved: true,
-      baseCd: 0.08, dmg: [2], length: [240], width: 48, spin: 0, aimNearest: true, turn: 12,
-      visual: 'hunter', summonBats: true, cone: 0.55,
+      baseCd: 0.08, dmg: [2], length: [230], width: 44, spin: 0, aimNearest: true, turn: 11,
+      visual: 'hunter', summonBats: true, cone: 0.5,
     },
     cleaner: {
       id: 'cleaner', name: 'Оружие уборщицы', ico: '🧼', max: 1,
       desc: 'Несколько швабр + ядовитый след',
       type: 'sword', evolved: true,
-      baseCd: 0.05, dmg: [3], count: [3], range: [200], speed: 210, visual: 'cleaner', trail: true, size: 1.35,
+      baseCd: 0.05, dmg: [3], count: [3], range: [195], speed: 205, visual: 'cleaner', trail: true, size: 1.3,
+    },
+    wet_floor: {
+      id: 'wet_floor', name: 'Мокрый пол', ico: '⚠️', max: 1,
+      desc: 'Швабры + зона slow под ногами',
+      type: 'sword', evolved: true,
+      baseCd: 0.05, dmg: [2], count: [2], range: [180], speed: 195, visual: 'mop', size: 1.2,
+      floorSlow: true,
     },
     black_friday: {
       id: 'black_friday', name: 'Чёрная пятница', ico: '💀', max: 1,
       desc: 'Ливень ценников; убитые взрываются',
       type: 'projectile', evolved: true,
-      baseCd: 0.55, dmg: [3], count: [5], speed: 480, lifesteal: 0.14,
+      baseCd: 0.62, dmg: [3], count: [4], speed: 460, lifesteal: 0.12,
       visual: 'bloody_price', impact: 'sp_bleed2', explodeOnKill: true,
     },
     mag_cart: {
       id: 'mag_cart', name: 'Магнитная тележка', ico: '🛒', max: 1,
       desc: 'Тележка несётся и притягивает толпу',
       type: 'charge', evolved: true,
-      baseCd: 1.1, dmg: [5], speed: 300, range: [450], visual: 'mag_cart', size: 1.6, pull: 180, impact: 'sp_quake3',
+      baseCd: 1.2, dmg: [4], speed: 290, range: [420], visual: 'mag_cart', size: 1.55, pull: 165, impact: 'sp_quake3',
+    },
+    security_loop: {
+      id: 'security_loop', name: 'Охранный контур', ico: '🛂', max: 1,
+      desc: 'Кольцо щитовых ударов вокруг тебя',
+      type: 'nova', evolved: true,
+      baseCd: 1.55, dmg: [3], radius: [155], visual: 'siren', knock: 280, impact: 'sp_quake2',
+    },
+    auto_claimer: {
+      id: 'auto_claimer', name: 'Автоклеймер', ico: '🔫', max: 1,
+      desc: 'Очередь ценников с долгими метками',
+      type: 'mark', evolved: true,
+      baseCd: 0.72, dmg: [3], count: [3], speed: 500, visual: 'bloody_price', impact: 'sp_elec3', markSec: 5,
+    },
+    emergency_broadcast: {
+      id: 'emergency_broadcast', name: 'Экстренное объявление', ico: '📣', max: 1,
+      desc: 'Глобальный slow + короткий стан волны',
+      type: 'radio', evolved: true,
+      baseCd: 2.15, dmg: [2], radius: [270], visual: 'ultrasound', slow: 0.42, impact: 'sp_elec3', stun: 0.22,
+    },
+    party_bags: {
+      id: 'party_bags', name: 'Лента пакетов', ico: '🎁', max: 1,
+      desc: 'Пакеты на орбите, взрываются от касания',
+      type: 'orbit', evolved: true,
+      baseCd: 0.1, dmg: [2], count: [7], radius: [105], spin: 3.4, visual: 'giftbag',
+      explodeHit: true, size: 1.2,
     },
   };
 
@@ -357,6 +539,22 @@
       id: 'magnet_pass', name: 'Магнит', ico: '🧲', max: 3,
       desc: '+40 магнит XP / ур. (эво сканера → тележка)',
     },
+    guard_pass: {
+      id: 'guard_pass', name: 'Жетон охраны', ico: '🪪', max: 3,
+      desc: '+8% отталкивание / ур. (эво → Охранный контур)',
+    },
+    sticker: {
+      id: 'sticker', name: 'Стикер «−50%»', ico: '🔻', max: 3,
+      desc: '+12% урон меток / ур. (эво → Автоклеймер)',
+    },
+    broadcast: {
+      id: 'broadcast', name: 'Микрофон', ico: '🎙️', max: 3,
+      desc: '+10% радиус радио / ур. (эво → Экстренное объявление)',
+    },
+    ribbon: {
+      id: 'ribbon', name: 'Лента кассы', ico: '🎀', max: 3,
+      desc: '+1 орбитальный пакет / ур. (эво → Лента пакетов)',
+    },
   };
   // aliases for old hub saves
   SALE_PASSIVES.might = SALE_PASSIVES.discount;
@@ -368,43 +566,104 @@
   SALE_PASSIVES.regen = SALE_PASSIVES.medkit;
   SALE_PASSIVES.wallet = SALE_PASSIVES.money;
 
-  /** Эволюции: база max + пассивка → эво (как LN partner) */
+  /** Эволюции: база max + пассивка → эво (как LN partner). branch* — для выбора ветки. */
   const SALE_EVOLUTIONS = [
-    { from: 'receipt', needPassive: 'printer', into: 'endless_receipt', name: 'Бесконечный чек' },
-    { from: 'mop', needPassive: 'spray', into: 'cleaner', name: 'Оружие уборщицы' },
+    {
+      from: 'receipt', needPassive: 'printer', into: 'endless_receipt', name: 'Бесконечный чек',
+      branch: 'лента', branchHint: 'плотные орбиты',
+    },
+    {
+      from: 'receipt', needPassive: 'pouch', into: 'receipt_return', name: 'Возврат чека',
+      branch: 'возврат', branchHint: 'орбиты + залп наружу',
+    },
+    {
+      from: 'mop', needPassive: 'spray', into: 'cleaner', name: 'Оружие уборщицы',
+      branch: 'яд', branchHint: 'несколько швабр + яд',
+    },
+    {
+      from: 'mop', needPassive: 'gloves', into: 'wet_floor', name: 'Мокрый пол',
+      branch: 'пол', branchHint: 'швабры + slow-зона',
+    },
     { from: 'phone', needPassive: 'charger', into: 'phone5g', name: 'Смартфон 5G' },
     { from: 'speaker', needPassive: 'headphones', into: 'ultrasound', name: 'Ультразвук' },
-    { from: 'card', needPassive: 'money', into: 'black_card', name: 'Чёрная карта' },
-    { from: 'card', needPassive: 'badge', into: 'vip', name: 'VIP-клиент' },
-    { from: 'coffee', needPassive: 'energy', into: 'caffeine', name: 'КОФЕИН' },
-    { from: 'siren', needPassive: 'map', into: 'mall_fire', name: 'Пожар в ТЦ' },
+    {
+      from: 'card', needPassive: 'money', into: 'black_card', name: 'Чёрная карта',
+      branch: 'сила', branchHint: 'гигантский бумеранг, больше урон/дальность',
+    },
+    {
+      from: 'card', needPassive: 'badge', into: 'vip', name: 'VIP-клиент',
+      branch: 'магнит', branchHint: 'бумеранг + сильный магнит XP',
+    },
+    {
+      from: 'coffee', needPassive: 'energy', into: 'caffeine', name: 'КОФЕИН',
+      branch: 'заряд', branchHint: '3 лужи + ускорение',
+    },
+    {
+      from: 'coffee', needPassive: 'mug', into: 'cold_latte', name: 'Холодный латте',
+      branch: 'холод', branchHint: 'лужи slow',
+    },
+    {
+      from: 'siren', needPassive: 'map', into: 'mall_fire', name: 'Пожар в ТЦ',
+      branch: 'огонь', branchHint: 'струя огня',
+    },
+    {
+      from: 'siren', needPassive: 'key', into: 'mall_evac', name: 'Эвакуация',
+      branch: 'выход', branchHint: 'отталкивание + godframe',
+    },
     { from: 'flashlight', needPassive: 'headlamp', into: 'hunter', name: 'Охотник' },
-    { from: 'tagger', needPassive: 'discount', into: 'black_friday', name: 'Чёрная пятница' },
-    { from: 'tagger', needPassive: 'magnet_pass', into: 'mag_cart', name: 'Магнитная тележка' },
+    {
+      from: 'tagger', needPassive: 'discount', into: 'black_friday', name: 'Чёрная пятница',
+      branch: 'ливень', branchHint: 'залп ценников, взрывы и вамлеч',
+    },
+    {
+      from: 'tagger', needPassive: 'magnet_pass', into: 'mag_cart', name: 'Магнитная тележка',
+      branch: 'тележка', branchHint: 'чардж сквозь толпу + притяжение',
+    },
+    { from: 'turnstile', needPassive: 'guard_pass', into: 'security_loop', name: 'Охранный контур' },
+    { from: 'pricetag', needPassive: 'sticker', into: 'auto_claimer', name: 'Автоклеймер' },
+    { from: 'mall_radio', needPassive: 'broadcast', into: 'emergency_broadcast', name: 'Экстренное объявление' },
+    { from: 'giftbag', needPassive: 'ribbon', into: 'party_bags', name: 'Лента пакетов' },
   ];
 
   const SALE_HUB_WEAPON_COST = {
-    // 9 баз LN-карты (чек всегда бесплатен)
-    mop: 70, phone: 80, tagger: 100, coffee: 100,
+    mop: 70, phone: 80, tagger: 100, coffee: 100, giftbag: 110,
     card: 120, speaker: 130, flashlight: 140, siren: 150,
+    turnstile: 130, pricetag: 140, mall_radio: 145,
   };
 
   const SALE_HUB_PASSIVES = [
-    { id: 'mug', ico: '☕', name: 'Кружка', max: 3, cost: [40, 80, 130], desc: 'Старт с +HP' },
+    { id: 'mug', ico: '☕', name: 'Кружка', max: 3, cost: [40, 80, 130], desc: 'Старт +HP / эво кофе → латте' },
     { id: 'charger', ico: '🔌', name: 'Зарядка', max: 3, cost: [45, 85, 140], desc: 'Старт с меньшей КД / эво телефона' },
     { id: 'shoes', ico: '👟', name: 'Кроссовки', max: 3, cost: [40, 75, 120], desc: 'Старт быстрее' },
     { id: 'radio', ico: '📻', name: 'Рация', max: 3, cost: [35, 65, 110], desc: 'Старт с магнитом XP' },
-    { id: 'gloves', ico: '🧤', name: 'Перчатки', max: 3, cost: [40, 75, 120], desc: 'Старт с большей зоной' },
+    { id: 'gloves', ico: '🧤', name: 'Перчатки', max: 3, cost: [40, 75, 120], desc: 'Зона / эво швабры → мокрый пол' },
+    { id: 'key', ico: '🔑', name: 'Ключ', max: 2, cost: [50, 100], desc: 'Скорость / эво сирены → эвакуация' },
+    { id: 'pouch', ico: '👝', name: 'Сумка', max: 2, cost: [55, 100], desc: 'Снаряды / эво чека → возврат' },
     { id: 'money', ico: '💰', name: 'Деньги', max: 2, cost: [55, 100], desc: 'Монеты / эво карты' },
     { id: 'printer', ico: '🖨️', name: 'Чековый аппарат', max: 2, cost: [80, 140], desc: '+орбиты чеков / эво чека' },
     { id: 'spray', ico: '🧴', name: 'Спрей', max: 2, cost: [80, 140], desc: 'Яд на швабре / эво швабры' },
     { id: 'magnet_pass', ico: '🧲', name: 'Магнит', max: 2, cost: [80, 140], desc: '+магнит XP / эво → тележка' },
-    { id: 'energy', ico: '🥤', name: 'Энергетик', max: 1, cost: [130], desc: 'Эво кофе' },
+    { id: 'guard_pass', ico: '🪪', name: 'Жетон', max: 1, cost: [120], desc: 'Эво турникета' },
+    { id: 'sticker', ico: '🔻', name: 'Стикер', max: 1, cost: [120], desc: 'Эво пистолета-ценника' },
+    { id: 'broadcast', ico: '🎙️', name: 'Микрофон', max: 1, cost: [120], desc: 'Эво радио ТЦ' },
+    { id: 'ribbon', ico: '🎀', name: 'Лента', max: 1, cost: [120], desc: 'Эво пакета' },
+    { id: 'energy', ico: '🥤', name: 'Энергетик', max: 1, cost: [130], desc: 'Эво кофе → КОФЕИН' },
     { id: 'headphones', ico: '🎧', name: 'Наушники', max: 1, cost: [130], desc: 'Эво громкоговорителя' },
-    { id: 'map', ico: '🗺️', name: 'План ТЦ', max: 1, cost: [130], desc: 'Эво сирены' },
+    { id: 'map', ico: '🗺️', name: 'План ТЦ', max: 1, cost: [130], desc: 'Эво сирены → пожар' },
     { id: 'headlamp', ico: '💡', name: 'Налобник', max: 1, cost: [130], desc: 'Эво фонарика' },
     { id: 'discount', ico: '🏷️', name: 'Скидка', max: 1, cost: [140], desc: 'Эво сканера → Чёрная пятница' },
+    { id: 'badge', ico: '🪪', name: 'Бейдж', max: 1, cost: [130], desc: 'Эво карты → VIP' },
   ];
+
+  /** Фирменный дроп босса (в следующий левел-ап / сразу) */
+  const SALE_BOSS_DROP = {
+    floor_manager: { kind: 'overflow', id: 'power', label: 'Сверхурочные +1' },
+    cart_horde: { kind: 'powerup', id: 'bomb', label: 'Хлопушка' },
+    discount_king: { kind: 'weapon_unlock', id: 'pricetag', label: 'Пистолет-ценник в пуле' },
+    security_chief: { kind: 'buff', id: 'walls', label: 'Стены охраны' },
+    promo_witch: { kind: 'buff', id: 'puddles', label: 'Промо-лужи' },
+    mall_closing: { kind: 'heal_max', id: '1', label: '+1 макс HP' },
+  };
 
   /** visual id в атласе оружия (wp_<id>1/2/3) */
   const SALE_VISUAL_ALIAS = {
@@ -698,6 +957,14 @@
     this._saleBanishMode = false;
     this.saleOverflow = {};
     this.saleWeaponOver = {};
+    this.saleRoleBan = null;
+    this.saleRunUnlocks = [];
+    this._saleSynSeen = {};
+    this.saleFloorId = this.selectedFloorId || 'grocery';
+    this.saleContract = SALE_CONTRACTS.find((c) => c.id === (this.selectedContractId || 'none')) || SALE_CONTRACTS[0];
+    this._saleShieldT = 0;
+    this._saleOrbitVolleyCd = {};
+    // баннер контракта/этажа — после старта кадра (см. ниже)
 
     // Sale state
     this.saleTime = 0;
@@ -733,6 +1000,7 @@
     this.saleSwords = [];
     this.saleRings = [];
     this._salePromoAuraR = 0;
+    this._saleUltraAuraR = 0;
     Object.keys(SALE_WEAPONS).forEach((id) => { this.saleWeaponCd[id] = 0.25; });
 
     this.applyMetaToPlayer();
@@ -761,6 +1029,13 @@
     for (let i = 0; i < 28; i++) this.spawnSaleEnemy();
     this._saleLsCd = 0;
 
+    const fl = this.getSaleFloor();
+    const c = this.saleContract;
+    const bits = [];
+    if (fl) bits.push(fl.ico + ' ' + fl.name);
+    if (c && c.id !== 'none') bits.push(c.ico + ' ' + c.name);
+    if (bits.length) this.showEventBanner(bits.join(' · '), 2.2);
+
     this.refreshMusicState();
     sfx.click();
   };
@@ -769,7 +1044,8 @@
     const p = this.player;
     if (!p) return;
     const spd = (this.salePassives.speed || 0) + (this.salePassives.shoes || 0) + (this.salePassives.key || 0);
-    const caff = this.saleWeapons.caffeine ? 0.25 : 0;
+    const caffDef = this.saleWeapons.caffeine && SALE_WEAPONS.caffeine;
+    const caff = caffDef ? ((caffDef.buffSpeed || 1.25) - 1) : 0;
     const hero = getSaleHero(this.selectedHeroId);
     p._saleSpeedMul = (1 + spd * 0.08 + caff) * (hero.speedMul || 1);
   };
@@ -784,6 +1060,43 @@
     p._saleHeroName = hero.name;
   };
 
+  Game.prototype.getSaleFloor = function () {
+    return SALE_FLOORS.find((f) => f.id === (this.saleFloorId || this.selectedFloorId)) || SALE_FLOORS[0];
+  };
+
+  Game.prototype.saleSynergyOn = function (key) {
+    for (const s of SALE_SYNERGIES) {
+      if (saleHasFamily(this.saleWeapons, s.a) && saleHasFamily(this.saleWeapons, s.b) && s[key]) return s[key];
+    }
+    return null;
+  };
+
+  Game.prototype.getActiveSaleSynergies = function () {
+    const out = [];
+    for (const s of SALE_SYNERGIES) {
+      if (saleHasFamily(this.saleWeapons, s.a) && saleHasFamily(this.saleWeapons, s.b)) out.push(s);
+    }
+    return out;
+  };
+
+  /** Баннер при первой активации синергии в забеге */
+  Game.prototype.tickSaleSynergyAnnounce = function () {
+    this._saleSynSeen = this._saleSynSeen || {};
+    for (const s of this.getActiveSaleSynergies()) {
+      const key = s.a + '+' + s.b;
+      if (this._saleSynSeen[key]) continue;
+      this._saleSynSeen[key] = true;
+      this.showEventBanner('🔗 Синергия: ' + s.label, 2.0);
+      break;
+    }
+  };
+
+  Game.prototype.saleMaxWeaponSlots = function () {
+    const c = this.saleContract;
+    if (c && c.maxWeapons) return c.maxWeapons;
+    return SALE_MAX_WEAPONS;
+  };
+
   Game.prototype.saleDmgMul = function () {
     const hero = getSaleHero(this.saleHeroId || this.selectedHeroId);
     const over = (this.saleOverflow && this.saleOverflow.power) || 0;
@@ -794,11 +1107,16 @@
   Game.prototype.saleCdMul = function () {
     const haste = (this.salePassives.haste || 0) + (this.salePassives.charger || 0) + (this.salePassives.energy || 0);
     const over = (this.saleOverflow && this.saleOverflow.tempo) || 0;
-    return Math.max(0.35, 1 - haste * 0.08 - over * 0.06);
+    const floor = this.getSaleFloor();
+    const floorCd = floor && floor.cdMul ? floor.cdMul : 1;
+    return Math.max(0.35, (1 - haste * 0.08 - over * 0.06) * floorCd);
   };
   Game.prototype.saleAreaMul = function () {
     const over = (this.saleOverflow && this.saleOverflow.space) || 0;
-    return 1 + ((this.salePassives.area || 0) + (this.salePassives.gloves || 0) + (this.salePassives.map || 0)) * 0.1 + over * 0.08;
+    let m = 1 + ((this.salePassives.area || 0) + (this.salePassives.gloves || 0) + (this.salePassives.map || 0)) * 0.1 + over * 0.08;
+    const orb = this.saleSynergyOn('orbitBonus');
+    if (orb) m += orb;
+    return m;
   };
   Game.prototype.saleMagnetRange = function () {
     const mag = (this.salePassives.magnet || 0)
@@ -806,15 +1124,17 @@
       + (this.salePassives.headlamp || 0)
       + (this.salePassives.magnet_pass || 0);
     const hero = getSaleHero(this.saleHeroId || this.selectedHeroId);
+    const floor = this.getSaleFloor();
     let bonus = 70 + mag * 36 + (this.salePassives.magnet_pass || 0) * 8
-      + (this.metaPerks.magnet || 0) * 20 + (hero.magnetBonus || 0);
+      + (this.metaPerks.magnet || 0) * 20 + (hero.magnetBonus || 0)
+      + (floor && floor.magnetBonus ? floor.magnetBonus : 0);
     if (this.saleWeapons && this.saleWeapons.vip) bonus += 50;
     return bonus;
   };
 
-  /** Бонус орбит от чекового аппарата */
+  /** Бонус орбит от чекового аппарата / ленты */
   Game.prototype.saleOrbitBonus = function () {
-    return this.salePassives.printer || 0;
+    return (this.salePassives.printer || 0) + (this.salePassives.ribbon || 0);
   };
   Game.prototype.saleXpMul = function () {
     const hero = getSaleHero(this.saleHeroId || this.selectedHeroId);
@@ -948,12 +1268,54 @@
     this.saleBossT = (this.saleTime || 0) + SALE_BOSS_INTERVAL;
   };
 
+  Game.prototype.applySaleBossDrop = function (bossId, x, y) {
+    const drop = SALE_BOSS_DROP[bossId];
+    if (!drop) return;
+    const p = this.player;
+    if (drop.kind === 'overflow') {
+      this.saleOverflow = this.saleOverflow || {};
+      this.saleOverflow[drop.id] = (this.saleOverflow[drop.id] || 0) + 1;
+    } else if (drop.kind === 'powerup') {
+      this.spawnSalePowerup(x, y - 28, drop.id);
+    } else if (drop.kind === 'weapon_unlock') {
+      this.saleRunUnlocks = this.saleRunUnlocks || [];
+      if (!this.saleRunUnlocks.includes(drop.id)) this.saleRunUnlocks.push(drop.id);
+    } else if (drop.kind === 'buff' && drop.id === 'walls') {
+      this.obstacles = this.obstacles || [];
+      this.saleTempWalls = this.saleTempWalls || [];
+      if (p) {
+        for (let i = 0; i < 2; i++) {
+          const a = (p.angle || 0) + (i === 0 ? Math.PI / 2 : -Math.PI / 2);
+          const o = {
+            x: p.x + Math.cos(a) * 70 - 40, y: p.y + Math.sin(a) * 70 - 12,
+            w: 80, h: 24, _saleTemp: true, _saleBossWall: true, life: 8,
+          };
+          this.obstacles.push(o); this.saleTempWalls.push(o);
+        }
+      }
+    } else if (drop.kind === 'buff' && drop.id === 'puddles' && p) {
+      this.salePuddles = this.salePuddles || [];
+      for (let i = 0; i < 4; i++) {
+        const a = (Math.PI * 2 * i) / 4;
+        this.salePuddles.push({
+          x: p.x + Math.cos(a) * 70, y: p.y + Math.sin(a) * 70,
+          r: 32, life: 5, dmg: 1, tick: 0, color: '#c026d3', slow: 0.5, poison: true,
+        });
+      }
+    } else if (drop.kind === 'heal_max' && p) {
+      p.maxHp += 1;
+      p.hp = Math.min(p.maxHp, p.hp + 1);
+    }
+    this.showEventBanner('🎁 Босс: ' + drop.label, 2.0);
+  };
+
   Game.prototype.onSaleBossKilled = function (enemy) {
     // LN kill-kit: хил + магнит + хлопушка (+ посылка уже в dropSalePowerup)
     if (this.player && this.player.hp < this.player.maxHp) {
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);
     }
     this.spawnSalePowerup(enemy.x, enemy.y - 18, 'bomb');
+    if (enemy.saleBossId) this.applySaleBossDrop(enemy.saleBossId, enemy.x, enemy.y);
     // не стакать следующего босса сразу после долгого боя
     const now = this.saleTime || 0;
     this.saleBossT = Math.max(this.saleBossT || 0, now + SALE_BOSS_GAP_AFTER_KILL);
@@ -1051,8 +1413,9 @@
     if (this.saleEliteT == null) this.saleEliteT = SALE_ELITE_START;
     this.saleEliteT -= dt;
     if (this.saleEliteT > 0) return;
-    this.saleEliteT = SALE_ELITE_INTERVAL;
-    const n = 1 + Math.floor(t / 420);
+    const eliteMul = (this.saleContract && this.saleContract.eliteMul) || 1;
+    this.saleEliteT = SALE_ELITE_INTERVAL / Math.max(1, eliteMul);
+    const n = (1 + Math.floor(t / 420)) * Math.max(1, Math.round(eliteMul));
     const pool = ['miniboss'];
     if (t > 200) pool.push('director');
     if (t > 300) pool.push('boss');
@@ -1196,6 +1559,20 @@
       enemy._salePhaseSpike = true;
       this.spawnAnimFx('afx_darkburst', enemy.x, enemy.y, { life: 0.55, scale: 1.2, scaleEnd: 2.0 });
       this.screenShake = Math.max(this.screenShake || 0, 0.35);
+      // фаза 3: бан одной роли оружия игрока на ~20с
+      if (ph === 3) {
+        const types = [];
+        for (const wid of Object.keys(this.saleWeapons || {})) {
+          if (!(this.saleWeapons[wid] > 0)) continue;
+          const t = SALE_WEAPONS[wid] && SALE_WEAPONS[wid].type;
+          if (t && !types.includes(t)) types.push(t);
+        }
+        if (types.length) {
+          const ban = types[randi(0, types.length - 1)];
+          this.saleRoleBan = { type: ban, t: SALE_ROLE_BAN_SEC };
+          this.showEventBanner(`🚫 Босс банит роль: ${SALE_ROLE_LABEL[ban] || ban} (${SALE_ROLE_BAN_SEC}с)`, 2.2);
+        }
+      }
     }
 
     if (id === 'floor_manager') {
@@ -1539,9 +1916,36 @@
     this.spawnSalePowerup(enemy.x, enemy.y, kind);
   };
 
+  Game.prototype.pickSaleEvoKeyDrop = function () {
+    const opts = [];
+    for (const ev of SALE_EVOLUTIONS) {
+      const fromMax = SALE_WEAPONS[ev.from]?.max || 5;
+      if ((this.saleWeapons[ev.from] || 0) < fromMax) continue;
+      if (this.saleWeapons[ev.into]) continue;
+      if (!ev.needPassive) continue;
+      if ((this.salePassives[ev.needPassive] || 0) > 0) continue;
+      if (!SALE_PASSIVES[ev.needPassive]) continue;
+      opts.push(ev.needPassive);
+    }
+    if (!opts.length) return null;
+    return opts[randi(0, opts.length - 1)];
+  };
+
   Game.prototype.applySalePowerup = function (pu) {
     const p = this.player;
     if (pu.kind === 'chest') {
+      // редко: ключ эво вместо/вместе с апгрейдом
+      if (Math.random() < 0.28) {
+        const key = this.pickSaleEvoKeyDrop();
+        if (key && SALE_PASSIVES[key]) {
+          this.salePassives[key] = (this.salePassives[key] || 0) + 1;
+          this.applySalePassivesToPlayer();
+          this.showEventBanner(`📦 В посылке ключ: ${SALE_PASSIVES[key].name}!`, 2.0);
+          this.spawnAnimFx('afx_levelup', p.x, p.y, { life: 0.65, scale: 0.9, scaleEnd: 1.3 });
+          sfx.level();
+          return;
+        }
+      }
       this.pendingUpgrades = (this.pendingUpgrades || 0) + 1;
       this.showEventBanner('📦 Посылка со склада: бесплатное улучшение!', 1.8);
       this.spawnAnimFx('afx_levelup', p.x, p.y, { life: 0.65, scale: 0.9, scaleEnd: 1.3 });
@@ -1662,13 +2066,19 @@
     return SALE_WEAPON_MIGRATE[id] || id;
   };
 
-  /** Оружие в пуле: хаб = ранний ассортимент; после 6 мин / 12 ур. — весь зал. */
+  /** Оружие в пуле: хаб = ранний ассортимент; этаж ТЦ; после 6 мин / 12 ур. — весь зал. */
   Game.prototype.saleWeaponInCatalog = function (id) {
     id = this.migrateSaleWeaponId(id);
-    if (!SALE_WEAPONS[id] || SALE_WEAPONS[id].evolved) return false;
+    const def = SALE_WEAPONS[id];
+    if (!def || def.evolved) return false;
+    const banTypes = (this.saleContract && this.saleContract.banTypes) || [];
+    if (banTypes.includes(def.type)) return false;
     if (id === 'receipt') return true;
     const hero = getSaleHero(this.saleHeroId || this.selectedHeroId);
     if (hero.starterWeapon === id) return true;
+    const floor = this.getSaleFloor();
+    if (floor && floor.weapons && floor.weapons.includes(id)) return true;
+    if ((this.saleRunUnlocks || []).includes(id)) return true;
     const unlocked = (this.saleUnlockedWeapons || ['receipt']).map((x) => this.migrateSaleWeaponId(x));
     if (unlocked.includes(id)) return true;
     if ((this.saleTime || 0) >= SALE_CATALOG_OPEN_SEC || (this.saleLevel || 0) >= SALE_CATALOG_OPEN_LV) {
@@ -1682,7 +2092,7 @@
     // слот занимает любое оружие, включая эволюции (evo заменяет базу, слот тот же)
     const slotCount = Object.keys(this.saleWeapons).filter((id) => (this.saleWeapons[id] || 0) > 0).length;
     const ownedP = Object.keys(this.salePassives).filter((id) => (this.salePassives[id] || 0) > 0);
-    const canNewWeapon = slotCount < SALE_MAX_WEAPONS;
+    const canNewWeapon = slotCount < this.saleMaxWeaponSlots();
     const banned = this.saleBanned || {};
     this.saleOverflow = this.saleOverflow || {};
     this.saleWeaponOver = this.saleWeaponOver || {};
@@ -1694,15 +2104,19 @@
       if (lv <= 0) {
         if (!canNewWeapon) continue;
         if (!this.saleWeaponInCatalog(def.id)) continue;
+        const role = SALE_ROLE_LABEL[def.type] || def.type;
         candidates.push({
-          kind: 'weapon_new', id: def.id, ico: def.ico, ttl: def.name, desc: def.desc,
-          weight: 2.2,
+          kind: 'weapon_new', id: def.id, ico: def.ico,
+          ttl: def.name, desc: `${def.desc} · ${role}`,
+          weight: 2.2, role,
         });
       } else if (lv < def.max) {
+        const role = SALE_ROLE_LABEL[def.type] || def.type;
         candidates.push({
           kind: 'weapon_up', id: def.id, ico: def.ico,
-          ttl: `${def.name} ур.${lv + 1}`, desc: `Улучшить до ${lv + 1}/${def.max}`,
-          weight: 3,
+          ttl: `${def.name} ур.${lv + 1}`,
+          desc: `Улучшить до ${lv + 1}/${def.max} · ${role}`,
+          weight: 3, role,
         });
       } else {
         // поверх капа — мягкий оверлевел оружия
@@ -1739,10 +2153,20 @@
       const lv = this.salePassives[def.id] || 0;
       if (lv <= 0 && !canNewPassive) continue;
       if (lv < def.max) {
+        // ключ эво: если база уже на капе — чаще предлагаем пассивку, чтобы ветка открылась
+        let weight = 2;
+        for (const ev of SALE_EVOLUTIONS) {
+          if (ev.needPassive !== def.id) continue;
+          const fromMax = SALE_WEAPONS[ev.from]?.max || 5;
+          if ((this.saleWeapons[ev.from] || 0) >= fromMax && !this.saleWeapons[ev.into]) {
+            weight = 4.8;
+            break;
+          }
+        }
         candidates.push({
           kind: 'passive', id: def.id, ico: def.ico,
           ttl: `${def.name} ур.${lv + 1}`, desc: def.desc,
-          weight: 2,
+          weight,
         });
       }
     }
@@ -1768,11 +2192,34 @@
       if (ev.needPassive && !(this.salePassives[ev.needPassive] > 0)) continue;
       if (ev.needWeapon && !(this.saleWeapons[ev.needWeapon] > 0)) continue;
       const into = SALE_WEAPONS[ev.into];
+      const fromDef = SALE_WEAPONS[ev.from];
+      const fromName = fromDef?.name || ev.from;
+      const role = SALE_ROLE_LABEL[into.type] || into.type;
+      const before = fromDef ? `${SALE_ROLE_LABEL[fromDef.type] || fromDef.type}` : '?';
+      const after = `${role}`;
+      const hint = ev.branchHint ? `${ev.branchHint} · ` : '';
       guaranteed.push({
         kind: 'evolve', id: ev.into, from: ev.from, ico: into.ico,
-        ttl: `✨ ${ev.name}`, desc: into.desc,
+        ttl: ev.branch ? `✨ ${fromName} → ${ev.name}` : `✨ ${ev.name}`,
+        desc: `${hint}${into.desc} · ${before} → ${after}`,
+        branch: ev.branch || null,
+        role,
       });
     }
+
+    // две готовые ветки одной базы (сканер / карта) — только выбор ветки, без лишних карт
+    const byFrom = {};
+    for (const g of guaranteed) {
+      (byFrom[g.from] = byFrom[g.from] || []).push(g);
+    }
+    const branchPick = Object.values(byFrom).find((arr) => arr.length >= 2);
+    if (branchPick) {
+      return branchPick.map((g) => ({
+        ...g,
+        ttl: `✨ Ветка «${g.branch || g.id}»: ${SALE_WEAPONS[g.id]?.name || g.id}`,
+      }));
+    }
+
     if (this.player.hp < this.player.maxHp) {
       candidates.push({ kind: 'heal', id: 'heal', ico: '❤️', ttl: 'Аптечка', desc: '+2 HP сейчас', weight: 1.2 });
     }
@@ -1831,10 +2278,20 @@
     wrap.classList.toggle('banish-mode', !!this._saleBanishMode);
     const title = document.querySelector('#upgrade-overlay h2');
     const sub = document.getElementById('upgrade-sub') || document.querySelector('#upgrade-overlay p');
-    if (title) title.textContent = `⬆ Уровень ${this.saleLevel}!`;
-    if (sub) sub.textContent = this._saleBanishMode
-      ? '🚫 Выбери карту, которую забанить до конца забега'
-      : 'Оружие / пассивка / эволюция · можно перебросить выбор';
+    const branchOnly = this.upgradeChoices.length >= 2
+      && this.upgradeChoices.every((u) => u.kind === 'evolve' && u.branch);
+    if (title) {
+      title.textContent = branchOnly
+        ? `✨ Выбери ветку эволюции`
+        : `⬆ Уровень ${this.saleLevel}!`;
+    }
+    if (sub) {
+      sub.textContent = this._saleBanishMode
+        ? '🚫 Выбери карту, которую забанить до конца забега'
+        : branchOnly
+          ? 'Две ветки готовы — выбери одну (вторая станет недоступна)'
+          : 'Оружие / пассивка / эволюция · можно перебросить выбор';
+    }
     this.upgradeChoices.forEach((up, i) => {
       const el = document.createElement('button');
       el.className = 'card';
@@ -1974,6 +2431,15 @@
       this.spawnSpriteFx('fx_shield', e.x, e.y - 6, { scale: 0.35, life: 0.12, vy: -6 });
       return false;
     }
+    if (opts.mark) e._saleMarked = Math.max(e._saleMarked || 0, opts.mark);
+    if ((e._saleMarked || 0) > 0) {
+      let markMul = 1.3;
+      if (this.salePassives.sticker) markMul += this.salePassives.sticker * 0.12;
+      if (this.saleSynergyOn('markAura') && opts.fromAura) markMul += 0.25;
+      dmg = Math.max(1, Math.round(dmg * markMul));
+    }
+    const floor = this.getSaleFloor();
+    if (floor && floor.knockMul && knock) knock *= floor.knockMul;
     const died = e.hit(dmg, srcX, srcY, knock || 140, opts.stun || 0);
     this.pushSaleDmgNum(e.x, e.y - e.r - 6, Math.min(dmg, e.maxHp || dmg));
     if (opts.confuse && !died) {
@@ -2017,10 +2483,24 @@
     const dmgM = this.saleDmgMul();
     const cdM = this.saleCdMul();
     const projBonus = this.saleProjectileBonus();
+    if (this._saleShieldT > 0) this._saleShieldT -= dt;
+    if (this.saleRoleBan) {
+      this.saleRoleBan.t -= dt;
+      if (this.saleRoleBan.t <= 0) {
+        this.showEventBanner('🔓 Бан роли снят', 1.2);
+        this.saleRoleBan = null;
+      }
+    }
+    for (const e of this.enemies) {
+      if ((e._saleMarked || 0) > 0) e._saleMarked -= dt;
+    }
 
     for (const [id, lv] of Object.entries(this.saleWeapons)) {
       const def = SALE_WEAPONS[id];
       if (!def) continue;
+      if (this.saleRoleBan && def.type === this.saleRoleBan.type) continue;
+      const banTypes = (this.saleContract && this.saleContract.banTypes) || [];
+      if (banTypes.includes(def.type)) continue;
       const level = Math.min(def.max, Math.max(1, lv)) - 1;
       this.saleWeaponCd[id] = (this.saleWeaponCd[id] || 0) - dt;
       if (this.saleWeaponCd[id] > 0) continue;
@@ -2038,7 +2518,8 @@
         while (list.length < need) {
           const o = {
             weaponId: id, ico: def.ico, visual: def.visual || id, angle: (Math.PI * 2 * list.length) / need,
-            radius, dmg, spin, size: def.size || 1, trail: !!def.trail, hitAt: new Map(),
+            radius, dmg, spin, size: def.size || 1, trail: !!def.trail, explodeHit: !!def.explodeHit,
+            hitAt: new Map(),
           };
           this.saleOrbits.push(o);
           list.push(o);
@@ -2050,7 +2531,7 @@
         for (const o of this.saleOrbits) {
           if (o.weaponId !== id) continue;
           o.radius = radius; o.dmg = dmg; o.spin = spin; o.ico = def.ico; o.size = def.size || 1;
-          o.visual = def.visual || id;
+          o.visual = def.visual || id; o.explodeHit = !!def.explodeHit;
         }
         this.saleWeaponCd[id] = 0.15;
         continue;
@@ -2072,6 +2553,7 @@
           turn: def.turn || 8,
           cone: def.cone || 0,
           summonBats: !!def.summonBats,
+          burn: !!this.saleSynergyOn('beamBurn'),
           tick: 0,
         });
         continue;
@@ -2092,7 +2574,8 @@
           const s = {
             weaponId: id, x: p.x, y: p.y, ang: 0, cd: 0,
             ico: def.ico, visual: def.visual || id, size: def.size || 1,
-            trail, dmg: swordDmg, range, speed, hitR: 16 + (def.size || 1) * 4,
+            trail, floorSlow: !!def.floorSlow, dmg: swordDmg, range, speed,
+            hitR: 16 + (def.size || 1) * 4,
           };
           this.saleSwords.push(s);
           list.push(s);
@@ -2104,6 +2587,20 @@
         for (const s of list) {
           s.dmg = swordDmg; s.range = range; s.speed = speed; s.ico = def.ico;
           s.visual = def.visual || id; s.trail = trail; s.size = def.size || 1;
+          s.floorSlow = !!def.floorSlow;
+        }
+        if (def.floorSlow && p) {
+          this.salePuddles = this.salePuddles || [];
+          // одна «мокрая» зона под игроком
+          let floor = this.salePuddles.find((u) => u._wetFloor);
+          if (!floor) {
+            floor = {
+              x: p.x, y: p.y, r: 48, life: 0.4, dmg: 0, tick: 0, color: '#38bdf8',
+              slow: 0.45, _wetFloor: true, hurtPlayer: false,
+            };
+            this.salePuddles.push(floor);
+          }
+          floor.x = p.x; floor.y = p.y; floor.life = 0.45;
         }
         continue;
       }
@@ -2122,31 +2619,96 @@
         if (def.impact) {
           this.spawnSpriteFx(def.impact, p.x, p.y, { scale: Math.min(0.55, maxR / 240), life: 0.28, vy: 0 });
         }
+        if (def.iFrames && p) {
+          p.invincible = Math.max(p.invincible || 0, def.iFrames);
+        }
         continue;
       }
 
       if (def.type === 'aura') {
         const radius = (def.radius[level] || def.radius[0] || 80) * area;
         const isPromo = !!def.promo || def.visual === 'speaker';
-        const pulseT = isPromo ? 0.4 : 0.22;
+        const isUltra = def.visual === 'ultrasound' || id === 'ultrasound';
+        const pulseT = isPromo || isUltra ? 0.4 : 0.22;
         this._saleAura = {
           r: radius, t: pulseT, max: pulseT,
-          ico: isPromo ? null : def.ico,
+          ico: isPromo || isUltra ? null : def.ico,
           visual: def.visual,
           blood: false,
           promo: isPromo,
+          ultra: isUltra,
         };
         if (isPromo) this._salePromoAuraR = radius;
+        if (isUltra) this._saleUltraAuraR = radius;
         for (const e of this.enemies) {
           if (e.hp <= 0) continue;
           if (dist(p.x, p.y, e.x, e.y) < radius + e.r) {
             this.saleHitEnemy(e, dmg, p.x, p.y, def.knock || 70, {
-              lifesteal: def.lifesteal, impact: def.impact, explodeOnKill: def.explodeOnKill, color: '#9b59b6',
+              lifesteal: def.lifesteal, impact: def.impact, explodeOnKill: def.explodeOnKill,
+              color: isUltra ? '#38bdf8' : '#9b59b6', fromAura: true,
             });
           }
         }
         if (def.impact) {
           this.spawnSpriteFx(def.impact, p.x, p.y, { scale: Math.min(0.4, radius / 220), life: 0.18, vy: 0 });
+        }
+        continue;
+      }
+
+      if (def.type === 'shield') {
+        const range = (def.range[level] || def.range[0] || 100) * area;
+        const ang = p.angle;
+        const half = def.arc || 0.85;
+        for (const e of this.enemies) {
+          if (e.hp <= 0) continue;
+          const d = dist(p.x, p.y, e.x, e.y);
+          if (d > range + e.r) continue;
+          let diff = angleTo(p.x, p.y, e.x, e.y) - ang;
+          while (diff > Math.PI) diff -= Math.PI * 2;
+          while (diff < -Math.PI) diff += Math.PI * 2;
+          if (Math.abs(diff) < half) {
+            this.saleHitEnemy(e, dmg, p.x, p.y, def.knock || 220, { color: '#64748b', impact: 'sp_quake1' });
+          }
+        }
+        this._saleShieldT = Math.max(this._saleShieldT || 0, 0.55);
+        this.spawnAnimFx('afx_ring', p.x + Math.cos(ang) * 36, p.y + Math.sin(ang) * 36, {
+          life: 0.3, scale: 0.5, scaleEnd: 1.2, tint: '#94a3b8',
+        });
+        continue;
+      }
+
+      if (def.type === 'radio') {
+        let maxR = (def.radius[level] || def.radius[0] || 160) * area;
+        if (this.salePassives.broadcast) maxR *= 1 + this.salePassives.broadcast * 0.1;
+        for (const e of this.enemies) {
+          if (e.hp <= 0) continue;
+          if (dist(p.x, p.y, e.x, e.y) > maxR + e.r) continue;
+          this.saleHitEnemy(e, dmg, p.x, p.y, 40, {
+            color: '#38bdf8', impact: def.impact, stun: def.stun || 0,
+          });
+          e.slowTimer = Math.max(e.slowTimer || 0, 1.1);
+          e._saleRadioSlow = def.slow || 0.55;
+        }
+        this.spawnAnimFx('afx_ring', p.x, p.y, {
+          life: 0.5, scale: 0.7, scaleEnd: Math.max(1.4, maxR / 90), tint: '#7dd3fc',
+        });
+        continue;
+      }
+
+      if (def.type === 'mark') {
+        let count = (def.count?.[level] || def.count?.[0] || 1) + projBonus;
+        const targets = this.enemies.filter((e) => e.hp > 0)
+          .map((e) => ({ e, d: dist(p.x, p.y, e.x, e.y) }))
+          .sort((a, b) => a.d - b.d);
+        for (let i = 0; i < count; i++) {
+          let ang = p.angle;
+          if (targets[i]) ang = angleTo(p.x, p.y, targets[i].e.x, targets[i].e.y);
+          else if (targets[0]) ang = angleTo(p.x, p.y, targets[0].e.x, targets[0].e.y) + (i - 1) * 0.25;
+          this.saleProjectiles.push({
+            x: p.x, y: p.y, angle: ang, speed: def.speed || 460, life: 1.6, r: 11,
+            dmg, ico: def.ico, visual: def.visual || id, bounces: 0, puddle: false,
+            mark: def.markSec || 4, impact: def.impact, hit: new Set(),
+          });
         }
         continue;
       }
@@ -2190,7 +2752,8 @@
         const a = nearest ? angleTo(p.x, p.y, nearest.x, nearest.y) : p.angle;
         this.saleBoomerangs.push({
           x: p.x, y: p.y, angle: a, speed: def.speed || 340,
-          range, traveled: 0, returning: false, dmg, ico: def.ico, visual: def.visual || id, hit: new Set(), size: 1.1,
+          range, traveled: 0, returning: false, dmg, ico: def.ico, visual: def.visual || id,
+          hit: new Set(), size: def.size || 1.1,
         });
         continue;
       }
@@ -2226,6 +2789,8 @@
             r: 12, dmg, ico: def.ico, visual: def.visual || id,
             bounces: def.type === 'ricochet' ? (def.bounces?.[level] || 3) : 0,
             puddle: def.type === 'puddle',
+            puddleSlow: def.puddleSlow,
+            puddleColor: def.puddleColor,
             confuse: def.confuse || 0,
             lifesteal: def.lifesteal || 0,
             explodeOnKill: !!def.explodeOnKill,
@@ -2240,7 +2805,26 @@
 
   Game.prototype.updateSaleOrbits = function (dt) {
     const p = this.player;
+    if (!p) return;
     const now = performance.now();
+    this._saleOrbitVolleyCd = this._saleOrbitVolleyCd || {};
+    // залп «Возврат чека»
+    for (const [wid, lv] of Object.entries(this.saleWeapons || {})) {
+      if (!lv) continue;
+      const def = SALE_WEAPONS[wid];
+      if (!def || !def.volleyOut) continue;
+      this._saleOrbitVolleyCd[wid] = (this._saleOrbitVolleyCd[wid] || 0) - dt;
+      if (this._saleOrbitVolleyCd[wid] > 0) continue;
+      this._saleOrbitVolleyCd[wid] = def.volleyCd || 1.4;
+      const dmg = Math.max(1, Math.round((def.dmg[0] || 2) * this.saleDmgMul()));
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI * 2 * i) / 6 + now * 0.001;
+        this.saleProjectiles.push({
+          x: p.x, y: p.y, angle: a, speed: 340, life: 1.1, r: 10,
+          dmg, ico: def.ico, visual: def.visual || wid, bounces: 0, puddle: false, hit: new Set(),
+        });
+      }
+    }
     for (const o of this.saleOrbits) {
       o.angle += dt * (o.spin || 3);
       o.x = p.x + Math.cos(o.angle) * o.radius;
@@ -2254,6 +2838,12 @@
         if (dist(o.x, o.y, e.x, e.y) < e.r + 22 * (o.size || 1)) {
           o.hitAt.set(e, now + 280);
           this.saleHitEnemy(e, o.dmg, p.x, p.y, 130, { color: '#f39c12', spark: 'fx_slash' });
+          if (o.explodeHit) {
+            this.spawnAnimFx('afx_ring', e.x, e.y, { life: 0.28, scale: 0.4, scaleEnd: 1.1 });
+            this.salePuddles.push({
+              x: e.x, y: e.y, r: 28, life: 1.05, dmg: 1, tick: 0, color: '#f59e0b',
+            });
+          }
         }
       }
     }
@@ -2275,9 +2865,10 @@
         b.y += Math.sin(a) * b.speed * 1.2 * dt;
         if (dist(b.x, b.y, p.x, p.y) < 22) b.dead = true;
       }
+      const hitR = 14 * (b.size || 1.1);
       for (const e of this.enemies) {
         if (e.hp <= 0 || b.hit.has(e)) continue;
-        if (dist(b.x, b.y, e.x, e.y) < e.r + 14) {
+        if (dist(b.x, b.y, e.x, e.y) < e.r + hitR) {
           b.hit.add(e);
           this.saleHitEnemy(e, b.dmg, b.x, b.y, 200, { color: '#1abc9c' });
         }
@@ -2297,11 +2888,16 @@
           pr.hit.add(e);
           this.saleHitEnemy(e, pr.dmg, pr.x, pr.y, 160, {
             confuse: pr.confuse, lifesteal: pr.lifesteal, impact: pr.impact,
-            explodeOnKill: pr.explodeOnKill, color: '#f1c40f',
+            explodeOnKill: pr.explodeOnKill, color: '#f1c40f', mark: pr.mark || 0,
           });
           if (pr.impact) this.spawnSpriteFx(pr.impact, pr.x, pr.y, { scale: 0.45, life: 0.2, vy: 0 });
           if (pr.puddle) {
-            this.salePuddles.push({ x: e.x, y: e.y, r: 40, life: 2.8, dmg: 1, tick: 0, color: '#d35400', slow: 0.55 });
+            this.salePuddles.push({
+              x: e.x, y: e.y, r: 40, life: 2.8, dmg: 1, tick: 0,
+              color: pr.puddleColor || '#d35400',
+              slow: pr.puddleSlow != null ? pr.puddleSlow : 0.55,
+              poison: !!pr.poison || !!this.saleSynergyOn('poisonPuddle'),
+            });
             pr.life = 0;
           } else if (pr.bounces > 0) {
             pr.bounces--;
@@ -2416,6 +3012,11 @@
           const px = ax + bx * t, py = ay + by * t;
           if (dist(px, py, e.x, e.y) < e.r + b.width * 0.35) {
             this.saleHitEnemy(e, b.dmg, px, py, 60, { color: '#f1c40f', spark: 'sp_fire1' });
+            if (b.burn && Math.random() < 0.35) {
+              this.salePuddles.push({
+                x: e.x, y: e.y, r: 22, life: 1.6, dmg: 1, tick: 0, color: '#ea580c',
+              });
+            }
             if (b.summonBats && Math.random() < 0.1) {
               this.saleSeekers.push({
                 x: p.x, y: p.y, vx: 0, vy: 0,
@@ -2993,14 +3594,22 @@
           this.player.knockback.x += Math.cos(a) * 140;
           this.player.knockback.y += Math.sin(a) * 140;
         } else if (this.player.invincible <= 0 && this.player.lunchTimer <= 0 && this.player.dashTime <= 0) {
-          if (this.player.takeDamage(enemy.x, enemy.y)) {
+          // турникет: краткий блок контакта
+          if ((this._saleShieldT || 0) > 0 && Math.random() < 0.65) {
+            this.spawnAnimFx('afx_ring', this.player.x, this.player.y, { life: 0.2, scale: 0.4, scaleEnd: 0.9, tint: '#94a3b8' });
+            const a = angleTo(enemy.x, enemy.y, this.player.x, this.player.y);
+            enemy.knockback = enemy.knockback || { x: 0, y: 0 };
+            enemy.knockback.x -= Math.cos(a) * 180;
+            enemy.knockback.y -= Math.sin(a) * 180;
+          } else if (this.player.takeDamage(enemy.x, enemy.y)) {
             this.endSaleGame(false, enemy.nameTag || 'Покупатель');
             return;
+          } else {
+            this.tookDamage = true;
+            sfx.hurt();
+            this.vibrate(40);
+            if (this.applySaleFragileExtra()) return;
           }
-          this.tookDamage = true;
-          sfx.hurt();
-          this.vibrate(40);
-          if (this.applySaleFragileExtra()) return;
         }
       }
     }
@@ -3165,16 +3774,29 @@
 
     if (this.$combo) this.$combo.style.display = 'none';
 
+    this.tickSaleSynergyAnnounce();
+
     const tags = [];
     // слоты: базовое + эволюции считаются занятыми слотами билда
     const wepSlots = Object.keys(this.saleWeapons).filter((id) => (this.saleWeapons[id] || 0) > 0).length;
-    tags.push(`<span class="buff-tag good">⚔ ${wepSlots}/${SALE_MAX_WEAPONS}</span>`);
+    const maxSlots = this.saleMaxWeaponSlots();
+    tags.push(`<span class="buff-tag good">⚔ ${wepSlots}/${maxSlots}</span>`);
+    for (const syn of this.getActiveSaleSynergies()) {
+      tags.push(`<span class="buff-tag syn" title="${syn.label}">🔗 ${syn.short || syn.label}</span>`);
+    }
+    if (this.saleRoleBan && this.saleRoleBan.t > 0) {
+      const role = SALE_ROLE_LABEL[this.saleRoleBan.type] || this.saleRoleBan.type;
+      tags.push(`<span class="buff-tag bad">🚫 ${role} ${this.saleRoleBan.t.toFixed(0)}с</span>`);
+    }
+    if ((this._saleShieldT || 0) > 0) {
+      tags.push(`<span class="buff-tag good">🚧 блок</span>`);
+    }
     const ovPower = (this.saleOverflow && this.saleOverflow.power) || 0;
     if (ovPower > 0) tags.push(`<span class="buff-tag good">💪 +${ovPower}</span>`);
     if (p.lunchTimer > 0) tags.push(`<span class="buff-tag good">☕ ${p.lunchTimer.toFixed(0)}с</span>`);
     if (this.saleActiveEvent) {
-      const left = Math.max(0, this.saleActiveEvent.t);
-      tags.push(`<span class="buff-tag bad">📣 ${left.toFixed(0)}с</span>`);
+      const leftEv = Math.max(0, this.saleActiveEvent.t);
+      tags.push(`<span class="buff-tag bad">📣 ${leftEv.toFixed(0)}с</span>`);
     }
     if (this.saleXpEventMul > 1.01) tags.push(`<span class="buff-tag good">✨ XP×${this.saleXpEventMul}</span>`);
     if (this.saleXpEventMul < 0.99) tags.push(`<span class="buff-tag bad">💸 XP×${this.saleXpEventMul}</span>`);
@@ -3369,22 +3991,27 @@
       }
     }
 
-    // громкоговоритель — постоянный «акционный» пол (LN censer)
-    if (this.saleWeapons && this.saleWeapons.speaker && this.player && this._salePromoAuraR > 0) {
+    // громкоговоритель / ультразвук — постоянный пол-аура (LN censer)
+    const floorAura = (this.saleWeapons && this.saleWeapons.ultrasound && this._saleUltraAuraR > 0)
+      ? { r: this._saleUltraAuraR, label: 'УЗВ', fill0: 'rgba(56,189,248,0.2)', fill1: 'rgba(14,116,144,0.08)', fill2: 'rgba(8,47,73,0)', stroke: 'rgba(125,211,252,0.4)', text: 'rgba(186,230,253,0.55)' }
+      : (this.saleWeapons && this.saleWeapons.speaker && this._salePromoAuraR > 0)
+        ? { r: this._salePromoAuraR, label: 'АКЦИЯ', fill0: 'rgba(155,89,186,0.18)', fill1: 'rgba(120,60,160,0.08)', fill2: 'rgba(80,40,120,0)', stroke: 'rgba(241,196,15,0.35)', text: 'rgba(255,230,150,0.55)' }
+        : null;
+    if (floorAura && this.player) {
       const px = this.player.x;
       const py = this.player.y;
-      const r = this._salePromoAuraR;
+      const r = floorAura.r;
       const t = performance.now() / 1000;
       ctx.save();
       const g = ctx.createRadialGradient(px, py, r * 0.1, px, py, r);
-      g.addColorStop(0, 'rgba(155,89,186,0.18)');
-      g.addColorStop(0.55, 'rgba(120,60,160,0.08)');
-      g.addColorStop(1, 'rgba(80,40,120,0)');
+      g.addColorStop(0, floorAura.fill0);
+      g.addColorStop(0.55, floorAura.fill1);
+      g.addColorStop(1, floorAura.fill2);
       ctx.fillStyle = g;
       ctx.beginPath();
       ctx.arc(px, py, r, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = 'rgba(241,196,15,0.35)';
+      ctx.strokeStyle = floorAura.stroke;
       ctx.lineWidth = 2;
       ctx.setLineDash([6, 10]);
       ctx.lineDashOffset = -t * 40;
@@ -3393,12 +4020,12 @@
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.font = 'bold 11px "Segoe UI",sans-serif';
-      ctx.fillStyle = 'rgba(255,230,150,0.55)';
+      ctx.fillStyle = floorAura.text;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       for (let i = 0; i < 3; i++) {
         const a = t * 1.1 + (i * Math.PI * 2) / 3;
-        ctx.fillText('АКЦИЯ', px + Math.cos(a) * r * 0.72, py + Math.sin(a) * r * 0.72);
+        ctx.fillText(floorAura.label, px + Math.cos(a) * r * 0.72, py + Math.sin(a) * r * 0.72);
       }
       ctx.restore();
     }
@@ -3729,6 +4356,8 @@
     const secs = Math.floor(survived % 60);
     let bankGain = Math.floor(this.coins * 0.4) + Math.floor(survived / 30) + (won ? 40 : Math.floor(survived / 60) * 3);
     bankGain = Math.floor(bankGain * (1 + (this.salePassives.wallet || 0) * 0.1));
+    const contractMul = (this.saleContract && this.saleContract.coinMul) || 1;
+    bankGain = Math.floor(bankGain * contractMul);
     this.bankCoins += bankGain;
     this.persist();
 
@@ -3758,6 +4387,10 @@
   window.SALE_EVENT_POOLS = SALE_EVENT_POOLS;
   window.SALE_HUB_PASSIVES = SALE_HUB_PASSIVES;
   window.SALE_WEAPON_MIGRATE = SALE_WEAPON_MIGRATE;
+  window.SALE_FLOORS = SALE_FLOORS;
+  window.SALE_CONTRACTS = SALE_CONTRACTS;
+  window.SALE_EVOLUTIONS = SALE_EVOLUTIONS;
+  window.SALE_SYNERGIES = SALE_SYNERGIES;
 
   Game.prototype.renderSaleHubLoadout = function () {
     const heroBox = document.getElementById('hub-sale-heroes');
@@ -3781,24 +4414,77 @@
       }
     }
 
+    const floorBox = document.getElementById('hub-sale-floors');
+    if (floorBox) {
+      floorBox.innerHTML = '';
+      if (!this.selectedFloorId) this.selectedFloorId = 'grocery';
+      for (const fl of SALE_FLOORS) {
+        const el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'hub-card' + (this.selectedFloorId === fl.id ? ' sel' : '');
+        el.innerHTML = `<div class="ttl">${fl.ico} ${fl.name}</div>
+          <div class="desc">${fl.desc}</div>
+          <div class="meta">${this.selectedFloorId === fl.id ? 'Выбран' : 'Выбрать'}</div>`;
+        el.onclick = () => {
+          this.selectedFloorId = fl.id;
+          this.persist();
+          this.renderHub();
+          sfx.click();
+        };
+        floorBox.appendChild(el);
+      }
+    }
+
+    const contractBox = document.getElementById('hub-sale-contracts');
+    if (contractBox) {
+      contractBox.innerHTML = '';
+      if (!this.selectedContractId) this.selectedContractId = 'none';
+      for (const c of SALE_CONTRACTS) {
+        const el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'hub-card' + (this.selectedContractId === c.id ? ' sel' : '');
+        el.innerHTML = `<div class="ttl">${c.ico} ${c.name}</div>
+          <div class="desc">${c.desc}</div>
+          <div class="meta">${this.selectedContractId === c.id ? 'Активен' : 'Выбрать'} · ×${c.coinMul}</div>`;
+        el.onclick = () => {
+          this.selectedContractId = c.id;
+          this.persist();
+          this.renderHub();
+          sfx.click();
+        };
+        contractBox.appendChild(el);
+      }
+    }
+
     const wepBox = document.getElementById('hub-sale-weapons');
     if (wepBox) {
       wepBox.innerHTML = '';
+      const startP = this.saleStartPassives || {};
+      const evoHint = (wid) => {
+        const tips = [];
+        for (const ev of SALE_EVOLUTIONS) {
+          if (ev.from !== wid) continue;
+          if (startP[ev.needPassive] > 0) tips.push('откроет «' + ev.name + '»');
+        }
+        return tips.length ? ' · ' + tips.join(' / ') : '';
+      };
       for (const def of Object.values(SALE_WEAPONS)) {
         if (def.evolved) continue;
         const owned = (this.saleUnlockedWeapons || []).includes(def.id);
         const cost = SALE_HUB_WEAPON_COST[def.id];
+        const role = SALE_ROLE_LABEL[def.type] || def.type;
+        const hint = evoHint(def.id);
         const el = document.createElement('button');
         el.type = 'button';
-        el.className = 'hub-card' + (owned ? ' sel' : '');
+        el.className = 'hub-card' + (owned ? ' sel' : '') + (hint ? ' hot' : '');
         if (def.id === 'receipt') {
           el.innerHTML = `<div class="ttl">${def.ico} ${def.name}</div>
-            <div class="desc">${def.desc}</div>
+            <div class="desc">${def.desc} · ${role}${hint}</div>
             <div class="meta">Всегда в ассортименте</div>`;
           el.disabled = true;
         } else {
           el.innerHTML = `<div class="ttl">${def.ico} ${def.name}</div>
-            <div class="desc">${def.desc}</div>
+            <div class="desc">${def.desc} · ${role}${hint}</div>
             <div class="meta">${owned ? 'В ассортименте забега' : ('Купить в ассортимент 🪙 ' + cost)}</div>`;
           if (!owned) {
             el.onclick = () => this.buySaleWeaponUnlock(def.id);
@@ -3903,7 +4589,7 @@
     const H = (t) => `<div class="dvh">${t}</div>`;
     const R = (s) => `<div class="dvrow">${s}</div>`;
     const enemyTypes = ['normal', 'fast', 'tank', 'fatty', 'manager', 'returner', 'boss', 'director', 'miniboss'];
-    const wepIds = Object.keys(SALE_WEAPONS).filter((id) => !SALE_WEAPONS[id].evolved).slice(0, 12);
+    const wepIds = Object.keys(SALE_WEAPONS).filter((id) => !SALE_WEAPONS[id].evolved);
     const info = g
       ? `t=${fmtSaleClock(g.saleTime)} · lv=${g.saleLevel || 0} · 🪙${g.coins || 0} · mobs=${(g.enemies || []).filter((e) => e.hp > 0).length} · god=${g.__god ? 'ON' : 'off'} · ×${g.__saleTimeScale || 1}`
       : 'game не готов';
