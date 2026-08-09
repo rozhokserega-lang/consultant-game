@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const SALE_VERSION = '0.10.3-sale';
+  const SALE_VERSION = '0.11.0-sale';
   const SALE_DURATION = 20 * 60; // 20 минут
   const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
   const SALE_WORLD_MUL = 2.75;
@@ -18,8 +18,26 @@
   const SALE_CATALOG_OPEN_LV = 12;
   const SALE_ROLE_BAN_SEC = 20;
   const SALE_LIFESTEAL_CD = 2.2; // сек между хилами от вампиризма
-  /** LN-style: враги слабее в начале, к 6:00 выходят на baseline */
-  const SALE_WARM_MINUTES = 6;
+  /** LN-style: враги слабее в начале, к 9:00 выходят на baseline кривой */
+  const SALE_WARM_MINUTES = 9;
+
+  /**
+   * Единый регулятор сложности как в LONG NIGHT (DIFFICULTY + WDMG).
+   * m = минуты забега. Крутить только здесь.
+   */
+  const SALE_DIFFICULTY = {
+    mul: 1.15,
+    /** LN WDMG: глобальный множитель урона оружия (−28%) */
+    weaponDmg: 0.72,
+    /** общий i-frame орбит на враге (сек), как LN orbT */
+    orbHitCd: 0.42,
+    warm: (m) => 0.65 + 0.35 * Math.min(1, m / SALE_WARM_MINUTES),
+    hpWarm: (m) => 0.55 + 0.45 * Math.min(1, m / 4),
+    /** кривая HP: без неё чек AFK-чистит весь зал */
+    hp: (m) => 1 + 0.32 * m + 0.07 * m * m,
+    spd: (m) => 1 + Math.min(0.32, m * 0.038),
+    bossHp: (m) => 1 + m * 0.09,
+  };
   /** LN-style директор: босс каждые 180с, волны ~42с, элиты ~70с */
   const SALE_BOSS_INTERVAL = 180;
   const SALE_BOSS_GAP_AFTER_KILL = 45;
@@ -161,13 +179,24 @@
 
   function saleWarmMul(tSec) {
     const m = Math.max(0, tSec) / 60;
-    // 0.65 → 1.0 за SALE_WARM_MINUTES
-    return Math.min(1, 0.65 + 0.35 * Math.min(1, m / SALE_WARM_MINUTES));
+    return SALE_DIFFICULTY.warm(m);
   }
   function saleCoinWarmMul(tSec) {
     const m = Math.max(0, tSec) / 60;
-    // ×2 в начале → ×1 к 6 мин
+    // ×2 в начале → ×1 к концу warm
     return Math.max(1, 2 - m / SALE_WARM_MINUTES);
+  }
+  /** Итоговый множитель HP моба (волна Enemy × эта кривая). */
+  function saleEnemyScaleMul(tSec) {
+    const m = Math.max(0, tSec) / 60;
+    return SALE_DIFFICULTY.mul
+      * SALE_DIFFICULTY.warm(m)
+      * SALE_DIFFICULTY.hpWarm(m)
+      * SALE_DIFFICULTY.hp(m);
+  }
+  function saleEnemySpdScale(tSec) {
+    const m = Math.max(0, tSec) / 60;
+    return SALE_DIFFICULTY.spd(m);
   }
 
   window.SALE_VERSION = SALE_VERSION;
@@ -282,13 +311,13 @@
       baseCd: 0.95, dmg: [1, 1, 2, 2, 3], count: [1, 2, 2, 3, 4], speed: 520,
       visual: 'bloody_price', impact: 'sp_elec2',
     },
-    // orbit → чек
+    // orbit → чек (как LN blades: меньше штук, общий orbT на враге)
     receipt: {
       id: 'receipt', name: 'Чек', ico: '🧾', max: 5,
       desc: 'Чеки крутятся вокруг и режут толпу',
       type: 'orbit', evolve: 'endless_receipt',
-      baseCd: 0.1, dmg: [1, 1, 1, 2, 2], count: [3, 4, 5, 6, 8], radius: [58, 68, 78, 90, 105],
-      spin: 3.4, visual: 'receipt',
+      baseCd: 0.1, dmg: [1, 1, 1, 1, 2], count: [2, 3, 3, 4, 5], radius: [52, 60, 68, 78, 88],
+      spin: 2.7, visual: 'receipt',
     },
     // chain → смартфон
     phone: {
@@ -375,8 +404,8 @@
       id: 'giftbag', name: 'Пакет «спасибо»', ico: '🛍️', max: 5,
       desc: 'Пакеты на орбите; при касании вспыхивают',
       type: 'orbit', evolve: 'party_bags',
-      baseCd: 0.12, dmg: [1, 1, 1, 2, 2], count: [2, 2, 3, 3, 4], radius: [68, 78, 88, 98, 110],
-      spin: 2.6, visual: 'giftbag', explodeHit: true, size: 1.05,
+      baseCd: 0.12, dmg: [1, 1, 1, 1, 2], count: [2, 2, 2, 3, 3], radius: [64, 72, 80, 90, 100],
+      spin: 2.3, visual: 'giftbag', explodeHit: true, size: 1.0,
     },
 
     // ── эволюции ──
@@ -384,14 +413,14 @@
       id: 'endless_receipt', name: 'Бесконечный чек', ico: '📜', max: 1,
       desc: 'Плотная лента чеков вокруг',
       type: 'orbit', evolved: true,
-      baseCd: 0.08, dmg: [3], count: [12], radius: [100], spin: 5.5, visual: 'endless_receipt', size: 1.15,
+      baseCd: 0.08, dmg: [2], count: [7], radius: [92], spin: 4.0, visual: 'endless_receipt', size: 1.1,
     },
     receipt_return: {
       id: 'receipt_return', name: 'Возврат чека', ico: '↩️', max: 1,
       desc: 'Орбиты + периодический залп чеков наружу',
       type: 'orbit', evolved: true,
-      baseCd: 0.1, dmg: [2], count: [7], radius: [92], spin: 4.0, visual: 'endless_receipt',
-      size: 1.08, volleyOut: true, volleyCd: 1.75,
+      baseCd: 0.1, dmg: [2], count: [5], radius: [86], spin: 3.4, visual: 'endless_receipt',
+      size: 1.05, volleyOut: true, volleyCd: 2.0,
     },
     phone5g: {
       id: 'phone5g', name: 'Смартфон 5G', ico: '📶', max: 1,
@@ -498,8 +527,8 @@
       id: 'party_bags', name: 'Лента пакетов', ico: '🎁', max: 1,
       desc: 'Пакеты на орбите, взрываются от касания',
       type: 'orbit', evolved: true,
-      baseCd: 0.1, dmg: [2], count: [7], radius: [105], spin: 3.4, visual: 'giftbag',
-      explodeHit: true, size: 1.2,
+      baseCd: 0.1, dmg: [2], count: [5], radius: [96], spin: 3.0, visual: 'giftbag',
+      explodeHit: true, size: 1.15,
     },
   };
 
@@ -1136,9 +1165,9 @@
     return bonus;
   };
 
-  /** Бонус орбит от чекового аппарата / ленты */
+  /** Бонус орбит от чекового аппарата / ленты (кап 2 — иначе AFK-чек) */
   Game.prototype.saleOrbitBonus = function () {
-    return (this.salePassives.printer || 0) + (this.salePassives.ribbon || 0);
+    return Math.min(2, (this.salePassives.printer || 0) + (this.salePassives.ribbon || 0));
   };
   Game.prototype.saleXpMul = function () {
     const hero = getSaleHero(this.saleHeroId || this.selectedHeroId);
@@ -1173,13 +1202,23 @@
     }
     const wave = saleEnemyWaveApprox(this.saleTime);
     const e = new Enemy(x, y, type, wave);
-    const warm = saleWarmMul(this.saleTime);
-    if (warm < 0.999) {
-      e.maxHp = Math.max(1, Math.round(e.maxHp * warm));
-      e.hp = e.maxHp;
-    }
+    this.applySaleEnemyDifficulty(e);
     // в распродаже все агрессивны
     this.enemies.push(e);
+    return e;
+  };
+
+  /** LN DIFFICULTY: HP/скорость растут с минутами (не только warm-down). */
+  Game.prototype.applySaleEnemyDifficulty = function (e, opts) {
+    opts = opts || {};
+    if (!e || opts.noScale) return e;
+    const t = this.saleTime || 0;
+    const hpMul = saleEnemyScaleMul(t);
+    const spdMul = saleEnemySpdScale(t);
+    e.maxHp = Math.max(1, Math.round(e.maxHp * hpMul));
+    e.hp = e.maxHp;
+    e.speed = (e.speed || 60) * spdMul;
+    e._saleOrbT = 0;
     return e;
   };
 
@@ -1191,12 +1230,12 @@
     if (opts.nameTag) e.nameTag = opts.nameTag;
     if (opts.hp) { e.hp = e.maxHp = opts.hp; }
     if (opts.hpMul) { e.maxHp = Math.max(1, Math.round(e.maxHp * opts.hpMul)); e.hp = e.maxHp; }
-    if (!opts.hp && !opts.hpMul) {
-      const warm = saleWarmMul(this.saleTime);
-      if (warm < 0.999) {
-        e.maxHp = Math.max(1, Math.round(e.maxHp * warm));
-        e.hp = e.maxHp;
-      }
+    if (!opts.skipDiff && !opts.hp) {
+      // фиксированный hp босса — в spawnSaleBoss уже с bossHp-кривой
+      this.applySaleEnemyDifficulty(e, opts);
+    } else {
+      e._saleOrbT = 0;
+      if (!opts.hp) e.speed = (e.speed || 60) * saleEnemySpdScale(this.saleTime || 0);
     }
     if (opts.xpReward) e.xpReward = opts.xpReward;
     if (opts.vip) e._saleVip = true;
@@ -1215,15 +1254,20 @@
     let y = (p ? p.y : this.worldH / 2) + Math.sin(ang) * distSpawn;
     x = Math.max(60, Math.min(this.worldW - 60, x));
     y = Math.max(60, Math.min(this.worldH - 60, y));
+    const m = (this.saleTime || 0) / 60;
+    const bossHp = Math.max(def.hp, Math.round(
+      def.hp * SALE_DIFFICULTY.bossHp(m) * SALE_DIFFICULTY.mul * SALE_DIFFICULTY.warm(m)
+    ));
     const e = this.spawnSaleEnemyNear(x, y, 'boss', {
       overCap: 4,
       nameTag: def.name,
-      hp: def.hp,
+      hp: bossHp,
       xpReward: def.xpReward,
+      skipDiff: true,
     });
     if (!e) return null;
     e.saleBossId = def.id;
-    e.speed = def.speed;
+    e.speed = def.speed * saleEnemySpdScale(this.saleTime || 0);
     e.r = def.r;
     e.coinDrop = def.coinDrop;
     e.slashTimer = 9999; // отключаем дефолтный slash админа
@@ -2517,6 +2561,10 @@
       if (this.saleSynergyOn('markAura') && opts.fromAura) markMul += 0.25;
       dmg = Math.max(1, Math.round(dmg * markMul));
     }
+    // LN WDMG: всё оружие слабее — иначе орбиты/ауры AFK-чисят зал
+    if (!opts.raw) {
+      dmg = Math.max(1, Math.round(dmg * SALE_DIFFICULTY.weaponDmg));
+    }
     const floor = this.getSaleFloor();
     if (floor && floor.knockMul && knock) knock *= floor.knockMul;
     const died = e.hit(dmg, srcX, srcY, knock || 140, opts.stun || 0);
@@ -2887,6 +2935,10 @@
     if (!p) return;
     const now = performance.now();
     this._saleOrbitVolleyCd = this._saleOrbitVolleyCd || {};
+    // LN orbT: один общий КД удара орбитой на врага (не «каждый чек бьёт отдельно»)
+    for (const e of this.enemies) {
+      if ((e._saleOrbT || 0) > 0) e._saleOrbT -= dt;
+    }
     // залп «Возврат чека»
     for (const [wid, lv] of Object.entries(this.saleWeapons || {})) {
       if (!lv) continue;
@@ -2896,14 +2948,15 @@
       if (this._saleOrbitVolleyCd[wid] > 0) continue;
       this._saleOrbitVolleyCd[wid] = def.volleyCd || 1.4;
       const dmg = Math.max(1, Math.round((def.dmg[0] || 2) * this.saleDmgMul()));
-      for (let i = 0; i < 6; i++) {
-        const a = (Math.PI * 2 * i) / 6 + now * 0.001;
+      for (let i = 0; i < 5; i++) {
+        const a = (Math.PI * 2 * i) / 5 + now * 0.001;
         this.saleProjectiles.push({
           x: p.x, y: p.y, angle: a, speed: 340, life: 1.1, r: 10,
           dmg, ico: def.ico, visual: def.visual || wid, bounces: 0, puddle: false, hit: new Set(),
         });
       }
     }
+    const orbCd = SALE_DIFFICULTY.orbHitCd * this.saleCdMul();
     for (const o of this.saleOrbits) {
       o.angle += dt * (o.spin || 3);
       o.x = p.x + Math.cos(o.angle) * o.radius;
@@ -2913,14 +2966,14 @@
       }
       for (const e of this.enemies) {
         if (e.hp <= 0) continue;
-        if ((o.hitAt.get(e) || 0) > now) continue;
-        if (dist(o.x, o.y, e.x, e.y) < e.r + 22 * (o.size || 1)) {
-          o.hitAt.set(e, now + 280);
+        if ((e._saleOrbT || 0) > 0) continue;
+        if (dist(o.x, o.y, e.x, e.y) < e.r + 20 * (o.size || 1)) {
+          e._saleOrbT = orbCd;
           this.saleHitEnemy(e, o.dmg, p.x, p.y, 130, { color: '#f39c12', spark: 'fx_slash' });
           if (o.explodeHit) {
             this.spawnAnimFx('afx_ring', e.x, e.y, { life: 0.28, scale: 0.4, scaleEnd: 1.1 });
             this.salePuddles.push({
-              x: e.x, y: e.y, r: 28, life: 1.05, dmg: 1, tick: 0, color: '#f59e0b',
+              x: e.x, y: e.y, r: 26, life: 0.95, dmg: 1, tick: 0, color: '#f59e0b',
             });
           }
         }
