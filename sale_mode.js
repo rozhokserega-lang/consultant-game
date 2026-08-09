@@ -299,11 +299,11 @@
       visual: 'graveyard', impact: 'sp_curse3',
     },
     bloody_aura: {
-      id: 'bloody_aura', name: 'Кровавая скидка', ico: '🔴', max: 5,
+      id: 'bloody_aura', name: 'Кровавая скидка', ico: '🩸', max: 5,
       desc: 'Круг урона; редкий хил только с убийства',
       type: 'aura', evolve: 'black_friday',
       baseCd: 0.45, dmg: [1, 1, 1, 2, 2], radius: [70, 82, 95, 110, 130], lifesteal: 0.1,
-      visual: 'bloody_aura', impact: 'sp_curse2',
+      visual: 'bloody_aura', impact: 'sp_bleed2',
     },
     // Эволюции (не в пуле новых, только через evolve)
     endless_receipt: {
@@ -735,6 +735,8 @@
     this.salePowerups = [];
     this.saleDmgNums = [];
     this.saleVacuumT = 0;
+    this._saleBloodAuraR = 0;
+    this._saleAura = null;
     this.saleBanned = {};
     this.saleBanishesLeft = SALE_BANISH_LIMIT;
     this._saleBanishMode = false;
@@ -1925,7 +1927,16 @@
 
       if (def.type === 'aura') {
         const radius = (def.radius[level] || def.radius[0] || 80) * area;
-        this._saleAura = { r: radius, t: 0.22, ico: def.ico, visual: def.visual, blood: def.visual === 'bloody_aura' };
+        const isBlood = def.visual === 'bloody_aura' || def.visual === 'black_friday';
+        const pulseT = isBlood ? 0.48 : 0.22;
+        this._saleAura = {
+          r: radius, t: pulseT, max: pulseT,
+          ico: isBlood ? null : def.ico,
+          visual: def.visual,
+          blood: isBlood,
+          black: def.visual === 'black_friday',
+        };
+        if (isBlood) this._saleBloodAuraR = radius;
         for (const e of this.enemies) {
           if (e.hp <= 0) continue;
           if (dist(p.x, p.y, e.x, e.y) < radius + e.r) {
@@ -1934,9 +1945,25 @@
             });
           }
         }
-        if (def.visual === 'bloody_aura' && typeof drawWeaponAtlas === 'function') {
-          // стадия 3 ауры — рисуется в overlays через _saleAura
-        } else if (def.impact) this.spawnSpriteFx(def.impact, p.x, p.y, { scale: Math.min(0.45, radius / 220), life: 0.2, vy: 0 });
+        if (isBlood) {
+          const pulseSc = Math.max(0.55, radius / 95);
+          const tint = def.visual === 'black_friday' ? '#2b0a12' : '#8b0000';
+          this.spawnAnimFx('afx_ring', p.x, p.y, {
+            life: 0.42, scale: pulseSc * 0.5, scaleEnd: pulseSc * 1.4, tint, alpha: 0.8,
+          });
+          this.spawnAnimFx('afx_darkburst', p.x, p.y, {
+            life: 0.32, scale: pulseSc * 0.35, scaleEnd: pulseSc * 0.85, tint: '#c0392b', alpha: 0.5,
+          });
+          this.spawnParticles(p.x, p.y, 12, '#c0392b', 150, 0.45);
+          this.spawnParticles(p.x, p.y, 6, '#5c0a0a', 90, 0.55);
+          if (def.impact) {
+            this.spawnSpriteFx(def.impact, p.x, p.y + 4, {
+              scale: Math.min(0.55, radius / 180), life: 0.28, vy: 0,
+            });
+          }
+        } else if (def.impact) {
+          this.spawnSpriteFx(def.impact, p.x, p.y, { scale: Math.min(0.45, radius / 220), life: 0.2, vy: 0 });
+        }
         continue;
       }
 
@@ -3029,23 +3056,90 @@
       }
     }
 
-    // аура / новы
+    // кровавая скидка / чёрная пятница — постоянный пол + мягкая волна (не мигающий круг)
+    const hasBloodAura = this.saleWeapons && (this.saleWeapons.bloody_aura || this.saleWeapons.black_friday);
+    if (hasBloodAura && this.player && this._saleBloodAuraR > 0) {
+      const px = this.player.x;
+      const py = this.player.y;
+      const r = this._saleBloodAuraR;
+      const t = performance.now() / 1000;
+      const isBlack = !!this.saleWeapons.black_friday;
+      ctx.save();
+      const g = ctx.createRadialGradient(px, py, r * 0.12, px, py, r);
+      if (isBlack) {
+        g.addColorStop(0, 'rgba(40,8,14,0.28)');
+        g.addColorStop(0.5, 'rgba(90,12,24,0.14)');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+      } else {
+        g.addColorStop(0, 'rgba(160,30,40,0.20)');
+        g.addColorStop(0.55, 'rgba(120,20,28,0.10)');
+        g.addColorStop(1, 'rgba(80,0,0,0)');
+      }
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(px, py, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = isBlack ? 'rgba(220,60,70,0.32)' : 'rgba(231,76,60,0.38)';
+      ctx.setLineDash([7, 11]);
+      ctx.lineDashOffset = -t * 48;
+      ctx.beginPath();
+      ctx.arc(px, py, r * 0.93, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([3, 14]);
+      ctx.lineDashOffset = t * 32;
+      ctx.strokeStyle = 'rgba(255,170,170,0.22)';
+      ctx.beginPath();
+      ctx.arc(px, py, r * (0.52 + Math.sin(t * 2.4) * 0.03), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = 'bold 11px "Segoe UI",sans-serif';
+      ctx.fillStyle = isBlack ? 'rgba(255,230,230,0.5)' : 'rgba(255,210,210,0.55)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let i = 0; i < 4; i++) {
+        const a = t * 1.15 + (i * Math.PI) / 2;
+        const rr = r * (0.76 + Math.sin(t * 3.2 + i) * 0.05);
+        ctx.fillText(isBlack ? '−90%' : '−%', px + Math.cos(a) * rr, py + Math.sin(a) * rr);
+      }
+      ctx.restore();
+    }
+
+    // аура / новы (пульс урона)
     if (this._saleAura) {
-      const alpha = Math.min(0.9, this._saleAura.t * 5);
-      const sc = Math.min(0.5, (this._saleAura.r / 180));
-      const spell = this._saleAura.blood ? 'sp_bleed3' : 'sp_heal3';
-      if (!(typeof drawSpell === 'function' && drawSpell(ctx, spell, this.player.x, this.player.y + 4, { scale: sc, anchorY: 0.55, alpha }))) {
-        ctx.strokeStyle = this._saleAura.blood ? `rgba(192,57,43,${0.45 * alpha})` : `rgba(155,89,186,${0.35 * alpha})`;
-        ctx.lineWidth = 2;
+      if (this._saleAura.blood) {
+        const max = this._saleAura.max || 0.48;
+        const k = 1 - Math.max(0, this._saleAura.t) / max;
+        const wave = Math.sin(Math.min(1, Math.max(0, k)) * Math.PI);
+        const rr = this._saleAura.r * (0.5 + 0.55 * k);
+        ctx.save();
+        ctx.globalAlpha = 0.55 * wave;
+        ctx.strokeStyle = this._saleAura.black ? '#7f1d1d' : '#e74c3c';
+        ctx.lineWidth = 3.5;
         ctx.beginPath();
-        ctx.arc(this.player.x, this.player.y, this._saleAura.r, 0, Math.PI * 2);
+        ctx.arc(this.player.x, this.player.y, rr, 0, Math.PI * 2);
         ctx.stroke();
-      }
-      if (this._saleAura.ico) {
-        drawSaleIcon(ctx, this._saleAura.ico, this.player.x, this.player.y - this._saleAura.r * 0.25, 0.7, 0, this._saleAura.visual, 2);
-      }
-      if (this._saleAura.visual === 'bloody_aura' && typeof drawWeaponAtlas === 'function') {
-        drawWeaponAtlas(ctx, 'bloody_aura', 3, this.player.x, this.player.y + 4, { targetSize: 28, alpha: alpha * 0.75 });
+        ctx.strokeStyle = 'rgba(255,120,120,0.45)';
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.arc(this.player.x, this.player.y, rr * 0.82, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        const alpha = Math.min(0.9, this._saleAura.t * 5);
+        const sc = Math.min(0.5, (this._saleAura.r / 180));
+        if (!(typeof drawSpell === 'function' && drawSpell(ctx, 'sp_heal3', this.player.x, this.player.y + 4, {
+          scale: sc, anchorY: 0.55, alpha,
+        }))) {
+          ctx.strokeStyle = `rgba(155,89,186,${0.35 * alpha})`;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(this.player.x, this.player.y, this._saleAura.r, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        if (this._saleAura.ico) {
+          drawSaleIcon(ctx, this._saleAura.ico, this.player.x, this.player.y - this._saleAura.r * 0.25, 0.7, 0);
+        }
       }
     }
     if (this._saleNova) {
