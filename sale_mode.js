@@ -2282,14 +2282,10 @@
         this.saleHitEnemy(e, dmg, p.x, p.y, 300, { impact: 'sp_fwave2', color: '#ff6b00', raw: true, source: 'bomb' });
       }
     } else if (pu.kind === 'heart') {
-      const before = p.hp;
       p.hp = Math.min(p.maxHp, p.hp + 1);
       this.spawnAnimFx('afx_heal', p.x, p.y - 10, { life: 0.45, scale: 0.75, vy: -18 });
       this.spawnParticles(p.x, p.y, 10, '#e11d48', 100, 0.35);
       sfx.pickup();
-      if (p.hp > before) {
-        this.showEventBanner('❤️ +1 HP', 1.1);
-      }
     }
   };
 
