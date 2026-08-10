@@ -329,26 +329,91 @@
   }
   #boosters-overlay .boosters-panel h2 { font-size: 18px; margin-bottom: 4px; }
   .equip-doll {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 6px;
-    margin: 8px 0 12px;
+    position: relative;
+    width: 180px;
+    height: 320px;
+    margin: 8px auto 12px;
   }
-  .equip-slot {
-    appearance: none;
-    border: 1px solid #555;
-    background: rgba(255,255,255,0.06);
+  .gear-silhouette { display: block; margin: 0 auto; }
+  .gear-slot-dot {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 2px solid #666;
+    background: rgba(0,0,0,0.45);
     color: #fff;
-    border-radius: 10px;
-    padding: 8px 6px;
-    text-align: center;
     cursor: pointer;
-    min-height: 72px;
+    padding: 2px;
+    font-size: 16px;
+    line-height: 32px;
+    text-align: center;
+    overflow: hidden;
   }
-  .equip-slot.filled { border-color: #2ecc71; background: rgba(46,204,113,0.12); }
-  .equip-slot .ico { font-size: 22px; line-height: 1.2; }
-  .equip-slot .nm { font-size: 11px; font-weight: 700; margin-top: 2px; }
-  .equip-slot .meta { font-size: 10px; color: #aaa; margin-top: 2px; }
+  .gear-dot-img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; display: block; }
+  .gear-worn-badge {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 78px;
+    height: auto;
+    pointer-events: none;
+    image-rendering: pixelated;
+    filter: drop-shadow(0 3px 8px rgba(0,0,0,0.55));
+    z-index: 2;
+  }
+  .gear-worn-radio {
+    position: absolute;
+    top: 168px;
+    left: 118px;
+    width: 52px;
+    height: auto;
+    pointer-events: none;
+    image-rendering: pixelated;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+    z-index: 2;
+    transform: rotate(-8deg);
+  }
+  .gear-slot-dot.filled { border-color: #2ecc71; box-shadow: 0 0 8px rgba(46,204,113,0.35); }
+  .gear-slot-dot.sel { border-color: #f1c40f; box-shadow: 0 0 10px rgba(241,196,15,0.45); }
+  .gear-paperdoll-wrap {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .gear-detail-panel {
+    flex: 1 1 200px;
+    max-width: 280px;
+    border: 1px solid #444;
+    border-radius: 12px;
+    padding: 10px;
+    background: rgba(255,255,255,0.04);
+    text-align: left;
+  }
+  .gear-detail-head { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .gear-detail-ico { font-size: 28px; }
+  .gear-detail-art { text-align: center; margin-bottom: 8px; }
+  .gear-detail-img {
+    max-width: 150px;
+    max-height: 170px;
+    image-rendering: pixelated;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));
+  }
+  .gear-detail-name { font-weight: 700; font-size: 14px; }
+  .gear-detail-part { font-size: 11px; color: #aaa; }
+  .gear-pips-row { display: flex; gap: 4px; margin: 6px 0; }
+  .gear-pip { width: 10px; height: 10px; border-radius: 50%; background: #333; border: 1px solid #555; }
+  .gear-pip.on { background: #f1c40f; border-color: #f39c12; }
+  .gear-detail-stat { font-size: 13px; color: #2ecc71; margin: 4px 0; }
+  .gear-detail-q { font-size: 11px; color: #aaa; margin-bottom: 8px; }
+  .gear-up-btn { width: 100%; margin-top: 4px; font-size: 12px; }
+  .gear-up-btn.locked { opacity: 0.65; }
+  .gear-up-cost { font-size: 10px; color: #aaa; font-weight: 400; }
+  .gear-mats-bar { font-size: 11px; color: #ccc; margin: 4px 0 8px; text-align: center; }
+  .gear-maxed { font-size: 12px; color: #2ecc71; margin-top: 6px; }
 
   #boosters-overlay .boosters-panel > p { font-size: 12px; margin-bottom: 6px; }
   #boosters-overlay .hub-scroll { text-align: left; flex: 1 1 auto; min-height: 0; }
@@ -691,13 +756,15 @@
 
         <div class="hub-pane" id="hub-pane-gear">
           <div class="hub-sec">Гардероб консультанта</div>
-          <p style="font-size:11px;color:#aaa;margin:0 0 6px;">Шлем, рубашка, штаны, перчатки, ботинки — постоянная экипировка между забегами. Не VS-апгрейд: надеваешь в хабе.</p>
-          <p id="hub-equip-hero" style="font-size:12px;color:#f1c40f;margin:0 0 8px;"></p>
+          <p style="font-size:11px;color:#aaa;margin:0 0 6px;">Бейдж, карта, рация — мета между забегами. Только экономика: XP, стартовые монеты, магнит. Без урона и КД.</p>
+          <p id="hub-equip-hero" style="font-size:12px;color:#f1c40f;margin:0 0 4px;"></p>
+          <div id="hub-gear-mats" class="gear-mats-bar"></div>
           <div class="hub-grid" id="hub-equip-heroes" style="margin-bottom:8px;"></div>
-          <div class="equip-doll" id="hub-equip-doll"></div>
-          <div class="hub-sec">Склад одежды</div>
-          <p style="font-size:11px;color:#aaa;margin:0 0 6px;">Купи за банк, надень на выбранного героя. У каждого консультанта свой комплект.</p>
-          <div class="hub-grid" id="hub-equip-shop"></div>
+          <div class="gear-paperdoll-wrap">
+            <div class="equip-doll" id="hub-equip-doll"></div>
+            <div class="gear-detail-panel" id="hub-gear-detail"></div>
+          </div>
+          <p style="font-size:11px;color:#aaa;margin:8px 0 0;">Материалы — с элит и боссов. KPI (+3 за босса) — для высоких тиров.</p>
         </div>
 
         <div class="hub-pane" id="hub-pane-book">
@@ -3005,8 +3072,15 @@ class Game {
     this.selectedHeroId = this.save.selectedHeroId || 'lena';
     this.selectedFloorId = this.save.selectedFloorId || 'grocery';
     this.selectedContractId = this.save.selectedContractId || 'none';
+    this.gearVersion = this.save.gearVersion || 0;
+    this.kpiBalance = this.save.kpiBalance || 0;
+    this.gearBossKillsTotal = this.save.gearBossKillsTotal || 0;
+    this.gearByHero = this.save.gearByHero || {};
+    this.gearMaterials = Object.assign({ badge_shard: 0, card_film: 0, radio_cell: 0, kpi_token: 0 }, this.save.gearMaterials || {});
     this.equipOwned = Array.isArray(this.save.equipOwned) ? this.save.equipOwned.slice() : [];
     this.equipLoadouts = this.save.equipLoadouts || {};
+    if (this.migrateGearSave) this.migrateGearSave();
+    if (this.ensureGearState) this.ensureGearState();
     this.challengeFailed = false;
     this.tookDamage = false;
     this.playerProjectiles = [];
@@ -3288,8 +3362,11 @@ class Game {
       selectedFloorId: this.selectedFloorId || 'grocery',
       selectedContractId: this.selectedContractId || 'none',
       selectedHeroId: this.selectedHeroId || 'lena',
-      equipOwned: this.equipOwned || [],
-      equipLoadouts: this.equipLoadouts || {},
+      gearVersion: this.gearVersion || 0,
+      kpiBalance: this.kpiBalance || 0,
+      gearBossKillsTotal: this.gearBossKillsTotal || 0,
+      gearByHero: this.gearByHero || {},
+      gearMaterials: this.gearMaterials || {},
       killLog: this.killLog,
     });
   }
@@ -5499,6 +5576,7 @@ class Game {
 <div id="sale-ver-corner" title="Дев-панель">v?</div>
 <div id="sale-dev-panel" aria-hidden="true"></div>
 <script src="sale_mode.js"></script>
+<script src="gear_mode.js"></script>
 <script src="shared/ui/button/button.js"></script>
 <script src="widgets/level-up-popup/level-up-popup.js"></script>
 <script src="widgets/game-menu/game-menu.js"></script>

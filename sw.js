@@ -1,9 +1,18 @@
 /* Minimal offline shell for Sale — cache core assets (GitHub Pages /consultant-game/). */
 const BASE = self.registration.scope; // e.g. https://…/consultant-game/
-const CACHE = 'sale-v0.11.1-gear';
+const CACHE = 'sale-v0.11.4-gear';
 const ASSETS = [
   'index.html',
   'sale_mode.js',
+  'gear_mode.js',
+  'gear/badges/badge_t1_staff.png',
+  'gear/badges/badge_t2_consultant.png',
+  'gear/badges/badge_t3_senior.png',
+  'gear/badges/badge_t4_kpi100.png',
+  'gear/radios/radio_t1_basic.png',
+  'gear/radios/radio_t2_sec.png',
+  'gear/radios/radio_t3_warehouse.png',
+  'gear/radios/radio_t4_dispatch.png',
   'anim_fx_data.js',
   'anim_fx_atlas.png',
   'mart_data.js',
@@ -29,7 +38,7 @@ function isAppShell(url) {
     const u = new URL(url);
     if (u.origin !== self.location.origin) return false;
     const path = u.pathname;
-    return /\/(index\.html)?$/.test(path) || path.endsWith('/sale_mode.js') || path.endsWith('/sw.js');
+    return /\/(index\.html)?$/.test(path) || path.endsWith('/sale_mode.js') || path.endsWith('/gear_mode.js') || path.endsWith('/sw.js');
   } catch {
     return false;
   }

@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const SALE_VERSION = '0.11.1-sale';
+  const SALE_VERSION = '0.11.4-sale';
   const SALE_DURATION = 20 * 60; // 20 минут
   const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
   const SALE_WORLD_MUL = 2.75;
@@ -93,98 +93,6 @@
     return SALE_HEROES[id] || SALE_HEROES.lena;
   }
 
-
-  /** Слоты экипировки героя (мета, не VS in-run) */
-  const EQUIP_SLOTS = [
-    { id: 'helm', name: 'Шлем', ico: '⛑️' },
-    { id: 'shirt', name: 'Рубашка', ico: '👕' },
-    { id: 'pants', name: 'Штаны', ico: '👖' },
-    { id: 'gloves', name: 'Перчатки', ico: '🧤' },
-    { id: 'boots', name: 'Ботинки', ico: '👟' },
-  ];
-
-  /** Каталог одежды ТЦ — покупается в хабе за банк, экипируется на героя */
-  const EQUIP_ITEMS = {
-    helm_badge: {
-      id: 'helm_badge', slot: 'helm', name: 'Бейдж-клипса', ico: '🪪', cost: 40,
-      desc: '+1 HP', maxHp: 1,
-    },
-    helm_hard: {
-      id: 'helm_hard', slot: 'helm', name: 'Каска склада', ico: '⛑️', cost: 95,
-      desc: '+2 HP, −3% скорость', maxHp: 2, speedMul: 0.97,
-    },
-    helm_visor: {
-      id: 'helm_visor', slot: 'helm', name: 'Козырёк кассы', ico: '🧢', cost: 120,
-      desc: '+8% XP', xpMul: 1.08,
-    },
-    shirt_polo: {
-      id: 'shirt_polo', slot: 'shirt', name: 'Поло ТЦ', ico: '👕', cost: 45,
-      desc: '+1 HP', maxHp: 1,
-    },
-    shirt_vest: {
-      id: 'shirt_vest', slot: 'shirt', name: 'Жилет охраны', ico: '🦺', cost: 100,
-      desc: '+2 HP', maxHp: 2,
-    },
-    shirt_hoodie: {
-      id: 'shirt_hoodie', slot: 'shirt', name: 'Худи склада', ico: '🧥', cost: 110,
-      desc: '+5% скорость, +5% XP', speedMul: 1.05, xpMul: 1.05,
-    },
-    pants_jeans: {
-      id: 'pants_jeans', slot: 'pants', name: 'Джинсы смены', ico: '👖', cost: 50,
-      desc: '+4% скорость', speedMul: 1.04,
-    },
-    pants_cargo: {
-      id: 'pants_cargo', slot: 'pants', name: 'Карго с карманами', ico: '🩳', cost: 85,
-      desc: '+магнит XP', magnet: 18,
-    },
-    pants_formal: {
-      id: 'pants_formal', slot: 'pants', name: 'Брюки менеджера', ico: '👔', cost: 115,
-      desc: '+6% XP, +1 HP', xpMul: 1.06, maxHp: 1,
-    },
-    gloves_cotton: {
-      id: 'gloves_cotton', slot: 'gloves', name: 'Хлопковые', ico: '🧤', cost: 55,
-      desc: '+6% урон', dmgMul: 1.06,
-    },
-    gloves_work: {
-      id: 'gloves_work', slot: 'gloves', name: 'Рабочие', ico: '🛠️', cost: 95,
-      desc: '+4% урон, +магнит', dmgMul: 1.04, magnet: 12,
-    },
-    gloves_cashier: {
-      id: 'gloves_cashier', slot: 'gloves', name: 'Кассовые', ico: '✋', cost: 125,
-      desc: '+8% урон', dmgMul: 1.08,
-    },
-    boots_sneak: {
-      id: 'boots_sneak', slot: 'boots', name: 'Кроссы', ico: '👟', cost: 55,
-      desc: '+6% скорость', speedMul: 1.06,
-    },
-    boots_safety: {
-      id: 'boots_safety', slot: 'boots', name: 'Защитные', ico: '🥾', cost: 90,
-      desc: '+1 HP, +3% скорость', maxHp: 1, speedMul: 1.03,
-    },
-    boots_roller: {
-      id: 'boots_roller', slot: 'boots', name: 'Ролики курьера', ico: '🛼', cost: 130,
-      desc: '+10% скорость', speedMul: 1.10,
-    },
-  };
-
-  function emptyEquipWorn() {
-    return { helm: null, shirt: null, pants: null, gloves: null, boots: null };
-  }
-
-  function normalizeEquipLoadouts(raw, owned) {
-    const own = new Set(Array.isArray(owned) ? owned : []);
-    const out = {};
-    for (const hid of Object.keys(SALE_HEROES)) {
-      const src = (raw && raw[hid]) || {};
-      const worn = emptyEquipWorn();
-      for (const sl of EQUIP_SLOTS) {
-        const id = src[sl.id] || null;
-        worn[sl.id] = (id && own.has(id) && EQUIP_ITEMS[id] && EQUIP_ITEMS[id].slot === sl.id) ? id : null;
-      }
-      out[hid] = worn;
-    }
-    return out;
-  }
 
   /** Уникальные боссы ТЦ — LN-позвоночник каждые ~3 мин (порядок = SALE_BOSS_ORDER) */
   const SALE_BOSS_DEFS = {
@@ -1041,7 +949,8 @@
     this.animFx = [];
 
     this.score = 0;
-    this.coins = 5 + (this.metaPerks.wallet || 0) * 4;
+    const gearEq = this.getGearBonuses ? this.getGearBonuses() : { coinStart: 0 };
+    this.coins = 5 + (this.metaPerks.wallet || 0) * 4 + (gearEq.coinStart || 0);
     this.coinMult = this.selectedChallenge === 'x2' ? 2 : 1;
     this.screenShake = 0;
     this.modeTimer = 0;
@@ -1089,6 +998,8 @@
     this.saleVipRef = null;
     this.saleBossSpawned = {};
     this.saleBossIdx = 0;
+    this._gearRunMatGain = 0;
+    this._gearRunKpiGain = 0;
     this.saleBossT = SALE_BOSS_INTERVAL;
     this.saleWaveT = SALE_WAVE_FIRST;
     this.saleEliteT = SALE_ELITE_START;
@@ -1186,7 +1097,6 @@
       this.player.maxHp += hero.maxHpBonus;
       this.player.hp = this.player.maxHp;
     }
-    if (this.applyEquipmentToPlayer) this.applyEquipmentToPlayer();
     this.generateObstacles();
     this.generateStorefronts();
     this.generateWallDecor();
@@ -1220,8 +1130,7 @@
     const caffDef = this.saleWeapons.caffeine && SALE_WEAPONS.caffeine;
     const caff = caffDef ? ((caffDef.buffSpeed || 1.25) - 1) : 0;
     const hero = getSaleHero(this.selectedHeroId);
-    const eq = this.getEquipBonuses ? this.getEquipBonuses() : { speedMul: 1 };
-    p._saleSpeedMul = (1 + spd * 0.08 + caff) * (hero.speedMul || 1) * (eq.speedMul || 1);
+    p._saleSpeedMul = (1 + spd * 0.08 + caff) * (hero.speedMul || 1);
   };
 
   Game.prototype.applySaleHeroToPlayer = function () {
@@ -1274,11 +1183,9 @@
   Game.prototype.saleDmgMul = function () {
     const hero = getSaleHero(this.saleHeroId || this.selectedHeroId);
     const over = (this.saleOverflow && this.saleOverflow.power) || 0;
-    const eq = this.getEquipBonuses ? this.getEquipBonuses() : { dmgMul: 1 };
     return (1 + (this.salePassives.might || 0) * 0.12 + (this.salePassives.discount || 0) * 0.1 + over * 0.08)
       * (this.saleWeaponDmgMul || 1)
-      * (hero.dmgMul || 1)
-      * (eq.dmgMul || 1);
+      * (hero.dmgMul || 1);
   };
   Game.prototype.saleCdMul = function () {
     const haste = (this.salePassives.haste || 0) + (this.salePassives.charger || 0) + (this.salePassives.energy || 0);
@@ -1504,6 +1411,7 @@
   };
 
   Game.prototype.onSaleBossKilled = function (enemy) {
+    if (this.grantBossKpi) this.grantBossKpi();
     // LN kill-kit: хил + магнит + хлопушка (+ посылка уже в dropSalePowerup)
     if (this.player && this.player.hp < this.player.maxHp) {
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);
@@ -2291,6 +2199,7 @@
     this.dropSaleXp(enemy);
     this.dropSalePowerup(enemy);
     this.dropSaleHeart(enemy);
+    if (this.dropGearMaterials) this.dropGearMaterials(enemy);
     if (enemy.saleBossId) {
       this.spawnAnimFx('afx_darkburst', enemy.x, enemy.y, { life: 0.9, scale: 2.0, scaleEnd: 2.8 });
       this.spawnAnimFx('afx_ring', enemy.x, enemy.y, { life: 0.6, scale: 1.4, scaleEnd: 4.5 });
@@ -4619,12 +4528,21 @@
     const contractMul = (this.saleContract && this.saleContract.coinMul) || 1;
     bankGain = Math.floor(bankGain * contractMul);
     this.bankCoins += bankGain;
+    const matGain = this._gearRunMatGain || 0;
+    const kpiGain = this._gearRunKpiGain || 0;
     this.persist();
 
+    let subExtra = '';
+    if (matGain > 0 || kpiGain > 0) {
+      const bits = [];
+      if (matGain > 0) bits.push('мат. +' + matGain);
+      if (kpiGain > 0) bits.push('KPI +' + kpiGain);
+      subExtra = ' · ' + bits.join(', ');
+    }
     document.getElementById('end-title').textContent = won ? '🛒 Распродажа закрыта!' : '💀 Вас растоптали';
     document.getElementById('end-sub').textContent = won
-      ? `Продержался 20:00. В банк: +${bankGain}🪙`
-      : `${killer ? 'Причина: ' + killer + '. ' : ''}Время ${mins}:${String(secs).padStart(2, '0')}. В банк: +${bankGain}🪙`;
+      ? `Продержался 20:00. В банк: +${bankGain}🪙${subExtra}`
+      : `${killer ? 'Причина: ' + killer + '. ' : ''}Время ${mins}:${String(secs).padStart(2, '0')}. В банк: +${bankGain}🪙${subExtra}`;
     document.getElementById('end-score').textContent = this.score + ` · 🪙 ${this.coins}`;
     document.getElementById('end-wave').textContent = `ур.${this.saleLevel}`;
     document.getElementById('end-combo').textContent = this.waveKills;
@@ -4652,156 +4570,7 @@
   window.SALE_CONTRACTS = SALE_CONTRACTS;
   window.SALE_EVOLUTIONS = SALE_EVOLUTIONS;
   window.SALE_SYNERGIES = SALE_SYNERGIES;
-  window.EQUIP_SLOTS = EQUIP_SLOTS;
-  window.EQUIP_ITEMS = EQUIP_ITEMS;
 
-
-  Game.prototype.ensureEquipState = function () {
-    if (!Array.isArray(this.equipOwned)) this.equipOwned = [];
-    this.equipOwned = this.equipOwned.filter((id) => !!EQUIP_ITEMS[id]);
-    this.equipLoadouts = normalizeEquipLoadouts(this.equipLoadouts, this.equipOwned);
-  };
-
-  Game.prototype.getHeroEquipWorn = function (heroId) {
-    this.ensureEquipState();
-    const hid = heroId || this.selectedHeroId || 'lena';
-    if (!this.equipLoadouts[hid]) this.equipLoadouts[hid] = emptyEquipWorn();
-    return this.equipLoadouts[hid];
-  };
-
-  Game.prototype.getEquipBonuses = function () {
-    this.ensureEquipState();
-    const worn = this.getHeroEquipWorn(this.saleHeroId || this.selectedHeroId);
-    const out = { maxHp: 0, speedMul: 1, dmgMul: 1, xpMul: 1, magnet: 0 };
-    for (const sl of EQUIP_SLOTS) {
-      const id = worn[sl.id];
-      const it = id && EQUIP_ITEMS[id];
-      if (!it) continue;
-      if (it.maxHp) out.maxHp += it.maxHp;
-      if (it.speedMul) out.speedMul *= it.speedMul;
-      if (it.dmgMul) out.dmgMul *= it.dmgMul;
-      if (it.xpMul) out.xpMul *= it.xpMul;
-      if (it.magnet) out.magnet += it.magnet;
-    }
-    return out;
-  };
-
-  Game.prototype.applyEquipmentToPlayer = function () {
-    const p = this.player;
-    if (!p) return;
-    const eq = this.getEquipBonuses();
-    if (eq.maxHp > 0) {
-      p.maxHp += eq.maxHp;
-      p.hp = p.maxHp;
-    }
-    this.applySalePassivesToPlayer();
-  };
-
-  Game.prototype.buyEquipItem = function (id) {
-    this.ensureEquipState();
-    const it = EQUIP_ITEMS[id];
-    if (!it) return;
-    if (this.equipOwned.includes(id)) { sfx.hurt(); return; }
-    if (this.bankCoins < it.cost) { sfx.hurt(); return; }
-    this.bankCoins -= it.cost;
-    this.equipOwned.push(id);
-    this.persist();
-    sfx.shop();
-    this.renderHub();
-  };
-
-  Game.prototype.equipItem = function (id) {
-    this.ensureEquipState();
-    const it = EQUIP_ITEMS[id];
-    if (!it || !this.equipOwned.includes(id)) { sfx.hurt(); return; }
-    const worn = this.getHeroEquipWorn(this.selectedHeroId);
-    worn[it.slot] = id;
-    this.persist();
-    sfx.click();
-    this.renderHub();
-  };
-
-  Game.prototype.unequipSlot = function (slot) {
-    this.ensureEquipState();
-    const worn = this.getHeroEquipWorn(this.selectedHeroId);
-    if (!worn[slot]) return;
-    worn[slot] = null;
-    this.persist();
-    sfx.click();
-    this.renderHub();
-  };
-
-  Game.prototype.renderEquipHub = function () {
-    this.ensureEquipState();
-    const doll = document.getElementById('hub-equip-doll');
-    const shop = document.getElementById('hub-equip-shop');
-    const heroHint = document.getElementById('hub-equip-hero');
-    const heroPick = document.getElementById('hub-equip-heroes');
-    const worn = this.getHeroEquipWorn(this.selectedHeroId);
-    const hero = getSaleHero(this.selectedHeroId);
-    if (heroHint) {
-      heroHint.textContent = (hero.ico || '') + ' ' + hero.name + ' — экипировка на этого консультанта';
-    }
-    if (heroPick) {
-      heroPick.innerHTML = '';
-      for (const h of Object.values(SALE_HEROES)) {
-        const el = document.createElement('button');
-        el.type = 'button';
-        el.className = 'hub-card' + (this.selectedHeroId === h.id ? ' sel' : '');
-        el.innerHTML = '<div class="ttl">' + h.ico + ' ' + h.name + '</div><div class="meta">'
-          + (this.selectedHeroId === h.id ? 'Комплект' : 'Сменить') + '</div>';
-        el.onclick = () => {
-          this.selectedHeroId = h.id;
-          this.persist();
-          this.renderHub();
-          sfx.click();
-        };
-        heroPick.appendChild(el);
-      }
-    }
-    if (doll) {
-      doll.innerHTML = '';
-      for (const sl of EQUIP_SLOTS) {
-        const id = worn[sl.id];
-        const it = id && EQUIP_ITEMS[id];
-        const el = document.createElement('button');
-        el.type = 'button';
-        el.className = 'equip-slot' + (it ? ' filled' : '');
-        el.innerHTML = it
-          ? '<div class="ico">' + it.ico + '</div><div class="nm">' + it.name + '</div><div class="meta">' + it.desc + '</div>'
-          : '<div class="ico">' + sl.ico + '</div><div class="nm">' + sl.name + '</div><div class="meta">пусто</div>';
-        el.onclick = () => {
-          if (it) this.unequipSlot(sl.id);
-        };
-        doll.appendChild(el);
-      }
-    }
-    if (shop) {
-      shop.innerHTML = '';
-      const items = Object.values(EQUIP_ITEMS);
-      for (const it of items) {
-        const owned = this.equipOwned.includes(it.id);
-        const equipped = worn[it.slot] === it.id;
-        const el = document.createElement('button');
-        el.type = 'button';
-        el.className = 'hub-card' + (equipped ? ' sel' : '') + (!owned && this.bankCoins < it.cost ? ' locked' : '');
-        let meta;
-        if (equipped) meta = 'Надето · тап снять';
-        else if (owned) meta = 'Надеть';
-        else meta = it.cost + ' 🪙';
-        const slotName = EQUIP_SLOTS.find((s) => s.id === it.slot).name;
-        el.innerHTML = '<div class="ttl">' + it.ico + ' ' + it.name + '</div>'
-          + '<div class="desc">' + slotName + ' · ' + it.desc + '</div>'
-          + '<div class="meta">' + meta + '</div>';
-        el.onclick = () => {
-          if (!owned) this.buyEquipItem(it.id);
-          else if (equipped) this.unequipSlot(it.slot);
-          else this.equipItem(it.id);
-        };
-        shop.appendChild(el);
-      }
-    }
-  };
 
   Game.prototype.renderSaleHubLoadout = function () {
     const heroBox = document.getElementById('hub-sale-heroes');
