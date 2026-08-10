@@ -328,6 +328,28 @@
     padding: 12px; margin: 0 auto;
   }
   #boosters-overlay .boosters-panel h2 { font-size: 18px; margin-bottom: 4px; }
+  .equip-doll {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    margin: 8px 0 12px;
+  }
+  .equip-slot {
+    appearance: none;
+    border: 1px solid #555;
+    background: rgba(255,255,255,0.06);
+    color: #fff;
+    border-radius: 10px;
+    padding: 8px 6px;
+    text-align: center;
+    cursor: pointer;
+    min-height: 72px;
+  }
+  .equip-slot.filled { border-color: #2ecc71; background: rgba(46,204,113,0.12); }
+  .equip-slot .ico { font-size: 22px; line-height: 1.2; }
+  .equip-slot .nm { font-size: 11px; font-weight: 700; margin-top: 2px; }
+  .equip-slot .meta { font-size: 10px; color: #aaa; margin-top: 2px; }
+
   #boosters-overlay .boosters-panel > p { font-size: 12px; margin-bottom: 6px; }
   #boosters-overlay .hub-scroll { text-align: left; flex: 1 1 auto; min-height: 0; }
   .hub-sec { font-size: 13px; margin: 6px 0 2px; font-weight: 700; text-align: left; }
@@ -635,6 +657,7 @@
         <div class="hub-pane on" id="hub-pane-prep">
           <div class="hub-tabs">
             <button type="button" class="hub-tab on" data-hub-tab="prep" id="hub-tab-prep">Подготовка · Распродажа</button>
+            <button type="button" class="hub-tab" data-hub-tab="gear" id="hub-tab-gear">👕 Гардероб</button>
             <button type="button" class="hub-tab" data-hub-tab="book" id="hub-tab-book">📖 Книга жалоб</button>
           </div>
 
@@ -664,6 +687,17 @@
             <div class="hub-sec">Зона ТЦ (арена)</div>
             <div class="hub-grid" id="hub-sale-arenas"></div>
           </div>
+        </div>
+
+        <div class="hub-pane" id="hub-pane-gear">
+          <div class="hub-sec">Гардероб консультанта</div>
+          <p style="font-size:11px;color:#aaa;margin:0 0 6px;">Шлем, рубашка, штаны, перчатки, ботинки — постоянная экипировка между забегами. Не VS-апгрейд: надеваешь в хабе.</p>
+          <p id="hub-equip-hero" style="font-size:12px;color:#f1c40f;margin:0 0 8px;"></p>
+          <div class="hub-grid" id="hub-equip-heroes" style="margin-bottom:8px;"></div>
+          <div class="equip-doll" id="hub-equip-doll"></div>
+          <div class="hub-sec">Склад одежды</div>
+          <p style="font-size:11px;color:#aaa;margin:0 0 6px;">Купи за банк, надень на выбранного героя. У каждого консультанта свой комплект.</p>
+          <div class="hub-grid" id="hub-equip-shop"></div>
         </div>
 
         <div class="hub-pane" id="hub-pane-book">
@@ -2971,6 +3005,8 @@ class Game {
     this.selectedHeroId = this.save.selectedHeroId || 'lena';
     this.selectedFloorId = this.save.selectedFloorId || 'grocery';
     this.selectedContractId = this.save.selectedContractId || 'none';
+    this.equipOwned = Array.isArray(this.save.equipOwned) ? this.save.equipOwned.slice() : [];
+    this.equipLoadouts = this.save.equipLoadouts || {};
     this.challengeFailed = false;
     this.tookDamage = false;
     this.playerProjectiles = [];
@@ -3133,6 +3169,8 @@ class Game {
     if (battleMenu) battleMenu.onclick = () => this.openGameMenu();
     document.getElementById('btn-again').onclick = () => { this.hideOverlays(); this.openMainMenu(); };
     document.getElementById('hub-tab-prep').onclick = () => this.setHubTab('prep');
+    const tabGear = document.getElementById('hub-tab-gear');
+    if (tabGear) tabGear.onclick = () => this.setHubTab('gear');
     document.getElementById('hub-tab-book').onclick = () => this.setHubTab('book');
     const backBook = document.getElementById('hub-back-modes-book');
     if (backBook) backBook.onclick = () => this.setHubTab('prep');
@@ -3250,6 +3288,8 @@ class Game {
       selectedFloorId: this.selectedFloorId || 'grocery',
       selectedContractId: this.selectedContractId || 'none',
       selectedHeroId: this.selectedHeroId || 'lena',
+      equipOwned: this.equipOwned || [],
+      equipLoadouts: this.equipLoadouts || {},
       killLog: this.killLog,
     });
   }
@@ -3491,10 +3531,11 @@ class Game {
     const box = document.getElementById('main-menu-actions');
     if (!box || typeof UiButton === 'undefined') return;
     box.innerHTML = '';
-    ['Играть', 'Усилители', 'Выход'].forEach((label, i) => {
+    ['Играть', 'Усилители', 'Гардероб', 'Выход'].forEach((label, i) => {
       const actions = [
         () => this.startGame(),
         () => this.openBoosters(),
+        () => this.openWardrobe(),
         () => this.exitGame(),
       ];
       box.appendChild(UiButton.create({
@@ -3536,19 +3577,24 @@ class Game {
     this.refreshMusicState();
   }
 
-  openBoosters() {
+  openBoosters(opts = {}) {
     this.hideOverlays();
     this.inMainMenu = false;
     this.inHub = false;
     this.paused = true;
-    this.hubScreen = 'prep';
-    this.hubTab = 'prep';
+    const tab = opts.tab === 'gear' || opts.tab === 'book' ? opts.tab : 'prep';
+    this.hubScreen = tab;
+    this.hubTab = tab;
     document.body.classList.remove('hub-mode', 'sale-mode');
     document.body.classList.add('main-menu-mode');
     this.renderBoosters();
     document.getElementById('boosters-overlay').classList.add('show');
     this.refreshMusicState();
     sfx.click();
+  }
+
+  openWardrobe() {
+    this.openBoosters({ tab: 'gear' });
   }
 
   renderBoosters() {
@@ -3654,8 +3700,16 @@ class Game {
   }
 
   setHubTab(tab) {
-    this.hubTab = tab === 'book' ? 'book' : 'prep';
-    this.hubScreen = this.hubTab === 'book' ? 'book' : 'prep';
+    if (tab === 'book') {
+      this.hubTab = 'book';
+      this.hubScreen = 'book';
+    } else if (tab === 'gear') {
+      this.hubTab = 'gear';
+      this.hubScreen = 'gear';
+    } else {
+      this.hubTab = 'prep';
+      this.hubScreen = 'prep';
+    }
     this.renderHub();
     sfx.click();
   }
@@ -3716,23 +3770,29 @@ class Game {
     if (!this.hubTab) this.hubTab = 'prep';
 
     const onPrep = this.hubScreen === 'prep';
+    const onGear = this.hubScreen === 'gear';
     const onBook = this.hubScreen === 'book';
 
     document.getElementById('hub-pane-prep').classList.toggle('on', onPrep);
+    const paneGear = document.getElementById('hub-pane-gear');
+    if (paneGear) paneGear.classList.toggle('on', onGear);
     document.getElementById('hub-pane-book').classList.toggle('on', onBook);
 
     const tabPrep = document.getElementById('hub-tab-prep');
+    const tabGear = document.getElementById('hub-tab-gear');
     const tabBook = document.getElementById('hub-tab-book');
     if (tabPrep) {
       tabPrep.classList.toggle('on', onPrep);
       tabPrep.textContent = 'Подготовка · Распродажа';
     }
+    if (tabGear) tabGear.classList.toggle('on', onGear);
     if (tabBook) tabBook.classList.toggle('on', onBook);
 
     const saleBox = document.getElementById('hub-sale-loadout');
     if (saleBox) saleBox.style.display = '';
 
-    if (onPrep || onBook) this.renderComplaintBook();
+    if (onBook) this.renderComplaintBook();
+    if (onGear && this.renderEquipHub) this.renderEquipHub();
     if (!onPrep) return;
 
     this.renderSaleHubLoadout();
