@@ -1,0 +1,15 @@
+/** Закрытие всех модальных экранов разом. */
+
+Object.assign(Game.prototype, {
+  hideOverlays() {
+    ['upgrade-overlay','game-menu-overlay','settings-overlay','end-overlay','main-menu-overlay','boosters-overlay'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('show');
+    });
+    const gameMenuRoot = document.getElementById('game-menu-root');
+    if (gameMenuRoot && typeof GameMenu !== 'undefined') GameMenu.showView(gameMenuRoot, 'main');
+    this.choosingUpgrade = false;
+    this.shopping = false;
+    if (typeof this.updateUpgradeRerollBtn === 'function') this.updateUpgradeRerollBtn();
+  },
+});

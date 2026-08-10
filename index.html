@@ -367,21 +367,54 @@
 <script src="src/game/entities/enemy.js"></script>
 <script src="src/game/entities/player.js"></script>
 
-<!-- 6. Класс Game -->
+<!-- 6. Класс Game: конструктор и главный цикл -->
 <script src="src/game/core/game.js"></script>
 
-<!-- 7. Режимы — дописывают методы в Game.prototype -->
+<!-- 7. Методы Game по зонам ответственности -->
+<script src="src/game/core/loadout.js"></script>
+<script src="src/game/core/save.js"></script>
+<script src="src/game/core/feedback.js"></script>
+<script src="src/game/core/overlays.js"></script>
+<script src="src/game/core/camera.js"></script>
+<script src="src/game/core/run.js"></script>
+<script src="src/game/core/rewards.js"></script>
+<script src="src/game/core/bind-ui.js"></script>
+<script src="src/game/core/input.js"></script>
+<script src="src/game/core/update.js"></script>
+<script src="src/game/arena/theme.js"></script>
+<script src="src/game/arena/fence.js"></script>
+<script src="src/game/arena/zones.js"></script>
+<script src="src/game/arena/obstacles.js"></script>
+<script src="src/game/arena/decor.js"></script>
+<script src="src/game/fx/particles.js"></script>
+<script src="src/game/fx/sprite-fx.js"></script>
+<script src="src/game/fx/explosions.js"></script>
+<script src="src/game/fx/boss-line-attack.js"></script>
+<script src="src/game/render/background.js"></script>
+<script src="src/game/render/depth-sort.js"></script>
+<script src="src/game/render/lighting.js"></script>
+<script src="src/game/render/frame.js"></script>
+
+<!-- 8. Режимы — тоже дописывают методы в Game.prototype -->
 <script src="src/game/modes/sale/sale-mode.js"></script>
 <script src="src/game/modes/gear/gear-mode.js"></script>
 
-<!-- 8. UI-кит и виджеты -->
+<!-- 9. UI-кит, виджеты и их связка с игрой -->
 <script src="src/shared/ui/button/button.js"></script>
 <script src="src/widgets/crash-overlay/crash-overlay.js"></script>
 <script src="src/widgets/complaint-book/complaint-book.js"></script>
+<script src="src/widgets/complaint-book/complaint-book.bindings.js"></script>
 <script src="src/widgets/level-up-popup/level-up-popup.js"></script>
+<script src="src/widgets/level-up-popup/level-up-popup.bindings.js"></script>
 <script src="src/widgets/game-menu/game-menu.js"></script>
+<script src="src/widgets/game-menu/game-menu.bindings.js"></script>
+<script src="src/widgets/battle-hud/battle-hud.bindings.js"></script>
+<script src="src/widgets/settings-popup/settings-popup.bindings.js"></script>
+<script src="src/widgets/end-popup/end-popup.bindings.js"></script>
+<script src="src/widgets/main-menu/main-menu.bindings.js"></script>
+<script src="src/widgets/boosters-hub/boosters-hub.bindings.js"></script>
 
-<!-- 9. Запуск -->
+<!-- 10. Запуск -->
 <script src="src/app/bootstrap.js"></script>
 </body>
 </html>
