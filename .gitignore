@@ -5,10 +5,5 @@ data/game-assets.json
 .tmp-batch-gen.cjs
 .next-tiktok/
 # исходники ассетов: скачанные паки не коммитим, только скрипты сборки
-assets_src/*
-!assets_src/build_anim_atlas.py
-!assets_src/build_mart_atlas.py
-!assets_src/build_skill_icons.py
-!assets_src/make_previews.py
-# скачанные кандидат-паки (7Soul и т.п.) — только локально
-assets_src/icon_candidates/
+tools/assets/*
+!tools/assets/*.py

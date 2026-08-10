@@ -13,7 +13,7 @@
 
 ## Графические ассеты (anim_fx_atlas.png)
 
-Атлас собран скриптом `assets_src/build_anim_atlas.py` из следующих CC0-паков:
+Атлас собран скриптом `tools/assets/build_anim_atlas.py` из следующих CC0-паков:
 
 ### Free Pixel Effects Pack — CodeManu
 - https://opengameart.org/content/free-pixel-effects-pack
@@ -33,7 +33,7 @@
 
 ## Графические ассеты (mart_atlas.png)
 
-Атлас собран скриптом `assets_src/build_mart_atlas.py`:
+Атлас собран скриптом `tools/assets/build_mart_atlas.py`:
 
 ### Pixel Mart — ghostpixxells
 - https://ghostpixxells.itch.io/pixel-mart
@@ -44,7 +44,7 @@
 
 ## Графические ассеты (skill_icon_atlas.png)
 
-Атлас собран скриптом `assets_src/build_skill_icons.py` в стиле боевых VFX игры:
+Атлас собран скриптом `tools/assets/build_skill_icons.py` в стиле боевых VFX игры:
 - кадры из `spell_atlas.png` / `vfx_atlas.png` / `pickup_fx_atlas.png` — эволюции, ауры, ореолы
 - **496 pixel art icons for medieval/fantasy RPG** — Henrique Lazarini (7Soul1), CC0
   https://opengameart.org/content/496-pixel-art-icons-for-medievalfantasy-rpg

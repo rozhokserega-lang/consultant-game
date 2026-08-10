@@ -2,8 +2,8 @@
  * Level-up popup widget — выбор способностей при повышении уровня.
  *
  * Подключение:
- *   <link rel="stylesheet" href="widgets/level-up-popup/level-up-popup.css">
- *   <script src="widgets/level-up-popup/level-up-popup.js"></script>
+ *   <link rel="stylesheet" href="src/widgets/level-up-popup/level-up-popup.css">
+ *   <script src="src/widgets/level-up-popup/level-up-popup.js"></script>
  */
 (function (global) {
   'use strict';

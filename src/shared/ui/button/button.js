@@ -1,6 +1,6 @@
 /**
  * Pixel button — фабрика и хелперы.
- * Подключение: <script src="shared/ui/button/button.js"></script>
+ * Подключение: <script src="src/shared/ui/button/button.js"></script>
  *
  * @example
  * const btn = UiButton.create({ text: 'Продолжить', variant: 'primary', size: 'lg', full: true });

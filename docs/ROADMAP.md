@@ -1,7 +1,7 @@
 # ROADMAP — Распродажа (Sale-only)
 
 > Миграция: механики/баланс в духе [LONG NIGHT](https://github.com/emorozoff/long-night) (MIT), атмосфера — ТЦ / консультант.
-> Режим «Смена» отключён. Живая версия в UI: `SALE_VERSION` (`sale_mode.js`).
+> Режим «Смена» отключён. Живая версия в UI: `SALE_VERSION` (`src/game/modes/sale/`).
 
 ## Сейчас (v0.11.0-sale)
 - [x] Баланс LN: `SALE_DIFFICULTY` (HP/spd по минутам), `weaponDmg×0.72`, общий `orbT` на враге; нерф чека/орбит
@@ -45,7 +45,7 @@
 - [x] Атлас анимированных эффектов `anim_fx_atlas.png` (CC0: CodeManu + Kenney)
 
 ## v0.5.0
-- [x] Атлас анимированных эффектов `anim_fx_atlas.png` (CC0: CodeManu + Kenney), сборка `assets_src/build_anim_atlas.py`
+- [x] Атлас анимированных эффектов `anim_fx_atlas.png` (CC0: CodeManu + Kenney), сборка `tools/assets/build_anim_atlas.py`
 - [x] Движок: `spawnAnimFx` / `drawAnimFxFrame` — покадровые анимации + тонировка белых частиц
 - [x] Новые взрывы (жирный, хлопушка), левел-ап/эволюция, появление и смерть боссов
 - [x] Живой огонь на пожарах, пузыри яда, вихрь промо-магнита, хил вампиризма, искры попаданий
@@ -75,7 +75,7 @@
 ## Принцип
 1. **Петля** — VS / LN (авто-оружие, XP, эво, орда, мета).
 2. **Контент** — Sale (чеки, тележки, ивенты ТЦ, атласы).
-3. **Два разработчика:** геймплей (`sale_mode.js` + баланс) vs контент/UI/арт.
+3. **Два разработчика:** геймплей (`src/game/modes/sale/` + баланс) vs контент/UI/арт.
 
 ## Атрибуция
 Идеи баланса warm-start и debug-API вдохновлены LONG NIGHT © emorozoff, MIT.

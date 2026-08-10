@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Сборка skill_icon_atlas.png + skill_icon_data.js.
+"""Сборка skill_icon_atlas.png + src/game/data/atlas-frames/skill-icons.js.
 
 Источники в стиле боевых атласов игры (детальный пиксель + свечение):
 - spell_atlas / vfx_atlas / pickup_fx_atlas — уже в проекте
@@ -14,10 +14,10 @@ import os
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-REPO = os.path.join(ROOT, '..')
+REPO = os.path.join(ROOT, '..', '..')
 SEVEN = os.path.join(ROOT, 'icon_candidates', 'seven_soul')
-OUT_PNG = os.path.join(REPO, 'skill_icon_atlas.png')
-OUT_JS = os.path.join(REPO, 'skill_icon_data.js')
+OUT_PNG = os.path.join(REPO, 'assets', 'atlases', 'skill_icon_atlas.png')
+OUT_JS = os.path.join(REPO, 'src', 'game', 'data', 'atlas-frames', 'skill-icons.js')
 PREV = os.path.join(ROOT, 'preview_skill_icons.png')
 
 CELL = 64
@@ -263,7 +263,7 @@ def main():
     atlas.save(OUT_PNG, optimize=True)
     with open(OUT_JS, 'w') as f:
         f.write(
-            '// Автогенерировано assets_src/build_skill_icons.py\n'
+            '// Автогенерировано tools/assets/build_skill_icons.py\n'
             '// Источники: spell/vfx/pickup атласы проекта + 7Soul1 496 RPG icons (CC0).\n'
             'window.SKILL_ICON_FRAMES = ' + json.dumps(frames) + ';\n'
         )

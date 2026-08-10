@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Сборка anim_fx_atlas.png + anim_fx_data.js из CC0-паков.
+"""Сборка anim_fx_atlas.png + src/game/data/atlas-frames/anim-fx.js из CC0-паков.
 
 Источники (см. ATTRIBUTION.md):
 - CodeManu «Free Pixel Effects Pack» (CC0) — анимированные эффекты 100x100
@@ -10,8 +10,9 @@ import os
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-OUT_PNG = os.path.join(ROOT, '..', 'anim_fx_atlas.png')
-OUT_JS = os.path.join(ROOT, '..', 'anim_fx_data.js')
+REPO = os.path.join(ROOT, '..', '..')
+OUT_PNG = os.path.join(REPO, 'assets', 'atlases', 'anim_fx_atlas.png')
+OUT_JS = os.path.join(REPO, 'src', 'game', 'data', 'atlas-frames', 'anim-fx.js')
 
 CM = os.path.join(ROOT, 'codemanu')
 KN = os.path.join(ROOT, 'kenney_particles')
@@ -96,7 +97,7 @@ def main():
     atlas.save(OUT_PNG, optimize=True)
 
     js = (
-        '// Автогенерировано assets_src/build_anim_atlas.py — не редактировать руками.\n'
+        '// Автогенерировано tools/assets/build_anim_atlas.py — не редактировать руками.\n'
         '// Источники: CodeManu Free Pixel Effects Pack (CC0), Kenney Particle Pack (CC0).\n'
         'window.ANIM_FX_DEFS = ' + json.dumps(defs) + ';\n'
         'window.ANIM_FX_FRAMES = ' + json.dumps(frames_meta) + ';\n'

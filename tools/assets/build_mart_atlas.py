@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Сборка mart_atlas.png + mart_data.js из пака Pixel Mart (CC0, ghostpixxells).
+"""Сборка mart_atlas.png + src/game/data/atlas-frames/mart.js из пака Pixel Mart (CC0, ghostpixxells).
 
 Товары служат XP-дропами (тир по ценности гема) и спрайтами пауэрапов.
 """
@@ -9,8 +9,9 @@ from PIL import Image
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, 'pixel_mart')
-OUT_PNG = os.path.join(ROOT, '..', 'mart_atlas.png')
-OUT_JS = os.path.join(ROOT, '..', 'mart_data.js')
+REPO = os.path.join(ROOT, '..', '..')
+OUT_PNG = os.path.join(REPO, 'assets', 'atlases', 'mart_atlas.png')
+OUT_JS = os.path.join(REPO, 'src', 'game', 'data', 'atlas-frames', 'mart.js')
 
 # XP-дропы по тирам: дешёвка / середина / деликатесы
 TIERS = {
@@ -51,7 +52,7 @@ def main():
     atlas.save(OUT_PNG, optimize=True)
 
     js = (
-        '// Автогенерировано assets_src/build_mart_atlas.py — не редактировать руками.\n'
+        '// Автогенерировано tools/assets/build_mart_atlas.py — не редактировать руками.\n'
         '// Источник: Pixel Mart by ghostpixxells (CC0), https://ghostpixxells.itch.io/pixel-mart\n'
         'window.MART_FRAMES = ' + json.dumps(frames) + ';\n'
         'window.MART_TIERS = ' + json.dumps({str(k): v for k, v in TIERS.items()}) + ';\n'

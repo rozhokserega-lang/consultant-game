@@ -1,8 +1,8 @@
 /**
  * Game menu widget — in-game pause popup.
  * Подключение:
- *   <link rel="stylesheet" href="widgets/game-menu/game-menu.css">
- *   <script src="widgets/game-menu/game-menu.js"></script>
+ *   <link rel="stylesheet" href="src/widgets/game-menu/game-menu.css">
+ *   <script src="src/widgets/game-menu/game-menu.js"></script>
  */
 (function (global) {
   'use strict';
