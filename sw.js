@@ -1,6 +1,6 @@
 /* Minimal offline shell for Sale — cache core assets (GitHub Pages /consultant-game/). */
 const BASE = self.registration.scope; // e.g. https://…/consultant-game/
-const CACHE = 'sale-v0.11.0-tg';
+const CACHE = 'sale-v0.11.1-gear';
 const ASSETS = [
   'index.html',
   'sale_mode.js',
@@ -24,6 +24,17 @@ const ASSETS = [
   'wall_decor_atlas.png',
 ].map((p) => new URL(p, BASE).href);
 
+function isAppShell(url) {
+  try {
+    const u = new URL(url);
+    if (u.origin !== self.location.origin) return false;
+    const path = u.pathname;
+    return /\/(index\.html)?$/.test(path) || path.endsWith('/sale_mode.js') || path.endsWith('/sw.js');
+  } catch {
+    return false;
+  }
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()),
@@ -41,6 +52,19 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
+
+  // HTML/JS: сеть первой, иначе меню залипает на старой сборке
+  if (isAppShell(req.url) || req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req).then((res) => {
+        const copy = res.clone();
+        if (res.ok) caches.open(CACHE).then((cache) => cache.put(req, copy));
+        return res;
+      }).catch(() => caches.match(req).then((hit) => hit || caches.match(new URL('index.html', BASE).href))),
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(req).then((hit) => {
       if (hit) return hit;
