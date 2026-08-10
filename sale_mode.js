@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const SALE_VERSION = '0.11.8-early-vs';
+  const SALE_VERSION = '0.11.9-no-fodder-slow';
   const SALE_DURATION = 20 * 60; // 20 минут
   const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
   const SALE_WORLD_MUL = 2.75;
@@ -1797,6 +1797,8 @@
       this.endSaleGame(false, killName || 'Босс');
       return true;
     }
+    // Slow только от боссов ТЦ — не от рядовых жалобщиков
+    p.slowTimer = Math.max(p.slowTimer || 0, 1.5);
     this.tookDamage = true;
     if (typeof sfx !== 'undefined' && sfx.hurt) sfx.hurt();
     this.vibrate && this.vibrate(40);
@@ -2580,17 +2582,19 @@
     if (!this._saleKeepBanishMode) this._saleBanishMode = false;
     this.upgradeChoices = this.buildSaleUpgradeChoices();
     if (!this.upgradeChoices.length) {
-      // LN noChoices: не сбрасываем уровни в пустоту
+      // LN noChoices: слоты полны — тихий хил без баннера
       const n = Math.max(1, this.pendingUpgrades | 0);
       if (this.player) {
         this.player.maxHp += Math.min(3, n);
         this.player.hp = Math.min(this.player.maxHp, this.player.hp + Math.min(3, n));
+        this.spawnAnimFx('afx_heal', this.player.x, this.player.y - 10, { life: 0.45, scale: 0.75, vy: -18 });
       }
       this.choosingUpgrade = false;
       this.pendingUpgrades = 0;
       this.paused = false;
       this.updateUpgradeRerollBtn();
-      this.showEventBanner(`❤️ Нечего брать — +${Math.min(3, n)} HP`, 1.6);
+      sfx.pickup();
+      this.refreshMusicState();
       return;
     }
     const branchOnly = this.upgradeChoices.length >= 2
@@ -3929,10 +3933,10 @@
           if (this.saleBossHurtPlayer(pr.x, pr.y, pr._saleBossKill || 'Босс')) return;
           this.spawnParticles(this.player.x, this.player.y, 12, '#e74c3c', 140, 0.4);
         } else {
-          this.player.applyComplaint();
-          this.spawnParticles(this.player.x, this.player.y, 10, '#8e44ad', 120, 0.4);
-          sfx.hurt();
-          this.vibrate(35);
+          // Раньше applyComplaint() от рядовых/потолка — постоянный slow бесил.
+          // Теперь без slow: только лёгкий FX (книги события «книга жалоб»).
+          this.spawnParticles(this.player.x, this.player.y, 8, '#8e44ad', 100, 0.3);
+          sfx.pickup();
         }
       }
     }

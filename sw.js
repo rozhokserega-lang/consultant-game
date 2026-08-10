@@ -1,6 +1,6 @@
 /* Minimal offline shell for Sale — cache core assets (GitHub Pages /consultant-game/). */
 const BASE = self.registration.scope; // e.g. https://…/consultant-game/
-const CACHE = 'sale-v0.11.8-early-vs';
+const CACHE = 'sale-v0.11.9-no-fodder-slow';
 const ASSETS = [
   'index.html',
   'sale_mode.js',
