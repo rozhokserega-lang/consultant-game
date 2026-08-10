@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="shared/ui/battle-bar/battle-bar.css">
 <link rel="stylesheet" href="widgets/game-menu/game-menu.css">
 <link rel="stylesheet" href="widgets/level-up-popup/level-up-popup.css">
+<link rel="stylesheet" href="widgets/end-popup/end-popup.css">
 <title>🛒 Распродажа</title>
 <style>
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -740,16 +741,51 @@
   </div>
 
   <!-- Game over / Win -->
-  <div class="overlay" id="end-overlay">
-    <div class="panel">
-      <h2 id="end-title">💀 Вас уволили</h2>
-      <p id="end-sub"></p>
-      <div class="stat-line">Счёт: <b id="end-score">0</b></div>
-      <div class="stat-line">Волна: <b id="end-wave">1</b> · Комбо макс: <b id="end-combo">0</b></div>
-      <div class="stat-line">Рекорд: <b id="end-record">0</b> <span id="end-newrec" style="display:none;color:#2ecc71;">★ НОВЫЙ РЕКОРД!</span></div>
-      <div class="stat-line" id="end-challenge-line"></div>
-      <div class="row-btns">
-        <button class="btn" id="btn-again" type="button">В меню</button>
+  <div class="overlay end-overlay" id="end-overlay">
+    <div class="end-popup" id="end-popup">
+      <div class="end-popup__header">
+        <span class="end-popup__header-arrow end-popup__header-arrow--left" aria-hidden="true"></span>
+        <h2 class="end-popup__title" id="end-title">ВАС РАСТОПТАЛИ</h2>
+        <span class="end-popup__header-arrow end-popup__header-arrow--right" aria-hidden="true"></span>
+      </div>
+      <div class="end-popup__art" id="end-art" aria-hidden="true">
+        <svg class="end-popup__cart" viewBox="0 0 96 72" width="96" height="72" role="img" aria-label="">
+          <rect x="8" y="52" width="80" height="6" fill="#5a6470" opacity="0.35"/>
+          <rect x="14" y="18" width="52" height="34" fill="#8a94a4"/>
+          <rect x="14" y="18" width="52" height="4" fill="#a8b0bc"/>
+          <rect x="14" y="48" width="52" height="4" fill="#6a7484"/>
+          <rect x="18" y="22" width="44" height="22" fill="#c8d4e0"/>
+          <rect x="20" y="24" width="40" height="18" fill="#1a2430"/>
+          <rect x="28" y="30" width="4" height="4" fill="#ffffff"/>
+          <rect x="44" y="30" width="4" height="4" fill="#ffffff"/>
+          <rect x="30" y="38" width="20" height="2" fill="#ffffff"/>
+          <rect x="66" y="22" width="10" height="26" fill="#7a8494"/>
+          <rect x="66" y="22" width="10" height="3" fill="#98a4b4"/>
+          <rect x="20" y="52" width="4" height="10" fill="#4a5464"/>
+          <rect x="56" y="52" width="4" height="10" fill="#4a5464"/>
+          <rect x="18" y="60" width="8" height="4" fill="#3a4454"/>
+          <rect x="54" y="60" width="8" height="4" fill="#3a4454"/>
+        </svg>
+      </div>
+      <div class="end-popup__stats">
+        <div class="end-popup__stat">ВРЕМЯ: <span id="end-time">00:00</span></div>
+        <div class="end-popup__stat">ВОЛНА: <span id="end-wave">1</span> ур.</div>
+        <div class="end-popup__stat">РЕКОРД ВОЛНЫ: <span id="end-wave-record">0</span> ур.</div>
+        <div class="end-popup__stat">МОНЕТ В БАНК: <span id="end-bank">0</span></div>
+      </div>
+      <p id="end-sub" class="end-popup__legacy"></p>
+      <div id="end-score" class="end-popup__legacy">0</div>
+      <div id="end-combo" class="end-popup__legacy">0</div>
+      <div id="end-record" class="end-popup__legacy">0</div>
+      <span id="end-newrec" class="end-popup__legacy" style="display:none;">★ НОВЫЙ РЕКОРД!</span>
+      <div id="end-challenge-line" class="end-popup__legacy"></div>
+      <div class="end-popup__actions">
+        <button class="button button--success button--full" id="btn-retry" type="button">
+          <span class="button__label">Попробовать ещё раз</span>
+        </button>
+        <button class="button button--menu-secondary button--full" id="btn-again" type="button">
+          <span class="button__label">В меню</span>
+        </button>
       </div>
     </div>
   </div>
@@ -3128,6 +3164,7 @@ class Game {
   constructor() {
     this.save = loadSave();
     this.highScore = this.save.highScore || 0;
+    this.highWaveLevel = this.save.highWaveLevel || 0;
     this.bankCoins = this.save.bankCoins || 0;
     this.metaPerks = Object.assign({
       tank: 0, speed: 0, crit: 0, life: 0, wallet: 0, magnet: 0, reach: 0, dash: 0, thick: 0,
@@ -3333,6 +3370,7 @@ class Game {
     if (battlePause) battlePause.onclick = () => this.togglePause();
     const battleMenu = document.getElementById('btn-battle-menu');
     if (battleMenu) battleMenu.onclick = () => this.openGameMenu();
+    document.getElementById('btn-retry').onclick = () => { this.hideOverlays(); this.resetGame(); };
     document.getElementById('btn-again').onclick = () => { this.hideOverlays(); this.openMainMenu(); };
     document.getElementById('hub-tab-prep').onclick = () => this.setHubTab('prep');
     const tabGear = document.getElementById('hub-tab-gear');
@@ -3436,6 +3474,7 @@ class Game {
   persist() {
     saveSave({
       highScore: this.highScore,
+      highWaveLevel: this.highWaveLevel || 0,
       sound: sfx.enabled,
       music: music.enabled,
       vibro: this.vibro,
@@ -4726,6 +4765,11 @@ class Game {
     }
   }
 
+  setEndOverlayState(won) {
+    const popup = document.getElementById('end-popup');
+    if (popup) popup.classList.toggle('end-popup--win', !!won);
+  }
+
   endGame(won, killer = '') {
     this.gameOver = !won;
     this.won = won;
@@ -4735,6 +4779,8 @@ class Game {
     if (isNew) {
       this.highScore = this.score;
     }
+    const waveLevel = this.wave || 1;
+    if (waveLevel > (this.highWaveLevel || 0)) this.highWaveLevel = waveLevel;
     const ch = CHALLENGES.find(c => c.id === this.selectedChallenge) || CHALLENGES[0];
     let challengeOk = won && ch.id !== 'none' && !this.challengeFailed;
     if (ch.id === 'no_damage' && this.tookDamage) challengeOk = false;
@@ -4746,12 +4792,16 @@ class Game {
     }
     this.bankCoins += bankGain;
     this.persist();
-    document.getElementById('end-title').textContent = won ? '🏆 Смена закрыта!' : '💀 Вас уволили';
+    this.setEndOverlayState(won);
+    document.getElementById('end-title').textContent = won ? 'СМЕНА ЗАКРЫТА!' : 'ВАС УВОЛИЛИ';
     document.getElementById('end-sub').textContent = won
       ? `Все 10 волн пройдены. В банк: +${bankGain}🪙`
       : ((killer ? `Причина: ${killer}. ` : '') + `В банк: +${bankGain}🪙`);
+    document.getElementById('end-time').textContent = '00:00';
+    document.getElementById('end-wave').textContent = String(waveLevel);
+    document.getElementById('end-wave-record').textContent = String(this.highWaveLevel || 0);
+    document.getElementById('end-bank').textContent = String(bankGain);
     document.getElementById('end-score').textContent = this.score + ` · 🪙 ${this.coins}`;
-    document.getElementById('end-wave').textContent = this.wave;
     document.getElementById('end-combo').textContent = this.maxCombo;
     document.getElementById('end-record').textContent = this.highScore;
     document.getElementById('end-newrec').style.display = isNew ? 'inline' : 'none';

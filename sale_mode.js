@@ -4564,6 +4564,8 @@
     bankGain = Math.floor(bankGain * (1 + (this.salePassives.wallet || 0) * 0.1));
     const contractMul = (this.saleContract && this.saleContract.coinMul) || 1;
     bankGain = Math.floor(bankGain * contractMul);
+    const waveLevel = this.saleLevel || 1;
+    if (waveLevel > (this.highWaveLevel || 0)) this.highWaveLevel = waveLevel;
     this.bankCoins += bankGain;
     const matGain = this._gearRunMatGain || 0;
     const kpiGain = this._gearRunKpiGain || 0;
@@ -4576,12 +4578,16 @@
       if (kpiGain > 0) bits.push('KPI +' + kpiGain);
       subExtra = ' · ' + bits.join(', ');
     }
-    document.getElementById('end-title').textContent = won ? '🛒 Распродажа закрыта!' : '💀 Вас растоптали';
+    this.setEndOverlayState(won);
+    document.getElementById('end-title').textContent = won ? 'РАСПРОДАЖА ЗАКРЫТА!' : 'ВАС РАСТОПТАЛИ';
     document.getElementById('end-sub').textContent = won
       ? `Продержался 20:00. В банк: +${bankGain}🪙${subExtra}`
       : `${killer ? 'Причина: ' + killer + '. ' : ''}Время ${mins}:${String(secs).padStart(2, '0')}. В банк: +${bankGain}🪙${subExtra}`;
+    document.getElementById('end-time').textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    document.getElementById('end-wave').textContent = String(waveLevel);
+    document.getElementById('end-wave-record').textContent = String(this.highWaveLevel || 0);
+    document.getElementById('end-bank').textContent = String(bankGain);
     document.getElementById('end-score').textContent = this.score + ` · 🪙 ${this.coins}`;
-    document.getElementById('end-wave').textContent = `ур.${this.saleLevel}`;
     document.getElementById('end-combo').textContent = this.waveKills;
     document.getElementById('end-record').textContent = this.highScore;
     document.getElementById('end-newrec').style.display = isNew ? 'inline' : 'none';

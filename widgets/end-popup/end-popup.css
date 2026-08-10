@@ -1,0 +1,201 @@
+/**
+ * End popup — экран поражения / победы
+ */
+
+.end-overlay {
+  background: rgba(10, 10, 20, 0.82);
+}
+
+.end-popup {
+  --ep-font: 'Press Start 2P', 'Courier New', monospace;
+  --ep-panel-light: #b8d4f0;
+  --ep-panel-mid: #9ec0e8;
+  --ep-panel-dark: #7aa8d4;
+  --ep-edge: #1a1a22;
+  --ep-border-light: #d8ecff;
+  --ep-border-dark: #4a6888;
+  --ep-stat: #f5d04a;
+  --ep-stat-shadow: #3a2808;
+  --ep-title-lose: #e85a28;
+  --ep-title-win: #f5d04a;
+
+  position: relative;
+  width: min(100%, 320px);
+  padding: 0 14px 16px;
+  border: 3px solid var(--ep-edge);
+  border-radius: 14px;
+  background: linear-gradient(
+    180deg,
+    var(--ep-panel-light) 0%,
+    var(--ep-panel-mid) 55%,
+    var(--ep-panel-dark) 100%
+  );
+  box-shadow:
+    inset 0 0 0 2px var(--ep-border-dark),
+    inset 0 0 0 4px var(--ep-border-light),
+    0 8px 28px rgba(0, 0, 0, 0.55);
+  image-rendering: pixelated;
+  text-align: center;
+}
+
+.end-popup__header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: -3px auto 10px;
+  padding: 10px 16px;
+  min-width: 200px;
+  max-width: 280px;
+  border: 2px solid var(--ep-edge);
+  border-radius: 0 0 10px 10px;
+  background: linear-gradient(180deg, #d0e8ff 0%, var(--ep-panel-light) 100%);
+  box-shadow:
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+    0 3px 0 var(--ep-edge);
+}
+
+.end-popup__header-arrow {
+  flex: none;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  opacity: 0.55;
+}
+
+.end-popup__header-arrow--left {
+  border-width: 5px 8px 5px 0;
+  border-color: transparent #5a7088 transparent transparent;
+}
+
+.end-popup__header-arrow--right {
+  border-width: 5px 0 5px 8px;
+  border-color: transparent transparent transparent #5a7088;
+}
+
+.end-popup__title {
+  font-family: var(--ep-font);
+  font-size: 9px;
+  line-height: 1.55;
+  letter-spacing: 0.02em;
+  color: var(--ep-title-lose);
+  text-shadow:
+    -1px -1px 0 var(--ep-edge),
+    0 -1px 0 var(--ep-edge),
+    1px -1px 0 var(--ep-edge),
+    -1px 0 0 var(--ep-edge),
+    1px 0 0 var(--ep-edge),
+    -1px 1px 0 var(--ep-edge),
+    0 1px 0 var(--ep-edge),
+    1px 1px 0 var(--ep-edge);
+  text-transform: uppercase;
+}
+
+.end-popup--win .end-popup__title {
+  color: var(--ep-title-win);
+}
+
+.end-popup__art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 96px;
+  margin: 0 0 8px;
+}
+
+.end-popup__art img,
+.end-popup__cart {
+  display: block;
+  width: auto;
+  max-width: 120px;
+  height: auto;
+  max-height: 96px;
+  image-rendering: pixelated;
+  pointer-events: none;
+  user-select: none;
+}
+
+.end-popup--win .end-popup__art {
+  display: none;
+}
+
+.end-popup__stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 14px;
+}
+
+.end-popup__stat {
+  font-family: var(--ep-font);
+  font-size: 8px;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--ep-stat);
+  text-shadow:
+    -1px -1px 0 var(--ep-stat-shadow),
+    0 -1px 0 var(--ep-stat-shadow),
+    1px -1px 0 var(--ep-stat-shadow),
+    -1px 0 0 var(--ep-stat-shadow),
+    1px 0 0 var(--ep-stat-shadow),
+    -1px 1px 0 var(--ep-stat-shadow),
+    0 1px 0 var(--ep-stat-shadow),
+    1px 1px 0 var(--ep-stat-shadow);
+  text-transform: uppercase;
+}
+
+.end-popup__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.end-popup__actions .button {
+  --button-font-size: 8px;
+  --button-padding-y: 12px;
+  --button-padding-x: 12px;
+  --button-min-height: 46px;
+  border-radius: 10px;
+  width: 100%;
+}
+
+.end-popup__actions .button--menu-secondary {
+  --button-face-light: #c8dff5;
+  --button-face-dark: #8ab0d8;
+  --button-edge: var(--ep-edge);
+  --button-highlight: #e8f4ff;
+  --button-shadow-inner: #5a7898;
+  --button-text: #1a1a22;
+  --button-text-shadow: rgba(255, 255, 255, 0.35);
+}
+
+.end-popup__legacy {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+@media (max-width: 380px) {
+  .end-popup {
+    padding: 0 12px 14px;
+  }
+
+  .end-popup__title {
+    font-size: 8px;
+  }
+
+  .end-popup__stat {
+    font-size: 7px;
+  }
+
+  .end-popup__actions .button {
+    --button-font-size: 7px;
+    --button-min-height: 42px;
+  }
+}
