@@ -199,7 +199,7 @@
     pointer-events: none; max-width: 90%;
   }
   #sale-boss-bar {
-    position: absolute; top: 62px; left: 50%; transform: translateX(-50%);
+    position: absolute; top: 78px; left: 50%; transform: translateX(-50%);
     z-index: 15; width: min(420px, 72%); pointer-events: none;
     display: none; flex-direction: column; align-items: center; gap: 2px;
   }
@@ -448,7 +448,45 @@
   .main-menu-actions {
     display: flex; flex-direction: column; gap: 10px; width: 100%;
   }
-  body.sale-mode:not(.hub-mode) #sale-ver-corner { display: block; }
+  body.dev-env.sale-mode:not(.hub-mode) #sale-ver-corner { display: block; }
+  body:not(.dev-env) #sale-ver-corner,
+  body:not(.dev-env) #sale-dev-panel,
+  body:not(.dev-env) #btn-speed { display: none !important; }
+  body:not(.dev-env) #hub-version {
+    cursor: default;
+    text-decoration: none;
+    pointer-events: none;
+  }
+  #crash-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(8, 8, 14, 0.92);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  #crash-overlay.show { display: flex; }
+  #crash-overlay .crash-box {
+    max-width: 520px;
+    width: 100%;
+    background: #1a1a28;
+    border: 1px solid #3a4560;
+    border-radius: 12px;
+    padding: 20px;
+    color: #e8eef8;
+  }
+  #crash-overlay h3 { margin: 0 0 12px; color: #ff6b6b; font-size: 16px; }
+  #crash-overlay pre {
+    font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: #9ab;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 200px;
+    overflow: auto;
+    margin: 0 0 16px;
+  }
   body.main-menu-mode #battle-bar,
   body.main-menu-mode #buff-bar,
   body.main-menu-mode #sale-boss-bar,
@@ -480,7 +518,6 @@
     -webkit-tap-highlight-color: transparent;
     display: none;
   }
-  body.sale-mode:not(.hub-mode) #sale-ver-corner { display: block; }
   #sale-dev-panel {
     position: fixed;
     inset: 0;
@@ -587,6 +624,12 @@
 <body>
 
 <header id="battle-bar" class="battle-bar" aria-label="Статус боя">
+  <div class="battle-bar__xp-row" aria-hidden="true">
+    <span class="battle-bar__xp-level" id="battle-xp-level">★1</span>
+    <div class="battle-bar__xp-track" aria-hidden="true">
+      <div class="battle-bar__xp-fill" id="battle-xp-fill"></div>
+    </div>
+  </div>
   <div class="battle-bar__inner">
     <div class="battle-bar__coins battle-bar__panel">
       <div class="battle-bar__coin-icon" aria-hidden="true"></div>
@@ -1665,7 +1708,44 @@ function loadSave() {
   } catch { return {}; }
 }
 function saveSave(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  try {
+    if (!data || typeof data !== 'object') return false;
+    const json = JSON.stringify(data);
+    if (!json || json === '{}') return false;
+    localStorage.setItem(STORAGE_KEY, json);
+    return true;
+  } catch (e) {
+    console.error('saveSave failed:', e);
+    if (typeof showCrashOverlay === 'function') {
+      showCrashOverlay(e, 'Не удалось сохранить прогресс');
+    }
+    return false;
+  }
+}
+
+function isDevEnvironment() {
+  try {
+    const h = location.hostname;
+    if (!h || h === 'localhost' || h === '127.0.0.1') return true;
+    if (/[?&]dev=1(?:&|$)/.test(location.search)) return true;
+    const p = location.pathname || '';
+    if (/\/dev\/?$/.test(p) || p.includes('/dev/')) return true;
+  } catch (_) { /* ignore */ }
+  return false;
+}
+
+function showCrashOverlay(err, title) {
+  const el = document.getElementById('crash-overlay');
+  if (!el) return;
+  const msg = document.getElementById('crash-overlay-msg');
+  const sub = document.getElementById('crash-overlay-sub');
+  if (msg) msg.textContent = title || 'Ошибка игры';
+  if (sub) {
+    const text = err && (err.stack || err.message) ? String(err.stack || err.message) : String(err || '');
+    sub.textContent = text.slice(0, 800);
+  }
+  el.classList.add('show');
+  el.setAttribute('aria-hidden', 'false');
 }
 
 // ── Звук (Web Audio, без файлов) ──
@@ -3208,6 +3288,8 @@ class Game {
     this.$buffBar = document.getElementById('buff-bar');
     this.$battleCoins = document.getElementById('battle-coins');
     this.$battleTime = document.getElementById('battle-time');
+    this.$battleXpFill = document.getElementById('battle-xp-fill');
+    this.$battleXpLevel = document.getElementById('battle-xp-level');
   }
 
   formatBattleCoins(n) {
@@ -3226,8 +3308,19 @@ class Game {
       this.$battleCoins.textContent = this.formatBattleCoins(this.coins);
     }
     if (this.$battleTime) {
-      const elapsed = this.saleTime || 0;
+      const elapsed = this.gameMode === 'sale' ? (this.saleTime || 0) : 0;
       this.$battleTime.textContent = this.formatBattleElapsed(elapsed);
+    }
+    if (this.gameMode === 'sale' && this.saleWeapons) {
+      const xpRow = document.querySelector('.battle-bar__xp-row');
+      if (xpRow) xpRow.setAttribute('aria-hidden', 'false');
+      if (this.$battleXpFill) {
+        const pct = Math.min(100, 100 * (this.saleXp || 0) / Math.max(1, this.saleXpNext || 1));
+        this.$battleXpFill.style.width = pct + '%';
+      }
+      if (this.$battleXpLevel) {
+        this.$battleXpLevel.textContent = '★' + (this.saleLevel || 1);
+      }
     }
   }
 
@@ -5569,12 +5662,21 @@ class Game {
       this.updateHUD();
     } catch (e) {
       console.error('Game loop error:', e);
+      showCrashOverlay(e, 'Сбой игрового цикла');
+      this.paused = true;
     }
     requestAnimationFrame(t => this.loop(t));
   }
 }
 
 </script>
+<div id="crash-overlay" aria-hidden="true">
+  <div class="crash-box">
+    <h3 id="crash-overlay-msg">Ошибка</h3>
+    <pre id="crash-overlay-sub"></pre>
+    <button type="button" class="btn" id="crash-reload-btn">Перезагрузить</button>
+  </div>
+</div>
 <div id="sale-ver-corner" title="Дев-панель">v?</div>
 <div id="sale-dev-panel" aria-hidden="true"></div>
 <script src="sale_mode.js"></script>
@@ -5583,6 +5685,21 @@ class Game {
 <script src="widgets/level-up-popup/level-up-popup.js"></script>
 <script src="widgets/game-menu/game-menu.js"></script>
 <script>
+if (typeof isDevEnvironment === 'function' && isDevEnvironment()) {
+  document.body.classList.add('dev-env');
+}
+window.addEventListener('error', (ev) => {
+  if (typeof showCrashOverlay === 'function') {
+    showCrashOverlay(ev.error || ev.message, 'Необработанная ошибка');
+  }
+});
+window.addEventListener('unhandledrejection', (ev) => {
+  if (typeof showCrashOverlay === 'function') {
+    showCrashOverlay(ev.reason, 'Необработанное отклонение');
+  }
+});
+const crashReloadBtn = document.getElementById('crash-reload-btn');
+if (crashReloadBtn) crashReloadBtn.addEventListener('click', () => location.reload());
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').catch(() => {});

@@ -30,6 +30,59 @@
   image-rendering: pixelated;
 }
 
+.battle-bar__xp-row {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  max-width: 720px;
+  margin: 0 auto 5px;
+  min-height: 14px;
+}
+
+body.sale-mode:not(.hub-mode):not(.main-menu-mode) .battle-bar__xp-row {
+  display: flex;
+}
+
+.battle-bar__xp-level {
+  flex: none;
+  min-width: 2.4em;
+  font-family: var(--bb-font);
+  font-size: 8px;
+  line-height: 1;
+  color: #e8c4ff;
+  text-shadow:
+    -1px -1px 0 #000,
+    0 -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 0 0 #000,
+    1px 0 0 #000,
+    -1px 1px 0 #000,
+    0 1px 0 #000,
+    1px 1px 0 #000;
+  white-space: nowrap;
+}
+
+.battle-bar__xp-track {
+  flex: 1 1 auto;
+  height: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: #1a1224;
+  border: 2px solid #3a2850;
+  box-shadow:
+    inset 0 2px 0 rgba(0, 0, 0, 0.45),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.battle-bar__xp-fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(180deg, #c084fc 0%, #9333ea 55%, #6b21a8 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: width 0.18s ease-out;
+}
+
 .battle-bar__inner {
   display: flex;
   align-items: stretch;

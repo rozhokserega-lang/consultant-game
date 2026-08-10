@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const SALE_VERSION = '0.11.4-sale-fix3';
+  const SALE_VERSION = '0.11.5-sale-balance';
   const SALE_DURATION = 20 * 60; // 20 минут
   const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
   const SALE_WORLD_MUL = 2.75;
@@ -27,14 +27,14 @@
    */
   const SALE_DIFFICULTY = {
     mul: 1.15,
-    /** LN WDMG: глобальный множитель урона оружия (−28%) */
-    weaponDmg: 0.72,
+    /** LN WDMG: глобальный множитель урона оружия — один раз в saleDmgMul */
+    weaponDmg: 0.85,
     /** общий i-frame орбит на враге (сек), как LN orbT */
     orbHitCd: 0.42,
     warm: (m) => 0.65 + 0.35 * Math.min(1, m / SALE_WARM_MINUTES),
     hpWarm: (m) => 0.55 + 0.45 * Math.min(1, m / 4),
-    /** кривая HP: без неё чек AFK-чистит весь зал */
-    hp: (m) => 1 + 0.32 * m + 0.07 * m * m,
+    /** кривая HP: ~20× к 20-й минуте (не 35×) */
+    hp: (m) => 1 + 0.25 * m + 0.035 * m * m,
     spd: (m) => 1 + Math.min(0.32, m * 0.038),
     bossHp: (m) => 1 + m * 0.09,
   };
@@ -777,18 +777,21 @@
 
   function saleSpawnInterval(t) {
     const f = saleTimeFactor(t);
-    // VS-плотность: быстро выходим на орду
-    return Math.max(0.07, 0.48 - f * 0.4);
+    let iv = Math.max(0.07, 0.48 - f * 0.4);
+    if (t >= 600) iv *= 0.85;
+    return iv;
   }
 
   /** Сколько мобов за один тик спавна */
   function saleSpawnBurst(t) {
     const f = saleTimeFactor(t);
-    if (f > 0.75) return 5;
-    if (f > 0.5) return 4;
-    if (f > 0.3) return 3;
-    if (f > 0.12) return 2;
-    return 1;
+    let burst = 1;
+    if (f > 0.75) burst = 5;
+    else if (f > 0.5) burst = 4;
+    else if (f > 0.3) burst = 3;
+    else if (f > 0.12) burst = 2;
+    if (t >= 600) burst += 1;
+    return burst;
   }
 
   function saleEnemyType(t) {
@@ -1187,7 +1190,8 @@
     const over = (this.saleOverflow && this.saleOverflow.power) || 0;
     return (1 + (this.salePassives.might || 0) * 0.12 + (this.salePassives.discount || 0) * 0.1 + over * 0.08)
       * (this.saleWeaponDmgMul || 1)
-      * (hero.dmgMul || 1);
+      * (hero.dmgMul || 1)
+      * SALE_DIFFICULTY.weaponDmg;
   };
   Game.prototype.saleCdMul = function () {
     const haste = (this.salePassives.haste || 0) + (this.salePassives.charger || 0) + (this.salePassives.energy || 0);
@@ -1529,8 +1533,9 @@
       if (!e) continue;
       e._saleElite = true;
       e.nameTag = (e.nameTag || 'Элита') + ' ★';
-      e.maxHp = Math.max(1, Math.round(e.maxHp * 1.35));
+      e.maxHp = Math.max(1, Math.round(e.maxHp * 1.15));
       e.hp = e.maxHp;
+      e.speed = (e.speed || 60) * 1.1;
       e.xpReward = Math.max(e.xpReward || 0, 12);
     }
     this.showEventBanner('⭐ Элита со склада…', 1.6);
@@ -2139,7 +2144,7 @@
         if (e.hp <= 0) continue;
         if (dist(p.x, p.y, e.x, e.y) > R) continue;
         const dmg = e.saleBossId ? 12 : (e.type === 'boss' || e.type === 'director' || e.type === 'miniboss') ? 20 : 999;
-        this.saleHitEnemy(e, dmg, p.x, p.y, 300, { impact: 'sp_fwave2', color: '#ff6b00' });
+        this.saleHitEnemy(e, dmg, p.x, p.y, 300, { impact: 'sp_fwave2', color: '#ff6b00', raw: true });
       }
     } else if (pu.kind === 'heart') {
       const before = p.hp;
@@ -2221,7 +2226,8 @@
   };
 
   Game.prototype.gainSaleXp = function (amount) {
-    const mul = (this.saleXpMul() || 1) * (this.saleXpEventMul || 1);
+    let mul = (this.saleXpMul() || 1) * (this.saleXpEventMul || 1);
+    if ((this.saleTime || 0) < 480) mul *= 1.12;
     this.saleXp += Math.max(0, amount * mul);
     let leveled = 0;
     while (this.saleXp >= this.saleXpNext) {
@@ -2585,10 +2591,6 @@
       if (this.salePassives.sticker) markMul += this.salePassives.sticker * 0.12;
       if (this.saleSynergyOn('markAura') && opts.fromAura) markMul += 0.25;
       dmg = Math.max(1, Math.round(dmg * markMul));
-    }
-    // LN WDMG: всё оружие слабее — иначе орбиты/ауры AFK-чисят зал
-    if (!opts.raw) {
-      dmg = Math.max(1, Math.round(dmg * SALE_DIFFICULTY.weaponDmg));
     }
     const floor = this.getSaleFloor();
     if (floor && floor.knockMul && knock) knock *= floor.knockMul;
@@ -3266,7 +3268,7 @@
         for (const e of this.enemies) {
           if (e.hp <= 0) continue;
           if (dist(u.x, u.y, e.x, e.y) < u.r + e.r) {
-            this.saleHitEnemy(e, u.dmg, u.x, u.y, 40, { color: u.color });
+            this.saleHitEnemy(e, u.dmg, u.x, u.y, 40, { color: u.color, raw: true });
             if (u.slow) e.slowTimer = Math.max(e.slowTimer || 0, 0.6);
           }
         }
@@ -4469,11 +4471,44 @@
     }
   };
 
-  /** Экранные оверлеи Sale (после restore камеры): стрелка на босса за экраном */
+  Game.prototype.drawSalePlayerHpBar = function (sx, sy) {
+    const p = this.player;
+    if (!p || p.maxHp <= 0) return;
+    const w = Math.max(34, Math.min(52, 28 + p.maxHp * 3));
+    const h = 4;
+    const barY = sy - 44;
+    const hpF = Math.max(0, Math.min(1, p.hp / p.maxHp));
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.68)';
+    ctx.fillRect(sx - w / 2 - 1, barY - 1, w + 2, h + 2);
+    if (p.maxHp <= 8) {
+      const segW = (w - (p.maxHp - 1) * 2) / p.maxHp;
+      for (let i = 0; i < p.maxHp; i++) {
+        const filled = p.hp > i;
+        const sx0 = sx - w / 2 + i * (segW + 2);
+        ctx.fillStyle = filled
+          ? (hpF > 0.35 ? '#2ecc71' : '#e74c3c')
+          : 'rgba(255,255,255,0.12)';
+        ctx.fillRect(sx0, barY, segW, h);
+      }
+    } else {
+      ctx.fillStyle = hpF > 0.5 ? '#2ecc71' : hpF > 0.25 ? '#f1c40f' : '#e74c3c';
+      ctx.fillRect(sx - w / 2, barY, w * hpF, h);
+    }
+    ctx.restore();
+  };
+
+  /** Экранные оверлеи Sale (после restore камеры): HP над героем, стрелка на босса */
   Game.prototype.renderSaleScreenUI = function () {
-    if (this.isBoostersOpen() || this.gameOver || this.won || !this.player) return;
+    if (this.isBoostersOpen() || this.gameOver || this.won || !this.player || !this.saleWeapons) return;
     const cam = this._renderCam;
     if (!cam) return;
+    const p = this.player;
+    const psx = (p.x - cam.x) * cam.z;
+    const psy = (p.y - cam.y) * cam.z;
+    if (psx > -40 && psx < this.W + 40 && psy > -60 && psy < this.H + 40) {
+      this.drawSalePlayerHpBar(psx, psy);
+    }
     for (const e of this.enemies || []) {
       if (e.hp <= 0 || !e.saleBossId) continue;
       const def = SALE_BOSS_DEFS[e.saleBossId];
@@ -4975,15 +5010,16 @@
     }
   }
 
+  function syncSaleVersionLabel() {
+    const label = 'v' + SALE_VERSION;
+    const hub = document.getElementById('hub-version');
+    const corner = document.getElementById('sale-ver-corner');
+    if (hub) hub.textContent = label;
+    if (corner) corner.textContent = label;
+  }
+
   function bindSaleDevUi() {
-    const syncVer = () => {
-      const label = 'v' + SALE_VERSION;
-      const hub = document.getElementById('hub-version');
-      const corner = document.getElementById('sale-ver-corner');
-      if (hub) hub.textContent = label;
-      if (corner) corner.textContent = label;
-    };
-    syncVer();
+    syncSaleVersionLabel();
     const open = (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -5019,6 +5055,19 @@
       if (typeof sfx !== 'undefined') sfx.click();
     };
   }
+
+  const isDevEnv = typeof isDevEnvironment === 'function' && isDevEnvironment();
+
+  syncSaleVersionLabel();
+  if (isDevEnv) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bindSaleDevUi);
+    } else {
+      bindSaleDevUi();
+    }
+  }
+
+  if (!isDevEnv) return;
 
   window.__sale = {
     version: () => SALE_VERSION,
@@ -5077,10 +5126,4 @@
     panel: (on) => toggleSaleDev(on),
   };
   window.__game = window.__sale;
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bindSaleDevUi);
-  } else {
-    bindSaleDevUi();
-  }
 })();
