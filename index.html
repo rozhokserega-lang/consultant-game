@@ -179,6 +179,28 @@
   .pause-chip .nm { color: #ccc; font-size: 11px; }
   .pause-empty { font-size: 12px; color: #888; }
   .row-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
+  .end-balance-upload {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    text-align: center;
+  }
+  .btn-balance-upload {
+    background: linear-gradient(180deg, #3d6b4f, #2a4a38) !important;
+    border-color: #5a9a70 !important;
+    width: 100%;
+    max-width: 280px;
+  }
+  .btn-balance-upload:disabled {
+    opacity: 0.75;
+    cursor: default;
+  }
+  .end-balance-status {
+    margin-top: 6px;
+    font-size: 11px;
+    color: #9ab;
+    word-break: break-all;
+  }
   .btn {
     background: #f1c40f; color: #222; border: none; border-radius: 10px;
     padding: 10px 16px; font-weight: 700; font-size: 14px; cursor: pointer;
@@ -452,7 +474,8 @@
   body.dev-env.sale-mode:not(.hub-mode) #sale-ver-corner { display: block; }
   body:not(.dev-env) #sale-ver-corner,
   body:not(.dev-env) #sale-dev-panel,
-  body:not(.dev-env) #btn-speed { display: none !important; }
+  body:not(.dev-env) #btn-speed,
+  body:not(.dev-env) #end-balance-upload { display: none !important; }
   body:not(.dev-env) #hub-version {
     cursor: default;
     text-decoration: none;
@@ -779,6 +802,10 @@
       <div id="end-record" class="end-popup__legacy">0</div>
       <span id="end-newrec" class="end-popup__legacy" style="display:none;">★ НОВЫЙ РЕКОРД!</span>
       <div id="end-challenge-line" class="end-popup__legacy"></div>
+      <div id="end-balance-upload" class="end-balance-upload" style="display:none;">
+        <button class="btn btn-balance-upload" id="btn-upload-balance" type="button">☁ Выгрузить логи</button>
+        <div class="end-balance-status" id="end-balance-status"></div>
+      </div>
       <div class="end-popup__actions">
         <button class="button button--success button--full" id="btn-retry" type="button">
           <span class="button__label">Попробовать ещё раз</span>
@@ -3372,6 +3399,12 @@ class Game {
     if (battleMenu) battleMenu.onclick = () => this.openGameMenu();
     document.getElementById('btn-retry').onclick = () => { this.hideOverlays(); this.resetGame(); };
     document.getElementById('btn-again').onclick = () => { this.hideOverlays(); this.openMainMenu(); };
+    const uploadBal = document.getElementById('btn-upload-balance');
+    if (uploadBal) {
+      uploadBal.onclick = () => {
+        if (typeof this.uploadSaleBalanceLog === 'function') this.uploadSaleBalanceLog();
+      };
+    }
     document.getElementById('hub-tab-prep').onclick = () => this.setHubTab('prep');
     const tabGear = document.getElementById('hub-tab-gear');
     if (tabGear) tabGear.onclick = () => this.setHubTab('gear');
