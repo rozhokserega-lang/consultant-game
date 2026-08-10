@@ -78,6 +78,12 @@
     return h;
   }
 
+  function gearHero(id) {
+    if (typeof getSaleHero === 'function') return getSaleHero(id);
+    const H = typeof SALE_HEROES !== 'undefined' ? SALE_HEROES : {};
+    return H[id] || H.lena || { id: 'lena', name: 'Лена', ico: '👩' };
+  }
+
   function gearTierImg(tierDef, alt, cls) {
     if (!tierDef || !tierDef.img) return '';
     const c = cls || 'gear-tier-img';
@@ -310,7 +316,7 @@
     const doll = document.getElementById('hub-equip-doll');
     const heroHint = document.getElementById('hub-equip-hero');
     const heroPick = document.getElementById('hub-equip-heroes');
-    const hero = getSaleHero(this.selectedHeroId);
+    const hero = gearHero(this.selectedHeroId);
     const g = this.getHeroGear(this.saleHeroId || this.selectedHeroId);
     if (heroHint) {
       heroHint.textContent = (hero.ico || '') + ' ' + hero.name + ' · Личное дело консультанта';

@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const SALE_VERSION = '0.11.4-sale';
+  const SALE_VERSION = '0.11.4-sale-fix2';
   const SALE_DURATION = 20 * 60; // 20 минут
   const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
   const SALE_WORLD_MUL = 2.75;
@@ -92,6 +92,8 @@
   function getSaleHero(id) {
     return SALE_HEROES[id] || SALE_HEROES.lena;
   }
+
+  window.getSaleHero = getSaleHero;
 
 
   /** Уникальные боссы ТЦ — LN-позвоночник каждые ~3 мин (порядок = SALE_BOSS_ORDER) */

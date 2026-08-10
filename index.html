@@ -350,32 +350,32 @@
     text-align: center;
     overflow: hidden;
   }
-  .gear-dot-img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; display: block; }
+  .gear-dot-img { width: 100%; height: 100%; object-fit: contain; image-rendering: auto; display: block; }
   .gear-worn-badge {
     position: absolute;
-    top: 12px;
+    top: 8px;
     left: 50%;
     transform: translateX(-50%);
-    width: 78px;
+    width: 72px;
     height: auto;
     pointer-events: none;
-    image-rendering: pixelated;
-    filter: drop-shadow(0 3px 8px rgba(0,0,0,0.55));
+    image-rendering: auto;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.45));
     z-index: 2;
   }
   .gear-worn-radio {
     position: absolute;
-    top: 168px;
-    left: 118px;
-    width: 52px;
+    top: 172px;
+    left: 122px;
+    width: 44px;
     height: auto;
     pointer-events: none;
-    image-rendering: pixelated;
-    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+    image-rendering: auto;
+    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.45));
     z-index: 2;
-    transform: rotate(-8deg);
+    transform: rotate(-10deg);
   }
-  .gear-slot-dot.filled { border-color: #2ecc71; box-shadow: 0 0 8px rgba(46,204,113,0.35); }
+  .gear-slot-dot.filled { border-color: #2ecc71; box-shadow: 0 0 8px rgba(46,204,113,0.35); background: rgba(0,0,0,0.25); }
   .gear-slot-dot.sel { border-color: #f1c40f; box-shadow: 0 0 10px rgba(241,196,15,0.45); }
   .gear-paperdoll-wrap {
     display: flex;
@@ -397,10 +397,10 @@
   .gear-detail-ico { font-size: 28px; }
   .gear-detail-art { text-align: center; margin-bottom: 8px; }
   .gear-detail-img {
-    max-width: 150px;
-    max-height: 170px;
-    image-rendering: pixelated;
-    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));
+    max-width: 140px;
+    max-height: 160px;
+    image-rendering: auto;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.35));
   }
   .gear-detail-name { font-weight: 700; font-size: 14px; }
   .gear-detail-part { font-size: 11px; color: #aaa; }
@@ -3405,7 +3405,6 @@ class Game {
     if (gameMenuRoot && typeof GameMenu !== 'undefined') GameMenu.showView(gameMenuRoot, 'main');
     this.choosingUpgrade = false;
     this.shopping = false;
-    this.paused = false;
     if (typeof this.updateUpgradeRerollBtn === 'function') this.updateUpgradeRerollBtn();
   }
 
@@ -3664,8 +3663,12 @@ class Game {
     this.hubTab = tab;
     document.body.classList.remove('hub-mode', 'sale-mode');
     document.body.classList.add('main-menu-mode');
-    this.renderBoosters();
     document.getElementById('boosters-overlay').classList.add('show');
+    try {
+      this.renderBoosters();
+    } catch (err) {
+      console.error('renderBoosters failed:', err);
+    }
     this.refreshMusicState();
     sfx.click();
   }
