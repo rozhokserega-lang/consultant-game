@@ -6,10 +6,17 @@
 (function () {
   'use strict';
 
-  const SALE_VERSION = '0.11.5-sale-balance';
+  const SALE_VERSION = '0.11.8-early-vs';
   const SALE_DURATION = 20 * 60; // 20 минут
   const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
   const SALE_WORLD_MUL = 2.75;
+  /** Деv-only: логи забегов для анализа баланса */
+  const SALE_BALANCE_LOG_KEY = 'consultant_balance_logs_v1';
+  const SALE_BALANCE_LOG_MAX = 40;
+  const SALE_BALANCE_SHEET_URL_KEY = 'consultant_balance_sheet_url';
+  const SALE_BALANCE_UPLOADED_KEY = 'consultant_balance_uploaded_v1';
+  /** URL Google Apps Script Web App для выгрузки balance-логов */
+  const SALE_BALANCE_SHEET_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbwWvYODfyDkoON9MAbT3Q7gYFr8ZA7D4JT4cwAf1QA5EUDRBVZ0gt-dMrUg1OcTCoK7/exec';
   /** LN-style: жёсткий потолок слотов — билд, а не «собери всё» */
   const SALE_MAX_WEAPONS = 4;
   const SALE_MAX_PASSIVES = 8;
@@ -36,15 +43,120 @@
     /** кривая HP: ~20× к 20-й минуте (не 35×) */
     hp: (m) => 1 + 0.25 * m + 0.035 * m * m,
     spd: (m) => 1 + Math.min(0.32, m * 0.038),
+    /** early soft: мобы медленнее в первые минуты (VS-feel) */
+    spdEarly: (m) => 0.58 + 0.42 * Math.min(1, m / 6),
     bossHp: (m) => 1 + m * 0.09,
   };
   /** LN-style директор: босс каждые 180с, волны ~42с, элиты ~70с */
   const SALE_BOSS_INTERVAL = 180;
   const SALE_BOSS_GAP_AFTER_KILL = 45;
-  const SALE_WAVE_FIRST = 55;
+  const SALE_WAVE_FIRST = 90;
   const SALE_WAVE_INTERVAL = 42;
   const SALE_ELITE_START = 115;
   const SALE_ELITE_INTERVAL = 70;
+
+  function isSaleBalanceLogEnabled() {
+    return typeof isDevEnvironment === 'function' && isDevEnvironment();
+  }
+
+  function loadSaleBalanceLogs() {
+    try {
+      const raw = localStorage.getItem(SALE_BALANCE_LOG_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function saveSaleBalanceLogs(arr) {
+    try {
+      localStorage.setItem(SALE_BALANCE_LOG_KEY, JSON.stringify(arr.slice(-SALE_BALANCE_LOG_MAX)));
+      return true;
+    } catch (e) {
+      console.warn('balance log save failed', e);
+      return false;
+    }
+  }
+
+  function downloadJsonFile(filename, data) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  function getSaleBalanceSheetUrl() {
+    try {
+      const fromLs = localStorage.getItem(SALE_BALANCE_SHEET_URL_KEY);
+      if (fromLs && /^https:\/\//.test(fromLs)) return fromLs.trim();
+    } catch (_) { /* ignore */ }
+    return SALE_BALANCE_SHEET_URL_DEFAULT || '';
+  }
+
+  function setSaleBalanceSheetUrl(url) {
+    url = String(url || '').trim();
+    if (url && !/^https:\/\//.test(url)) throw new Error('URL должен начинаться с https://');
+    try {
+      if (url) localStorage.setItem(SALE_BALANCE_SHEET_URL_KEY, url);
+      else localStorage.removeItem(SALE_BALANCE_SHEET_URL_KEY);
+    } catch (_) { /* ignore */ }
+    return getSaleBalanceSheetUrl();
+  }
+
+  function loadUploadedBalanceIds() {
+    try {
+      const raw = localStorage.getItem(SALE_BALANCE_UPLOADED_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function markBalanceUploaded(runId) {
+    if (!runId) return;
+    const ids = loadUploadedBalanceIds().filter((id) => id !== runId);
+    ids.push(runId);
+    try {
+      localStorage.setItem(SALE_BALANCE_UPLOADED_KEY, JSON.stringify(ids.slice(-200)));
+    } catch (_) { /* ignore */ }
+  }
+
+  function isBalanceUploaded(runId) {
+    return !!runId && loadUploadedBalanceIds().includes(runId);
+  }
+
+  /**
+   * POST в Google Apps Script.
+   * text/plain + no-cors — без preflight; ответ opaque, успех = нет сетевой ошибки.
+   */
+  async function uploadSaleBalanceToSheet(run) {
+    const url = getSaleBalanceSheetUrl();
+    if (!url) {
+      throw new Error('Сначала задай URL таблицы: __sale.balance.setSheetUrl(url)');
+    }
+    if (!run || !run.id) throw new Error('нет данных забега');
+    if (isBalanceUploaded(run.id)) return { ok: true, already: true, runId: run.id };
+
+    const body = JSON.stringify({
+      run,
+      uploadedAt: new Date().toISOString(),
+      source: 'consultant-game-dev',
+    });
+
+    await fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body,
+    });
+    markBalanceUploaded(run.id);
+    return { ok: true, runId: run.id, opaque: true };
+  }
 
   /** Герои-консультанты (выбор в хабе) */
   const SALE_HEROES = {
@@ -199,7 +311,19 @@
   }
   function saleEnemySpdScale(tSec) {
     const m = Math.max(0, tSec) / 60;
-    return SALE_DIFFICULTY.spd(m);
+    const early = SALE_DIFFICULTY.spdEarly
+      ? SALE_DIFFICULTY.spdEarly(m)
+      : 1;
+    return early * SALE_DIFFICULTY.spd(m);
+  }
+
+  /** Потолок орды растёт со временем — в начале не душим игрока */
+  function saleMaxEnemiesForTime(t) {
+    if (t < 60) return 32;
+    if (t < 180) return 50;
+    if (t < 360) return 75;
+    if (t < 600) return 105;
+    return SALE_MAX_ENEMIES;
   }
 
   window.SALE_VERSION = SALE_VERSION;
@@ -777,7 +901,10 @@
 
   function saleSpawnInterval(t) {
     const f = saleTimeFactor(t);
-    let iv = Math.max(0.07, 0.48 - f * 0.4);
+    // VS-like: старт редкий (~1с), к концу орда
+    let iv = Math.max(0.07, 1.05 - f * 0.95);
+    if (t < 120) iv = Math.max(iv, 0.9);
+    else if (t < 300) iv = Math.max(iv, 0.55);
     if (t >= 600) iv *= 0.85;
     return iv;
   }
@@ -788,8 +915,8 @@
     let burst = 1;
     if (f > 0.75) burst = 5;
     else if (f > 0.5) burst = 4;
-    else if (f > 0.3) burst = 3;
-    else if (f > 0.12) burst = 2;
+    else if (f > 0.35) burst = 3;
+    else if (f > 0.22) burst = 2; // ~4.5 мин, не со 2-й
     if (t >= 600) burst += 1;
     return burst;
   }
@@ -1087,6 +1214,9 @@
     this._saleUltraAuraR = 0;
     Object.keys(SALE_WEAPONS).forEach((id) => { this.saleWeaponCd[id] = 0.25; });
 
+    this.initSaleBalanceLog();
+    this.hookSaleBalancePlayerHurt();
+
     this.applyMetaToPlayer();
     this.applySalePassivesToPlayer();
     this.applySaleHeroToPlayer();
@@ -1109,8 +1239,8 @@
     this.camera.x = this.player.x - this.viewW() / 2;
     this.camera.y = this.player.y - this.viewH() / 2;
 
-    // стартовый наплыв — сразу как мини-орда
-    for (let i = 0; i < 28; i++) this.spawnSaleEnemy();
+    // стартовый наплыв — редко и далеко, как VS (не 28 в лицо)
+    for (let i = 0; i < 8; i++) this.spawnSaleEnemy();
     this._saleLsCd = 0;
 
     const fl = this.getSaleFloor();
@@ -1240,8 +1370,11 @@
   };
 
   Game.prototype.spawnSaleEnemy = function (forcedType) {
-    if (this.enemies.filter((e) => e.hp > 0).length >= SALE_MAX_ENEMIES) return null;
-    const margin = 80;
+    const cap = saleMaxEnemiesForTime(this.saleTime || 0);
+    if (this.enemies.filter((e) => e.hp > 0).length >= cap) return null;
+    const t = this.saleTime || 0;
+    // VS-feel: в начале спавн дальше за экраном
+    const margin = t < 180 ? 150 + rand(0, 90) : t < 420 ? 110 + rand(0, 40) : 80;
     const side = randi(0, 3);
     let x, y;
     // спавн за краем камеры / у границ мира
@@ -1252,8 +1385,8 @@
     else if (side === 1) { x = cam.x + vw + margin; y = rand(cam.y - 40, cam.y + vh + 40); }
     else if (side === 2) { x = rand(cam.x - 40, cam.x + vw + 40); y = cam.y + vh + margin; }
     else { x = cam.x - margin; y = rand(cam.y - 40, cam.y + vh + 40); }
-    x = Math.max(margin, Math.min(this.worldW - margin, x));
-    y = Math.max(margin, Math.min(this.worldH - margin, y));
+    x = Math.max(40, Math.min(this.worldW - 40, x));
+    y = Math.max(40, Math.min(this.worldH - 40, y));
 
     let type = forcedType || saleEnemyType(this.saleTime);
     if (!forcedType && this.saleForceTypes && this.saleForceTypes.length) {
@@ -1343,6 +1476,7 @@
       : def.id === 'floor_manager' ? 0
       : 15;
     e._saleFinalBoss = !!def.final;
+    e._saleBossSpawnAt = this.saleTime || 0;
     this.saleBossSpawned = this.saleBossSpawned || {};
     this.saleBossSpawned[def.id] = true;
     const n = Math.min(SALE_BOSS_ORDER.length, (this.saleBossIdx || 0) + 1);
@@ -1417,6 +1551,7 @@
   };
 
   Game.prototype.onSaleBossKilled = function (enemy) {
+    if (this.recordSaleBalanceBossKill) this.recordSaleBalanceBossKill(enemy);
     if (this.grantBossKpi) this.grantBossKpi();
     // LN kill-kit: хил + магнит + хлопушка (+ посылка уже в dropSalePowerup)
     if (this.player && this.player.hp < this.player.maxHp) {
@@ -1442,13 +1577,13 @@
     const p = this.player;
     if (!p) return;
     const opts = ['crowd'];
-    if (t > 45) opts.push('ring_fast');
-    if (t > 70) opts.push('queue');
-    if (t > 95) opts.push('fatty');
-    if (t > 120) opts.push('managers');
-    if (t > 150) opts.push('tanks');
-    if (t > 185) opts.push('directors');
-    if (t > 220) opts.push('mixed_horde');
+    if (t > 120) opts.push('ring_fast');
+    if (t > 150) opts.push('queue');
+    if (t > 180) opts.push('fatty');
+    if (t > 210) opts.push('managers');
+    if (t > 240) opts.push('tanks');
+    if (t > 280) opts.push('directors');
+    if (t > 320) opts.push('mixed_horde');
     // не повторять ту же волну подряд
     let kind = opts[randi(0, opts.length - 1)];
     if (opts.length > 1 && kind === this.saleLastWaveKind) {
@@ -1476,13 +1611,13 @@
 
     switch (kind) {
       case 'crowd':
-        for (let i = 0; i < randi(9, 14); i++) this.spawnSaleEnemy('normal');
+        for (let i = 0; i < (t < 180 ? randi(4, 7) : randi(9, 14)); i++) this.spawnSaleEnemy('normal');
         break;
       case 'ring_fast':
-        ring('fast', 16, { nameTag: 'Спринтер' });
+        ring('fast', t < 300 ? 8 : 16, { nameTag: 'Спринтер' });
         break;
       case 'queue':
-        for (let i = 0; i < randi(7, 11); i++) this.spawnSaleEnemy('queue');
+        for (let i = 0; i < (t < 300 ? randi(4, 7) : randi(7, 11)); i++) this.spawnSaleEnemy('queue');
         break;
       case 'fatty':
         for (let i = 0; i < randi(5, 8); i++) this.spawnSaleEnemy('fatty');
@@ -2144,7 +2279,7 @@
         if (e.hp <= 0) continue;
         if (dist(p.x, p.y, e.x, e.y) > R) continue;
         const dmg = e.saleBossId ? 12 : (e.type === 'boss' || e.type === 'director' || e.type === 'miniboss') ? 20 : 999;
-        this.saleHitEnemy(e, dmg, p.x, p.y, 300, { impact: 'sp_fwave2', color: '#ff6b00', raw: true });
+        this.saleHitEnemy(e, dmg, p.x, p.y, 300, { impact: 'sp_fwave2', color: '#ff6b00', raw: true, source: 'bomb' });
       }
     } else if (pu.kind === 'heart') {
       const before = p.hp;
@@ -2203,6 +2338,7 @@
     this.recordKill(enemy.type);
     this.score++;
     this.waveKills++;
+    if (this.recordSaleBalanceKill) this.recordSaleBalanceKill(enemy);
     this.dropSaleXp(enemy);
     this.dropSalePowerup(enemy);
     this.dropSaleHeart(enemy);
@@ -2228,7 +2364,9 @@
   Game.prototype.gainSaleXp = function (amount) {
     let mul = (this.saleXpMul() || 1) * (this.saleXpEventMul || 1);
     if ((this.saleTime || 0) < 480) mul *= 1.12;
-    this.saleXp += Math.max(0, amount * mul);
+    const gained = Math.max(0, amount * mul);
+    this.saleXp += gained;
+    if (gained > 0 && this.recordSaleBalanceXp) this.recordSaleBalanceXp(gained);
     let leveled = 0;
     while (this.saleXp >= this.saleXpNext) {
       this.saleXp -= this.saleXpNext;
@@ -2594,7 +2732,11 @@
     }
     const floor = this.getSaleFloor();
     if (floor && floor.knockMul && knock) knock *= floor.knockMul;
+    const dealt = Math.min(dmg, Math.max(0, e.hp || 0));
     const died = e.hit(dmg, srcX, srcY, knock || 140, opts.stun || 0);
+    if (dealt > 0 && this.recordSaleBalanceDmg) {
+      this.recordSaleBalanceDmg(dealt, opts.weapon || opts.source || 'other');
+    }
     this.pushSaleDmgNum(e.x, e.y - e.r - 6, Math.min(dmg, e.maxHp || dmg));
     if (opts.confuse && !died) {
       e._saleConfuse = Math.max(e._saleConfuse || 0, opts.confuse);
@@ -2764,7 +2906,7 @@
         this.saleRings = this.saleRings || [];
         this.saleRings.push({
           x: p.x, y: p.y, r: 18, maxR, dmg, hit: new Set(),
-          knock: def.knock || 200, ico: def.ico, visual: def.visual || id,
+          knock: def.knock || 200, ico: def.ico, visual: def.visual || id, weaponId: id,
         });
         this._saleNova = { r: maxR, t: 0.38 };
         this.spawnAnimFx('afx_ring', p.x, p.y, {
@@ -2799,7 +2941,7 @@
           if (dist(p.x, p.y, e.x, e.y) < radius + e.r) {
             this.saleHitEnemy(e, dmg, p.x, p.y, def.knock || 70, {
               lifesteal: def.lifesteal, impact: def.impact, explodeOnKill: def.explodeOnKill,
-              color: isUltra ? '#38bdf8' : '#9b59b6', fromAura: true,
+              color: isUltra ? '#38bdf8' : '#9b59b6', fromAura: true, weapon: id,
             });
           }
         }
@@ -2821,7 +2963,7 @@
           while (diff > Math.PI) diff -= Math.PI * 2;
           while (diff < -Math.PI) diff += Math.PI * 2;
           if (Math.abs(diff) < half) {
-            this.saleHitEnemy(e, dmg, p.x, p.y, def.knock || 220, { color: '#64748b', impact: 'sp_quake1' });
+            this.saleHitEnemy(e, dmg, p.x, p.y, def.knock || 220, { color: '#64748b', impact: 'sp_quake1', weapon: id });
           }
         }
         this._saleShieldT = Math.max(this._saleShieldT || 0, 0.55);
@@ -2838,7 +2980,7 @@
           if (e.hp <= 0) continue;
           if (dist(p.x, p.y, e.x, e.y) > maxR + e.r) continue;
           this.saleHitEnemy(e, dmg, p.x, p.y, 40, {
-            color: '#38bdf8', impact: def.impact, stun: def.stun || 0,
+            color: '#38bdf8', impact: def.impact, stun: def.stun || 0, weapon: id,
           });
           e.slowTimer = Math.max(e.slowTimer || 0, 1.1);
           e._saleRadioSlow = def.slow || 0.55;
@@ -2861,7 +3003,7 @@
           this.saleProjectiles.push({
             x: p.x, y: p.y, angle: ang, speed: def.speed || 460, life: 1.6, r: 11,
             dmg, ico: def.ico, visual: def.visual || id, bounces: 0, puddle: false,
-            mark: def.markSec || 4, impact: def.impact, hit: new Set(),
+            mark: def.markSec || 4, impact: def.impact, hit: new Set(), weaponId: id,
           });
         }
         continue;
@@ -2879,7 +3021,7 @@
           while (diff > Math.PI) diff -= Math.PI * 2;
           while (diff < -Math.PI) diff += Math.PI * 2;
           if (Math.abs(diff) < half) {
-            this.saleHitEnemy(e, dmg, p.x, p.y, 160, { impact: def.impact || 'sp_fwave1', color: '#e67e22' });
+            this.saleHitEnemy(e, dmg, p.x, p.y, 160, { impact: def.impact || 'sp_fwave1', color: '#e67e22', weapon: id });
           }
         }
         this.spawnSpriteFx(def.impact || 'sp_fwave2', p.x + Math.cos(ang) * 40, p.y + Math.sin(ang) * 40, {
@@ -2896,6 +3038,7 @@
           x: p.x, y: p.y, angle: a, speed: def.speed || 320,
           life: ((def.range && def.range[level]) || def.range?.[0] || 260) / (def.speed || 320),
           dmg, ico: def.ico, visual: def.visual || id, size: def.size || 1.2, pull: def.pull || 0, hit: new Set(), impact: def.impact,
+          weaponId: id,
         });
         continue;
       }
@@ -2907,7 +3050,7 @@
         this.saleBoomerangs.push({
           x: p.x, y: p.y, angle: a, speed: def.speed || 340,
           range, traveled: 0, returning: false, dmg, ico: def.ico, visual: def.visual || id,
-          hit: new Set(), size: def.size || 1.1,
+          hit: new Set(), size: def.size || 1.1, weaponId: id,
         });
         continue;
       }
@@ -2920,6 +3063,7 @@
             x: p.x + Math.cos(ang) * 20, y: p.y + Math.sin(ang) * 20,
             vx: Math.cos(ang) * 80, vy: Math.sin(ang) * 80,
             speed: def.speed || 260, life: 3.5, dmg, ico: '🦇', visual: 'bats', target: null, hit: new Set(),
+            weaponId: id,
           });
         }
         this.spawnSpriteFx('sp_bat1', p.x, p.y - 10, { scale: 0.8, life: 0.25, vy: -20 });
@@ -2951,6 +3095,7 @@
             impact: def.impact,
             hit: new Set(),
             born: performance.now(),
+            weaponId: id,
           });
         }
       }
@@ -2980,6 +3125,7 @@
         this.saleProjectiles.push({
           x: p.x, y: p.y, angle: a, speed: 340, life: 1.1, r: 10,
           dmg, ico: def.ico, visual: def.visual || wid, bounces: 0, puddle: false, hit: new Set(),
+          weaponId: wid,
         });
       }
     }
@@ -2996,7 +3142,7 @@
         if ((e._saleOrbT || 0) > 0) continue;
         if (dist(o.x, o.y, e.x, e.y) < e.r + 20 * (o.size || 1)) {
           e._saleOrbT = orbCd;
-          this.saleHitEnemy(e, o.dmg, p.x, p.y, 130, { color: '#f39c12', spark: 'fx_slash' });
+          this.saleHitEnemy(e, o.dmg, p.x, p.y, 130, { color: '#f39c12', spark: 'fx_slash', weapon: o.weaponId });
           if (o.explodeHit) {
             this.spawnAnimFx('afx_ring', e.x, e.y, { life: 0.28, scale: 0.4, scaleEnd: 1.1 });
             this.salePuddles.push({
@@ -3029,7 +3175,7 @@
         if (e.hp <= 0 || b.hit.has(e)) continue;
         if (dist(b.x, b.y, e.x, e.y) < e.r + hitR) {
           b.hit.add(e);
-          this.saleHitEnemy(e, b.dmg, b.x, b.y, 200, { color: '#1abc9c' });
+          this.saleHitEnemy(e, b.dmg, b.x, b.y, 200, { color: '#1abc9c', weapon: b.weaponId });
         }
       }
     }
@@ -3048,6 +3194,7 @@
           this.saleHitEnemy(e, pr.dmg, pr.x, pr.y, 160, {
             confuse: pr.confuse, lifesteal: pr.lifesteal, impact: pr.impact,
             explodeOnKill: pr.explodeOnKill, color: '#f1c40f', mark: pr.mark || 0,
+            weapon: pr.weaponId,
           });
           if (pr.impact) this.spawnSpriteFx(pr.impact, pr.x, pr.y, { scale: 0.45, life: 0.2, vy: 0 });
           if (pr.puddle) {
@@ -3095,7 +3242,7 @@
         if (e.hp <= 0 || c.hit.has(e)) continue;
         if (dist(c.x, c.y, e.x, e.y) < e.r + 18 * (c.size || 1)) {
           c.hit.add(e);
-          this.saleHitEnemy(e, c.dmg, c.x, c.y, 260, { impact: c.impact, color: '#16a085' });
+          this.saleHitEnemy(e, c.dmg, c.x, c.y, 260, { impact: c.impact, color: '#16a085', weapon: c.weaponId });
         }
       }
     }
@@ -3120,7 +3267,7 @@
         if (e.hp <= 0 || s.hit.has(e)) continue;
         if (dist(s.x, s.y, e.x, e.y) < e.r + 12) {
           s.hit.add(e);
-          this.saleHitEnemy(e, s.dmg, s.x, s.y, 100, { impact: 'sp_bat2', color: '#2c3e50' });
+          this.saleHitEnemy(e, s.dmg, s.x, s.y, 100, { impact: 'sp_bat2', color: '#2c3e50', weapon: s.weaponId });
           s.life -= 0.8;
         }
       }
@@ -3163,14 +3310,14 @@
           while (da > Math.PI) da -= Math.PI * 2;
           while (da < -Math.PI) da += Math.PI * 2;
           if (Math.abs(da) > halfCone) continue;
-          this.saleHitEnemy(e, b.dmg, e.x, e.y, 50, { color: '#f1c40f', spark: 'sp_fire1' });
+          this.saleHitEnemy(e, b.dmg, e.x, e.y, 50, { color: '#f1c40f', spark: 'sp_fire1', weapon: b.weaponId });
         } else {
           const ax = p.x, ay = p.y;
           const bx = x2 - ax, by = y2 - ay;
           const t = Math.max(0, Math.min(1, ((e.x - ax) * bx + (e.y - ay) * by) / (bx * bx + by * by || 1)));
           const px = ax + bx * t, py = ay + by * t;
           if (dist(px, py, e.x, e.y) < e.r + b.width * 0.35) {
-            this.saleHitEnemy(e, b.dmg, px, py, 60, { color: '#f1c40f', spark: 'sp_fire1' });
+            this.saleHitEnemy(e, b.dmg, px, py, 60, { color: '#f1c40f', spark: 'sp_fire1', weapon: b.weaponId });
             if (b.burn && Math.random() < 0.35) {
               this.salePuddles.push({
                 x: e.x, y: e.y, r: 22, life: 1.6, dmg: 1, tick: 0, color: '#ea580c',
@@ -3213,7 +3360,7 @@
         sw.y += (dy / d) * step;
         sw.ang = Math.atan2(dy, dx);
         if (d < (sw.hitR || 18) + tgt.r && sw.cd <= 0) {
-          this.saleHitEnemy(tgt, sw.dmg, sw.x, sw.y, 80, { color: '#27ae60', spark: 'fx_slash' });
+          this.saleHitEnemy(tgt, sw.dmg, sw.x, sw.y, 80, { color: '#27ae60', spark: 'fx_slash', weapon: sw.weaponId });
           tgt._saleSwordIframe = 0.4;
           sw.cd = 0.22;
           if (sw.trail) {
@@ -3251,7 +3398,7 @@
         if (Math.abs(d - ring.r) < e.r + 14) {
           ring.hit.add(e);
           this.saleHitEnemy(e, ring.dmg, ring.x, ring.y, ring.knock || 200, {
-            color: '#f39c12', impact: 'sp_fwave1',
+            color: '#f39c12', impact: 'sp_fwave1', weapon: ring.weaponId || 'nova',
           });
         }
       }
@@ -3268,7 +3415,7 @@
         for (const e of this.enemies) {
           if (e.hp <= 0) continue;
           if (dist(u.x, u.y, e.x, e.y) < u.r + e.r) {
-            this.saleHitEnemy(e, u.dmg, u.x, u.y, 40, { color: u.color, raw: true });
+            this.saleHitEnemy(e, u.dmg, u.x, u.y, 40, { color: u.color, raw: true, source: u.weaponId || 'puddle' });
             if (u.slow) e.slowTimer = Math.max(e.slowTimer || 0, 0.6);
           }
         }
@@ -3292,6 +3439,7 @@
   Game.prototype.applySaleFragileExtra = function () {
     if (!this.saleFragile || !this.player || this.player.hp <= 0) return false;
     this.player.hp -= 1;
+    if (this.recordSaleBalanceHurt) this.recordSaleBalanceHurt(1);
     if (this.player.hp <= 0) {
       if ((this.player.extraLives || 0) > 0) {
         this.player.extraLives -= 1;
@@ -3639,6 +3787,7 @@
     music.setIntensity(this.saleTime > SALE_DURATION * 0.75 ? 'boss' : 'rush');
 
     this.saleTime += realDt;
+    if (this.tickSaleBalanceLog) this.tickSaleBalanceLog(realDt);
     if (this._saleLsCd > 0) this._saleLsCd -= realDt;
     if (this.saleTime >= SALE_DURATION) {
       this.endSaleGame(true);
@@ -3862,7 +4011,9 @@
         if (pk.type === 'coin' || pk.type === 'coins') {
           const wallet = 1 + (this.salePassives.wallet || 0) * 0.15;
           const warmCoins = saleCoinWarmMul(this.saleTime || 0);
-          this.coins += Math.ceil((pk.value || 1) * wallet * (this.coinMult || 1) * warmCoins);
+          const gain = Math.ceil((pk.value || 1) * wallet * (this.coinMult || 1) * warmCoins);
+          this.coins += gain;
+          if (this.recordSaleBalanceGold) this.recordSaleBalanceGold(gain);
           pk.life = 0;
           sfx.pickup();
         } else if (pk.type === 'heal' && this.player.hp < this.player.maxHp) {
@@ -4549,7 +4700,222 @@
     }
   };
 
+  Game.prototype.initSaleBalanceLog = function () {
+    if (!isSaleBalanceLogEnabled()) {
+      this._saleBal = null;
+      return;
+    }
+    const hero = getSaleHero(this.selectedHeroId);
+    this._saleBal = {
+      id: 'run_' + Date.now().toString(36),
+      version: SALE_VERSION,
+      startedAt: new Date().toISOString(),
+      hero: hero.id,
+      floor: this.saleFloorId || this.selectedFloorId || 'grocery',
+      contract: (this.saleContract && this.saleContract.id) || this.selectedContractId || 'none',
+      minutes: [],
+      weaponDmg: {},
+      bosses: [],
+      totals: {
+        dmg: 0,
+        kills: 0,
+        elites: 0,
+        xp: 0,
+        gold: 0,
+        hurt: 0,
+      },
+      _acc: { dmg: 0, kills: 0, elites: 0, xp: 0, gold: 0, hurt: 0 },
+      _lastSampleMin: -1,
+      _sampleT: 0,
+    };
+  };
+
+  Game.prototype.hookSaleBalancePlayerHurt = function () {
+    if (!isSaleBalanceLogEnabled() || !this.player || this.player._saleBalHurtHooked) return;
+    const self = this;
+    const orig = this.player.takeDamage.bind(this.player);
+    this.player.takeDamage = function (fromX, fromY) {
+      const before = this.hp;
+      const dead = orig(fromX, fromY);
+      const lost = Math.max(0, before - this.hp);
+      if (lost > 0 && self.recordSaleBalanceHurt) self.recordSaleBalanceHurt(lost);
+      return dead;
+    };
+    this.player._saleBalHurtHooked = true;
+  };
+
+  Game.prototype.recordSaleBalanceDmg = function (amount, source) {
+    const bal = this._saleBal;
+    if (!bal || !(amount > 0)) return;
+    const src = source || 'other';
+    bal.totals.dmg += amount;
+    bal._acc.dmg += amount;
+    bal.weaponDmg[src] = (bal.weaponDmg[src] || 0) + amount;
+  };
+
+  Game.prototype.recordSaleBalanceHurt = function (amount) {
+    const bal = this._saleBal;
+    if (!bal || !(amount > 0)) return;
+    bal.totals.hurt += amount;
+    bal._acc.hurt += amount;
+  };
+
+  Game.prototype.recordSaleBalanceXp = function (amount) {
+    const bal = this._saleBal;
+    if (!bal || !(amount > 0)) return;
+    bal.totals.xp += amount;
+    bal._acc.xp += amount;
+  };
+
+  Game.prototype.recordSaleBalanceGold = function (amount) {
+    const bal = this._saleBal;
+    if (!bal || !(amount > 0)) return;
+    bal.totals.gold += amount;
+    bal._acc.gold += amount;
+  };
+
+  Game.prototype.recordSaleBalanceKill = function (enemy) {
+    const bal = this._saleBal;
+    if (!bal || !enemy) return;
+    bal.totals.kills += 1;
+    bal._acc.kills += 1;
+    if (enemy._saleElite) {
+      bal.totals.elites += 1;
+      bal._acc.elites += 1;
+    }
+  };
+
+  Game.prototype.recordSaleBalanceBossKill = function (enemy) {
+    const bal = this._saleBal;
+    if (!bal || !enemy) return;
+    const spawnAt = enemy._saleBossSpawnAt != null ? enemy._saleBossSpawnAt : 0;
+    const killAt = this.saleTime || 0;
+    bal.bosses.push({
+      id: enemy.saleBossId || enemy.type || 'boss',
+      name: enemy.nameTag || enemy.saleBossId || 'boss',
+      spawnAt: Math.round(spawnAt * 10) / 10,
+      killAt: Math.round(killAt * 10) / 10,
+      killTimeSec: Math.round(Math.max(0, killAt - spawnAt) * 10) / 10,
+      maxHp: enemy.maxHp || 0,
+    });
+  };
+
+  Game.prototype.sampleSaleBalanceMinute = function (minute) {
+    const bal = this._saleBal;
+    if (!bal) return;
+    const acc = bal._acc;
+    const enemies = (this.enemies || []).filter((e) => e.hp > 0);
+    const eliteAlive = enemies.filter((e) => e._saleElite).length;
+    const wepShare = {};
+    let totalW = 0;
+    for (const [k, v] of Object.entries(bal.weaponDmg)) totalW += v;
+    if (totalW > 0) {
+      for (const [k, v] of Object.entries(bal.weaponDmg)) {
+        wepShare[k] = Math.round((1000 * v) / totalW) / 10;
+      }
+    }
+    bal.minutes.push({
+      minute,
+      t: Math.round((this.saleTime || 0) * 10) / 10,
+      level: this.saleLevel || 1,
+      hp: this.player ? this.player.hp : 0,
+      maxHp: this.player ? this.player.maxHp : 0,
+      coins: this.coins || 0,
+      dps: Math.round(acc.dmg),
+      kills: acc.kills,
+      elitesKilled: acc.elites,
+      hurt: acc.hurt,
+      xp: Math.round(acc.xp),
+      gold: Math.round(acc.gold),
+      enemyCount: enemies.length,
+      eliteCount: eliteAlive,
+      weapons: { ...(this.saleWeapons || {}) },
+      passives: { ...(this.salePassives || {}) },
+      weaponSharePct: wepShare,
+    });
+    bal._acc = { dmg: 0, kills: 0, elites: 0, xp: 0, gold: 0, hurt: 0 };
+    bal._lastSampleMin = minute;
+  };
+
+  Game.prototype.tickSaleBalanceLog = function (dt) {
+    const bal = this._saleBal;
+    if (!bal) return;
+    const m = Math.floor((this.saleTime || 0) / 60);
+    if (m > (bal._lastSampleMin < 0 ? 0 : bal._lastSampleMin)) {
+      this.sampleSaleBalanceMinute(m);
+    }
+  };
+
+  Game.prototype.buildSaleBalanceWeaponShare = function () {
+    const bal = this._saleBal;
+    if (!bal) return {};
+    const out = {};
+    let total = 0;
+    for (const v of Object.values(bal.weaponDmg)) total += v;
+    if (total <= 0) return out;
+    for (const [k, v] of Object.entries(bal.weaponDmg)) {
+      out[k] = {
+        dmg: Math.round(v),
+        pct: Math.round((1000 * v) / total) / 10,
+      };
+    }
+    return out;
+  };
+
+  Game.prototype.finalizeSaleBalanceLog = function (won, killer) {
+    const bal = this._saleBal;
+    if (!bal) return null;
+    const m = Math.max(0, Math.floor((this.saleTime || 0) / 60));
+    const hasAcc = (bal._acc.dmg + bal._acc.kills + bal._acc.hurt + bal._acc.xp + bal._acc.gold) > 0;
+    if (hasAcc || bal._lastSampleMin < m) {
+      this.sampleSaleBalanceMinute(Math.max(m, 1));
+    }
+    const survived = Math.min(SALE_DURATION, this.saleTime || 0);
+    const summary = {
+      id: bal.id,
+      version: bal.version,
+      startedAt: bal.startedAt,
+      endedAt: new Date().toISOString(),
+      won: !!won,
+      killer: killer || '',
+      survivedSec: Math.round(survived * 10) / 10,
+      hero: bal.hero,
+      floor: bal.floor,
+      contract: bal.contract,
+      level: this.saleLevel || 1,
+      coins: this.coins || 0,
+      kills: bal.totals.kills,
+      elites: bal.totals.elites,
+      hurt: bal.totals.hurt,
+      dmg: Math.round(bal.totals.dmg),
+      xp: Math.round(bal.totals.xp),
+      gold: Math.round(bal.totals.gold),
+      avgDps: survived > 0 ? Math.round((bal.totals.dmg / survived) * 10) / 10 : 0,
+      weaponsEnd: { ...(this.saleWeapons || {}) },
+      passivesEnd: { ...(this.salePassives || {}) },
+      weaponShare: this.buildSaleBalanceWeaponShare(),
+      bosses: bal.bosses,
+      minutes: bal.minutes,
+      difficulty: {
+        weaponDmg: SALE_DIFFICULTY.weaponDmg,
+        mul: SALE_DIFFICULTY.mul,
+      },
+    };
+    const logs = loadSaleBalanceLogs();
+    logs.push(summary);
+    saveSaleBalanceLogs(logs);
+    this._saleBalLast = summary;
+    this._saleBal = null;
+    try {
+      console.log('[sale-balance]', summary.id, won ? 'WIN' : 'LOSS',
+        `t=${summary.survivedSec}s lv=${summary.level} dps=${summary.avgDps}`,
+        summary.weaponShare);
+    } catch (_) { /* ignore */ }
+    return summary;
+  };
+
   Game.prototype.endSaleGame = function (won, killer) {
+    this.finalizeSaleBalanceLog(won, killer);
     this.gameOver = !won;
     this.won = won;
     this.killedBy = killer || '';
@@ -4576,6 +4942,15 @@
       if (kpiGain > 0) bits.push('KPI +' + kpiGain);
       subExtra = ' · ' + bits.join(', ');
     }
+    if (isSaleBalanceLogEnabled() && this._saleBalLast) {
+      const share = this._saleBalLast.weaponShare || {};
+      const top = Object.entries(share)
+        .sort((a, b) => b[1].pct - a[1].pct)
+        .slice(0, 3)
+        .map(([k, v]) => `${k} ${v.pct}%`)
+        .join(', ');
+      if (top) subExtra += ` · log: ${top}`;
+    }
     document.getElementById('end-title').textContent = won ? '🛒 Распродажа закрыта!' : '💀 Вас растоптали';
     document.getElementById('end-sub').textContent = won
       ? `Продержался 20:00. В банк: +${bankGain}🪙${subExtra}`
@@ -4586,11 +4961,88 @@
     document.getElementById('end-record').textContent = this.highScore;
     document.getElementById('end-newrec').style.display = isNew ? 'inline' : 'none';
     const cl = document.getElementById('end-challenge-line');
-    if (cl) cl.textContent = `Режим: Распродажа · оружий: ${Object.keys(this.saleWeapons).length}`;
+    if (cl) {
+      let line = `Режим: Распродажа · оружий: ${Object.keys(this.saleWeapons).length}`;
+      if (isSaleBalanceLogEnabled()) line += ' · balance log ✓';
+      cl.textContent = line;
+    }
+    this.refreshSaleBalanceUploadBtn();
     document.getElementById('end-overlay').classList.add('show');
     this.refreshMusicState();
     if (won) sfx.win(); else sfx.lose();
     this.vibrate(won ? [40, 40, 80] : 80);
+  };
+
+  Game.prototype.refreshSaleBalanceUploadBtn = function () {
+    const wrap = document.getElementById('end-balance-upload');
+    const btn = document.getElementById('btn-upload-balance');
+    const status = document.getElementById('end-balance-status');
+    if (!wrap || !btn) return;
+    const show = isSaleBalanceLogEnabled() && !!this._saleBalLast;
+    wrap.style.display = show ? 'block' : 'none';
+    if (!show) return;
+    const run = this._saleBalLast;
+    const hasUrl = !!getSaleBalanceSheetUrl();
+    const uploaded = isBalanceUploaded(run.id);
+    btn.disabled = false;
+    if (!hasUrl) {
+      btn.textContent = '⚙️ Сначала задай URL таблицы';
+      if (status) status.textContent = 'В дев-панели: Balance log → URL таблицы';
+    } else if (uploaded) {
+      btn.textContent = '✓ Логи уже в таблице';
+      btn.disabled = true;
+      if (status) status.textContent = run.id;
+    } else {
+      btn.textContent = '☁ Выгрузить логи';
+      if (status) {
+        status.textContent = `${run.won ? 'WIN' : 'LOSS'} · lv${run.level} · ${run.survivedSec}с · dps ${run.avgDps}`;
+      }
+    }
+  };
+
+  Game.prototype.uploadSaleBalanceLog = async function () {
+    const btn = document.getElementById('btn-upload-balance');
+    const status = document.getElementById('end-balance-status');
+    const run = this._saleBalLast;
+    if (!run) return;
+    if (!getSaleBalanceSheetUrl()) {
+      const url = window.prompt(
+        'Вставь URL Google Apps Script (Web app …/exec).\nИнструкция: scripts/balance_sheet_appscript.gs',
+        getSaleBalanceSheetUrl() || '',
+      );
+      if (!url) return;
+      try {
+        setSaleBalanceSheetUrl(url);
+      } catch (e) {
+        if (status) status.textContent = String(e.message || e);
+        return;
+      }
+    }
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '⬆ Выгружаю…';
+    }
+    if (status) status.textContent = 'отправляю в Google Sheet…';
+    try {
+      const res = await uploadSaleBalanceToSheet(run);
+      if (btn) {
+        btn.textContent = res.already ? '✓ Уже было в таблице' : '✓ Логи выгружены';
+        btn.disabled = true;
+      }
+      if (status) {
+        status.textContent = res.opaque
+          ? `отправлено (run ${run.id}) — проверь строку в Sheet`
+          : `ok · ${run.id}`;
+      }
+      if (typeof sfx !== 'undefined') sfx.click();
+    } catch (e) {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = '☁ Повторить выгрузку';
+      }
+      if (status) status.textContent = 'ошибка: ' + (e && e.message ? e.message : e);
+      console.error('balance upload failed', e);
+    }
   };
 
   // expose for debugging / hub
@@ -4847,7 +5299,19 @@
           bq('powerup', 'heart', '❤️ сердце'),
       ) +
       H('Оружие +1') +
-      R(wepIds.map((id) => bq('wpn', id, SALE_WEAPONS[id].ico + ' ' + SALE_WEAPONS[id].name)).join(''));
+      R(wepIds.map((id) => bq('wpn', id, SALE_WEAPONS[id].ico + ' ' + SALE_WEAPONS[id].name)).join('')) +
+      H('Balance log') +
+      R(
+        bq('baldump', null, 'лог в консоль') +
+          bq('baldl', null, 'скачать JSON') +
+          bq('ballast', null, 'последний забег') +
+          bq('balclear', null, 'очистить логи'),
+      ) +
+      R(
+        bq('balsheet', null, 'URL таблицы') +
+          bq('balup', null, 'выгрузить последний') +
+          bq('balurl', null, getSaleBalanceSheetUrl() ? 'URL ✓ задан' : 'URL не задан'),
+      );
   }
 
   function saleDevAction(act, arg) {
@@ -4976,6 +5440,81 @@
         run.saleWeapons = run.saleWeapons || {};
         run.saleWeapons[arg] = Math.min(max, (run.saleWeapons[arg] || 0) + 1);
         info(`${SALE_WEAPONS[arg].name} lv${run.saleWeapons[arg]}`);
+        break;
+      }
+      case 'baldump': {
+        const logs = loadSaleBalanceLogs();
+        console.log('[sale-balance] logs', logs.length, logs);
+        info(`логов: ${logs.length} (см. консоль)`);
+        break;
+      }
+      case 'baldl': {
+        const logs = loadSaleBalanceLogs();
+        downloadJsonFile(`sale-balance-${SALE_VERSION}-${Date.now()}.json`, {
+          exportedAt: new Date().toISOString(),
+          version: SALE_VERSION,
+          count: logs.length,
+          runs: logs,
+        });
+        info(`скачано ${logs.length} забегов`);
+        break;
+      }
+      case 'ballast': {
+        const last = (window.game && window.game._saleBalLast)
+          || loadSaleBalanceLogs().slice(-1)[0]
+          || null;
+        console.log('[sale-balance] last', last);
+        if (!last) info('нет логов');
+        else {
+          const top = Object.entries(last.weaponShare || {})
+            .sort((a, b) => b[1].pct - a[1].pct)
+            .slice(0, 3)
+            .map(([k, v]) => `${k}:${v.pct}%`)
+            .join(' ');
+          info(`last ${last.won ? 'WIN' : 'LOSS'} t=${last.survivedSec}s lv=${last.level} dps=${last.avgDps} ${top}`);
+        }
+        break;
+      }
+      case 'balclear': {
+        saveSaleBalanceLogs([]);
+        if (window.game) window.game._saleBalLast = null;
+        info('логи очищены');
+        break;
+      }
+      case 'balsheet': {
+        const cur = getSaleBalanceSheetUrl();
+        const url = window.prompt(
+          'URL Google Apps Script Web App (…/exec)\nСм. scripts/balance_sheet_appscript.gs',
+          cur || '',
+        );
+        if (url == null) break;
+        try {
+          const saved = setSaleBalanceSheetUrl(url);
+          info(saved ? 'URL таблицы сохранён' : 'URL очищен');
+          buildSaleDevPanel();
+        } catch (e) {
+          info(String(e.message || e));
+        }
+        break;
+      }
+      case 'balup': {
+        const run = (window.game && window.game._saleBalLast)
+          || loadSaleBalanceLogs().slice(-1)[0]
+          || null;
+        if (!run) {
+          info('нет забега для выгрузки');
+          break;
+        }
+        info('выгружаю…');
+        uploadSaleBalanceToSheet(run)
+          .then((res) => info(res.already ? 'уже было' : (res.opaque ? 'отправлено (проверь Sheet)' : 'ok')))
+          .catch((e) => info('ошибка: ' + (e.message || e)));
+        break;
+      }
+      case 'balurl': {
+        const u = getSaleBalanceSheetUrl();
+        info(u ? u : 'URL не задан — нажми «URL таблицы»');
+        console.log('[sale-balance] sheet url', u || '(empty)');
         break;
       }
       default:
@@ -5124,6 +5663,19 @@
     },
     warm: (t) => ({ enemy: saleWarmMul(t || 0), coin: saleCoinWarmMul(t || 0) }),
     panel: (on) => toggleSaleDev(on),
+    balance: {
+      list: () => loadSaleBalanceLogs(),
+      last: () => (window.game && window.game._saleBalLast) || loadSaleBalanceLogs().slice(-1)[0] || null,
+      live: () => (window.game && window.game._saleBal) || null,
+      download: () => saleDevAction('baldl'),
+      clear: () => saleDevAction('balclear'),
+      dump: () => saleDevAction('baldump'),
+      getSheetUrl: () => getSaleBalanceSheetUrl(),
+      setSheetUrl: (url) => setSaleBalanceSheetUrl(url),
+      upload: (run) => uploadSaleBalanceToSheet(
+        run || (window.game && window.game._saleBalLast) || loadSaleBalanceLogs().slice(-1)[0],
+      ),
+    },
   };
   window.__game = window.__sale;
 })();
