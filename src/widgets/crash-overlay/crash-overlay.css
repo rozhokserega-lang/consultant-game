@@ -1,0 +1,42 @@
+/** Экран необработанной ошибки. Показывается поверх всего, включая дев-панель. */
+
+#crash-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(8, 8, 14, 0.92);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+#crash-overlay.show {
+  display: flex;
+}
+
+#crash-overlay .crash-box {
+  max-width: 520px;
+  width: 100%;
+  background: var(--c-dev-bg);
+  border: 1px solid var(--c-dev-border);
+  border-radius: 12px;
+  padding: 20px;
+  color: var(--c-dev-text);
+}
+
+#crash-overlay h3 {
+  margin: 0 0 12px;
+  color: #ff6b6b;
+  font-size: 16px;
+}
+
+#crash-overlay pre {
+  font: 11px/1.4 var(--c-mono);
+  color: var(--c-dev-text-dim);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow: auto;
+  margin: 0 0 16px;
+}

@@ -2,19 +2,9 @@
  * Level-up popup — выбор способностей при повышении уровня
  */
 
+/* Затемнение и центрирование берём из shared/ui/overlay. */
 .level-up-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 40;
-  display: none;
-  align-items: center;
-  justify-content: center;
   padding: 12px;
-  background: rgba(10, 10, 20, 0.82);
-}
-
-.level-up-overlay.show {
-  display: flex;
 }
 
 .level-up-popup {

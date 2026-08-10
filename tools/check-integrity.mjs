@@ -72,19 +72,15 @@ for (const rel of codeFiles) {
   }
 }
 
-/* ── 4. Service worker precache list ────────────────────────────────────── */
+/* ── 4. Service worker precache list is in sync ─────────────────────────── */
 
-const sw = read('sw.js');
-const assetBlock = sw.match(/const ASSETS = \[([\s\S]*?)\n\]/);
-if (!assetBlock) {
-  report('sw.js', 'could not locate the ASSETS array');
-} else {
-  for (const [, path] of assetBlock[1].matchAll(/'([^']+)'/g)) {
-    if (!exists(path)) report('sw.js', `precached file does not exist "${path}"`);
-  }
-  for (const ref of localRefs) {
-    if (!assetBlock[1].includes(`'${ref}'`)) report('sw.js', `not precached "${ref}"`);
-  }
+try {
+  execFileSync(process.execPath, [join(ROOT, 'tools/sync-sw-precache.mjs'), '--check'], {
+    cwd: ROOT,
+    stdio: 'pipe',
+  });
+} catch (err) {
+  report('sw.js', String(err.stderr || err.message).trim().split('\n')[0]);
 }
 
 /* ── Result ─────────────────────────────────────────────────────────────── */

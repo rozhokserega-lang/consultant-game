@@ -1,0 +1,87 @@
+/** Плашки поверх поля: активные баффы игрока и полоса здоровья босса. */
+
+/* ── Баффы ─────────────────────────────────────────────────────────────── */
+
+#buff-bar {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  pointer-events: none;
+  max-width: 90%;
+}
+
+.buff-tag {
+  display: inline-block;
+  margin: 2px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.buff-tag.good {
+  background: rgba(46, 204, 113, 0.25);
+  color: var(--c-success);
+}
+
+.buff-tag.bad {
+  background: rgba(231, 76, 60, 0.25);
+  color: var(--c-danger);
+}
+
+.buff-tag.syn {
+  background: rgba(56, 189, 248, 0.28);
+  color: #7dd3fc;
+  border: 1px solid rgba(125, 211, 252, 0.35);
+}
+
+/* ── Босс ──────────────────────────────────────────────────────────────── */
+
+#sale-boss-bar {
+  position: absolute;
+  top: 78px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  width: min(420px, 72%);
+  pointer-events: none;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+#sale-boss-bar.show {
+  display: flex;
+}
+
+#sale-boss-bar .nm {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--c-text);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  letter-spacing: 0.03em;
+}
+
+#sale-boss-bar .track {
+  width: 100%;
+  height: 9px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+#sale-boss-bar .fill {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, var(--c-danger), var(--c-accent-deep));
+  transition: width 0.12s linear;
+}

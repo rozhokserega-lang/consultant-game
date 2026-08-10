@@ -282,7 +282,7 @@
   function init(overlay, h) {
     if (!overlay) return;
     overlayEl = overlay;
-    overlayEl.classList.add('level-up-overlay');
+    overlayEl.classList.add('overlay', 'level-up-overlay');
     const root = document.createElement('div');
     root.id = 'level-up-root';
     overlayEl.innerHTML = '';

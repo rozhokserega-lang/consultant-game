@@ -302,8 +302,10 @@
         cost += ' · ';
         cost += mk.map(([k, n]) => (GEAR_MATERIALS[k] ? GEAR_MATERIALS[k].ico : k) + n).join(' ');
       }
-      html += '<button type="button" class="btn gear-up-btn' + (chk.ok ? '' : ' locked') + '" data-gear-up="' + slotId + '">'
-        + (chk.ok ? 'Улучшить' : chk.reason) + '<br><span class="gear-up-cost">' + cost + '</span></button>';
+      html += '<button type="button" class="button button--sm button--full gear-up-btn'
+        + (chk.ok ? '' : ' locked') + '" data-gear-up="' + slotId + '">'
+        + '<span class="button__label">' + (chk.ok ? 'Улучшить' : chk.reason)
+        + '<span class="gear-up-cost">' + cost + '</span></span></button>';
     } else {
       html += '<div class="gear-maxed">Максимальный тир</div>';
     }

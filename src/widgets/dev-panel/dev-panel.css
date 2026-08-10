@@ -1,0 +1,85 @@
+/**
+ * Дев-инструменты: угловая метка версии, ссылка на версию в хабе и сама панель.
+ * Видимость целиком управляется классом `dev-env` — см. shared/styles/body-state.css.
+ */
+
+#hub-version {
+  opacity: 0.55;
+  font-size: 11px;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#sale-ver-corner {
+  position: fixed;
+  left: 8px;
+  bottom: max(8px, env(safe-area-inset-bottom, 0px));
+  z-index: 60;
+  color: rgba(200, 190, 210, 0.45);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  padding: 10px 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  display: none;
+}
+
+#sale-dev-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  background: var(--c-scrim-solid);
+  color: #d8e0f0;
+  font: 12px/1.4 var(--c-mono);
+  padding: 12px 12px max(40px, env(safe-area-inset-bottom, 0px));
+  overflow: auto;
+  display: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+#sale-dev-panel.show {
+  display: block;
+}
+
+#sale-dev-panel h3 {
+  margin: 4px 0 10px;
+  font: bold 14px monospace;
+  color: var(--c-dev-accent);
+  letter-spacing: 1px;
+}
+
+#sale-dev-panel .dvh {
+  margin: 10px 0 4px;
+  color: var(--c-dev-text-dim);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+#sale-dev-panel .dvrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+#sale-dev-panel .dvb {
+  background: var(--c-dev-surface);
+  color: var(--c-dev-text);
+  border: 1px solid var(--c-dev-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: 12px monospace;
+  cursor: pointer;
+}
+
+#sale-dev-panel .dvb:active {
+  background: #2f3850;
+}
+
+#sale-dev-panel #sale-dev-info {
+  margin-top: 12px;
+  color: #8fa;
+  min-height: 1.2em;
+}

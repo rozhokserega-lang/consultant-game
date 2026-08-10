@@ -1,0 +1,14 @@
+/** Окно настроек. Оболочку даёт shared/ui/overlay, здесь только раскладка кнопок. */
+
+.settings-popup__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.settings-popup__stats {
+  margin-top: 12px;
+  font-size: 12px;
+}

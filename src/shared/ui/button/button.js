@@ -9,7 +9,7 @@
 (function (global) {
   'use strict';
 
-  const VARIANTS = ['primary', 'accent', 'ghost', 'danger', 'success', 'menu'];
+  const VARIANTS = ['primary', 'accent', 'ghost', 'danger', 'success', 'menu', 'secondary'];
   const SIZES = ['sm', 'md', 'lg'];
 
   /**
@@ -133,12 +133,30 @@
     el.classList.toggle('button--pressed', Boolean(pressed));
   }
 
+  /**
+   * Меняет надпись, не задевая иконку и обводку текста.
+   * Прямое присваивание el.textContent сносит `.button__label` и ломает вид.
+   * @param {HTMLElement} el
+   * @param {string} text
+   */
+  function setText(el, text) {
+    if (!el) return;
+    let label = el.querySelector('.button__label');
+    if (!label) {
+      label = document.createElement('span');
+      label.className = 'button__label';
+      el.appendChild(label);
+    }
+    label.textContent = text;
+  }
+
   const UiButton = {
     VARIANTS,
     SIZES,
     create: createButton,
     enhance: enhanceButton,
     setPressed,
+    setText,
   };
 
   global.UiButton = UiButton;

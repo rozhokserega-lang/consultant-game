@@ -2,10 +2,6 @@
  * End popup — экран поражения / победы
  */
 
-.end-overlay {
-  background: rgba(10, 10, 20, 0.82);
-}
-
 .end-popup {
   --ep-font: 'Press Start 2P', 'Courier New', monospace;
   --ep-panel-light: #b8d4f0;
@@ -159,14 +155,20 @@
   width: 100%;
 }
 
-.end-popup__actions .button--menu-secondary {
-  --button-face-light: #c8dff5;
-  --button-face-dark: #8ab0d8;
-  --button-edge: var(--ep-edge);
-  --button-highlight: #e8f4ff;
-  --button-shadow-inner: #5a7898;
-  --button-text: #1a1a22;
-  --button-text-shadow: rgba(255, 255, 255, 0.35);
+/* Выгрузка логов баланса — только в дев-окружении */
+.end-popup__upload {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.end-popup__upload-status {
+  margin-top: 6px;
+  font-family: var(--ep-font);
+  font-size: 7px;
+  line-height: 1.5;
+  color: #2a4055;
+  word-break: break-all;
 }
 
 .end-popup__legacy {

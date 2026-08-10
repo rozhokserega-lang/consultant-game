@@ -1,6 +1,9 @@
 /**
  * Pixel button — BEM block `.button`
- * Подключение: <link rel="stylesheet" href="shared/ui/button/button.css">
+ * Подключение: <link rel="stylesheet" href="src/shared/ui/button/button.css">
+ *
+ * Единственная система кнопок в проекте. Локальные варианты заводятся здесь,
+ * а не переопределением `.button` внутри чужого компонента.
  */
 
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap&subset=cyrillic');
@@ -138,6 +141,17 @@
   --button-face-dark: #2e9a52;
   --button-highlight: #b8f0c8;
   --button-shadow-inner: #1a6034;
+}
+
+/* Светлая кнопка второго плана — читается на голубых панелях попапов */
+.button--secondary {
+  --button-face-light: #c8dff5;
+  --button-face-dark: #8ab0d8;
+  --button-edge: #1a1a22;
+  --button-highlight: #e8f4ff;
+  --button-shadow-inner: #5a7898;
+  --button-text: #1a1a22;
+  --button-text-shadow: rgba(255, 255, 255, 0.35);
 }
 
 /* Меню стартового экрана — фиолетовый по умолчанию, жёлтый при hover/active */

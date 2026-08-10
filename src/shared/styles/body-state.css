@@ -1,0 +1,72 @@
+/**
+ * Режимы приложения, которые переключаются классом на <body>.
+ * Подключается последним: здесь живут перекрытия компонентных стилей.
+ */
+
+/* ── Дев-окружение ─────────────────────────────────────────────────────── */
+
+body.dev-env.sale-mode:not(.hub-mode) #sale-ver-corner {
+  display: block;
+}
+
+body:not(.dev-env) #sale-ver-corner,
+body:not(.dev-env) #sale-dev-panel,
+body:not(.dev-env) #btn-speed,
+body:not(.dev-env) #end-balance-upload {
+  display: none !important;
+}
+
+body:not(.dev-env) #hub-version {
+  cursor: default;
+  text-decoration: none;
+  pointer-events: none;
+}
+
+/* ── Главное меню: игровой UI спрятан ──────────────────────────────────── */
+
+body.main-menu-mode #battle-bar,
+body.main-menu-mode #buff-bar,
+body.main-menu-mode #sale-boss-bar,
+body.main-menu-mode #desktop-hint,
+body.main-menu-mode .mobile-only {
+  display: none !important;
+}
+
+body.main-menu-mode #game-container {
+  padding-bottom: 0 !important;
+}
+
+/* ── Режим «Распродажа»: поле на весь экран, джойстик на всю ширину ─────── */
+
+body.sale-mode #attack-zone,
+body.sale-mode #desktop-hint {
+  display: none !important;
+}
+
+body.sale-mode #joystick-zone {
+  left: 0;
+  width: 100%;
+  height: 100%;
+  bottom: 0;
+}
+
+body.sale-mode .hud-meters {
+  display: none !important;
+}
+
+body.sale-mode #game-container {
+  padding: 0 !important;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+body.sale-mode #game-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  body.sale-mode #game-container {
+    padding-bottom: 0 !important;
+  }
+}

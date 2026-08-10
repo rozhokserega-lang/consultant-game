@@ -8,612 +8,35 @@
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="assets/app-icons/icon-192.png">
+<title>🛒 Распродажа</title>
+
+<!-- Основа: сброс, палитра, лейаут страницы -->
+<link rel="stylesheet" href="src/shared/styles/tokens.css">
+<link rel="stylesheet" href="src/shared/styles/base.css">
+<link rel="stylesheet" href="src/shared/styles/utilities.css">
+
+<!-- Переиспользуемый UI-кит -->
+<link rel="stylesheet" href="src/shared/ui/overlay/overlay.css">
 <link rel="stylesheet" href="src/shared/ui/button/button.css">
 <link rel="stylesheet" href="src/shared/ui/battle-bar/battle-bar.css">
+
+<!-- Виджеты -->
+<link rel="stylesheet" href="src/widgets/legacy-hud/legacy-hud.css">
+<link rel="stylesheet" href="src/widgets/mobile-controls/mobile-controls.css">
+<link rel="stylesheet" href="src/widgets/status-bars/status-bars.css">
 <link rel="stylesheet" href="src/widgets/game-menu/game-menu.css">
 <link rel="stylesheet" href="src/widgets/level-up-popup/level-up-popup.css">
+<link rel="stylesheet" href="src/widgets/settings-popup/settings-popup.css">
 <link rel="stylesheet" href="src/widgets/end-popup/end-popup.css">
-<title>🛒 Распродажа</title>
-<style>
-  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body {
-    width: 100%; height: 100%; overflow: hidden; background: #1a1a2e;
-    touch-action: none; user-select: none; -webkit-user-select: none;
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    display: flex; flex-direction: column;
-  }
-  /* Legacy HUD — logic-only, visually hidden */
-  #hud {
-    position: absolute !important;
-    width: 1px !important;
-    height: 1px !important;
-    padding: 0 !important;
-    margin: -1px !important;
-    overflow: hidden !important;
-    clip: rect(0, 0, 0, 0) !important;
-    white-space: nowrap !important;
-    border: 0 !important;
-  }
-  .hud-main {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 0.85fr);
-    align-items: center;
-    gap: 6px;
-    min-height: 0;
-    flex: 1;
-  }
-  .hud-main > div { display: flex; align-items: center; gap: 6px; min-width: 0; }
-  .hud-sub {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    min-width: 0;
-    flex-shrink: 0;
-    padding-top: 2px;
-    border-top: 1px solid rgba(255,255,255,0.08);
-  }
-  .hud-sub-left {
-    display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;
-  }
-  .hud-hp-bar, .hud-xp-bar {
-    height: 12px; background: #333; border-radius: 7px; overflow: hidden; border: 1px solid #555;
-  }
-  .hud-hp-bar { width: min(100px, 20vw); }
-  .hud-xp-bar { width: min(72px, 15vw); height: 7px; border-radius: 4px; }
-  .hud-hp-fill { height: 100%; background: #2ecc71; transition: width 0.2s; border-radius: 7px; }
-  .hud-xp-fill { height: 100%; background: #9b59b6; transition: width 0.2s; border-radius: 4px; }
-  .hud-label { color: #aaa; font-size: 10px; white-space: nowrap; }
-  .hud-value { font-weight: 700; font-size: 12px; white-space: nowrap; }
-  .hud-mode {
-    font-weight: 700; font-size: 11px; padding: 2px 6px; border-radius: 10px;
-    min-width: 6.8em; text-align: center; white-space: nowrap;
-  }
-  .hud-mode.chase { background: rgba(231,76,60,0.3); color: #e74c3c; }
-  .hud-mode.flee { background: rgba(241,196,15,0.3); color: #f1c40f; }
-  .hud-combo-slot {
-    min-height: 12px; font-size: 10px; font-weight: 700; color: #f1c40f;
-    visibility: hidden; white-space: nowrap;
-  }
-  .hud-combo-slot.on { visibility: visible; }
-  .hud-mid {
-    flex-direction: column; align-items: center; gap: 2px;
-  }
-  .hud-mid-top {
-    display: flex; align-items: center; gap: 6px; white-space: nowrap;
-  }
-  .hud-mid-top #hud-score { font-size: 14px; font-weight: 800; }
-  .hud-meters {
-    display: flex; gap: 6px; align-items: center;
-    font-size: 9px; color: #aaa;
-  }
-  .hud-wave-line, .hud-enemies-line {
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    max-width: 46vw;
-  }
-  .hud-wave-line { font-weight: 700; font-size: 12px; }
-  .hud-enemies-line { color: #aaa; font-size: 11px; }
-  .hud-btn {
-    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25);
-    color: #fff; border-radius: 8px; padding: 3px 7px; font-size: 13px; cursor: pointer;
-    flex-shrink: 0;
-  }
-  #game-container {
-    position: relative; flex: 1; display: flex; align-items: center;
-    justify-content: center; overflow: hidden; padding-bottom: 8px;
-  }
-  @media (hover: none) and (pointer: coarse) {
-    #game-container { padding-bottom: 155px; }
-  }
-  canvas { display: block; }
-  .mobile-only { display: none; }
-  #joystick-zone { position: absolute; bottom: 0; left: 0; width: 50%; height: 100%; z-index: 10; }
-  #joystick-base {
-    position: absolute; bottom: 30px; left: 30px; width: 110px; height: 110px;
-    border-radius: 50%; background: rgba(255,255,255,0.08);
-    border: 3px solid rgba(255,255,255,0.3); pointer-events: none; opacity: 0.55;
-  }
-  #joystick-base.active { opacity: 0.85; border-color: rgba(255,255,255,0.55); background: rgba(255,255,255,0.14); }
-  #joystick-thumb {
-    position: absolute; top: 50%; left: 50%; width: 48px; height: 48px;
-    margin: -24px 0 0 -24px; border-radius: 50%; background: rgba(255,255,255,0.40);
-    border: 2px solid rgba(255,255,255,0.6); pointer-events: none;
-  }
-  #attack-zone { position: absolute; bottom: 0; right: 0; width: 50%; height: 100%; z-index: 10; }
-  #attack-btn {
-    position: absolute; bottom: 35px; right: 30px; width: 88px; height: 88px;
-    border-radius: 50%; background: radial-gradient(circle at 40% 35%, #ff6b6b, #c0392b);
-    border: 3px solid rgba(255,255,255,0.45); pointer-events: none;
-    display: flex; align-items: center; justify-content: center; font-size: 36px; color: #fff;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.5); opacity: 0.8;
-  }
-  #attack-btn.pressed { transform: scale(0.88); opacity: 1; }
-  @media (hover: none) and (pointer: coarse) { .mobile-only { display: block; } }
-  #desktop-hint {
-    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
-    color: rgba(255,255,255,0.45); font-size: 12px; z-index: 5; pointer-events: none; text-align: center;
-  }
-  @media (hover: none) and (pointer: coarse) { #desktop-hint { display: none; } }
+<link rel="stylesheet" href="src/widgets/main-menu/main-menu.css">
+<link rel="stylesheet" href="src/widgets/boosters-hub/boosters-hub.css">
+<link rel="stylesheet" href="src/widgets/equip-hub/equip-hub.css">
+<link rel="stylesheet" href="src/widgets/crash-overlay/crash-overlay.css">
+<link rel="stylesheet" href="src/widgets/dev-panel/dev-panel.css">
 
-  /* Overlays */
-  .overlay {
-    position: absolute; inset: 0; z-index: 40; display: none;
-    align-items: center; justify-content: center;
-    background: rgba(10,10,20,0.82); padding: 16px;
-  }
-  .overlay.show { display: flex; }
-  .panel {
-    background: linear-gradient(180deg, #2a2a45, #1c1c30);
-    border: 2px solid #555; border-radius: 16px; padding: 20px;
-    max-width: 520px; width: 100%; color: #fff; text-align: center;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-  }
-  .panel h2 { font-size: 22px; margin-bottom: 8px; }
-  .panel p { color: #bbb; font-size: 14px; margin-bottom: 14px; line-height: 1.4; }
-  .pause-loadout {
-    text-align: left;
-    margin: 0 0 12px;
-    max-height: 42vh;
-    overflow-y: auto;
-    padding: 8px 10px;
-    background: rgba(0,0,0,0.28);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 10px;
-  }
-  .pause-loadout .sec {
-    font-size: 11px; color: #f1c40f; font-weight: 700;
-    margin: 8px 0 6px; letter-spacing: 0.02em;
-  }
-  .pause-loadout .sec:first-child { margin-top: 0; }
-  .pause-chips {
-    display: flex; flex-wrap: wrap; gap: 6px;
-  }
-  .pause-chip {
-    display: inline-flex; align-items: center; gap: 5px;
-    padding: 4px 8px; border-radius: 8px;
-    background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(255,255,255,0.14);
-    font-size: 12px; color: #eee;
-  }
-  .pause-chip .lv { color: #f1c40f; font-weight: 700; font-size: 11px; }
-  .pause-chip .nm { color: #ccc; font-size: 11px; }
-  .pause-empty { font-size: 12px; color: #888; }
-  .row-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
-  .end-balance-upload {
-    margin-top: 12px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(255,255,255,0.1);
-    text-align: center;
-  }
-  .btn-balance-upload {
-    background: linear-gradient(180deg, #3d6b4f, #2a4a38) !important;
-    border-color: #5a9a70 !important;
-    width: 100%;
-    max-width: 280px;
-  }
-  .btn-balance-upload:disabled {
-    opacity: 0.75;
-    cursor: default;
-  }
-  .end-balance-status {
-    margin-top: 6px;
-    font-size: 11px;
-    color: #9ab;
-    word-break: break-all;
-  }
-  .btn {
-    background: #f1c40f; color: #222; border: none; border-radius: 10px;
-    padding: 10px 16px; font-weight: 700; font-size: 14px; cursor: pointer;
-  }
-  .btn.ghost { background: transparent; color: #ddd; border: 1px solid #666; }
-  .btn:active { transform: scale(0.96); }
-  .stat-line { font-size: 15px; margin: 4px 0; color: #eee; }
-  .stat-line b { color: #f1c40f; }
-  .buff-tag {
-    display: inline-block; margin: 2px; padding: 2px 8px; border-radius: 10px;
-    font-size: 11px; font-weight: 700;
-  }
-  .buff-tag.good { background: rgba(46,204,113,0.25); color: #2ecc71; }
-  .buff-tag.bad { background: rgba(231,76,60,0.25); color: #e74c3c; }
-  .buff-tag.syn { background: rgba(56,189,248,0.28); color: #7dd3fc; border: 1px solid rgba(125,211,252,0.35); }
-  #buff-bar {
-    position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
-    z-index: 15; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
-    pointer-events: none; max-width: 90%;
-  }
-  #sale-boss-bar {
-    position: absolute; top: 78px; left: 50%; transform: translateX(-50%);
-    z-index: 15; width: min(420px, 72%); pointer-events: none;
-    display: none; flex-direction: column; align-items: center; gap: 2px;
-  }
-  #sale-boss-bar.show { display: flex; }
-  #sale-boss-bar .nm {
-    font-size: 11px; font-weight: 800; color: #fff;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.8); letter-spacing: 0.03em;
-  }
-  #sale-boss-bar .track {
-    width: 100%; height: 9px; border-radius: 6px; overflow: hidden;
-    background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.35);
-  }
-  #sale-boss-bar .fill {
-    display: block; height: 100%; width: 100%;
-    background: linear-gradient(90deg, #e74c3c, #f39c12);
-    transition: width 0.12s linear;
-  }
-  .shop-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 8px; max-height: min(48vh, 360px); overflow-y: auto; text-align: left; margin: 10px 0;
-  }
-  .shop-item {
-    background: rgba(255,255,255,0.06); border: 2px solid #555; border-radius: 12px;
-    padding: 10px; cursor: pointer; color: #fff;
-  }
-  .shop-item:hover { border-color: #f1c40f; }
-  .shop-item.owned { border-color: #2ecc71; }
-  .shop-item.locked { opacity: 0.45; cursor: not-allowed; }
-  .shop-item .price { color: #f1c40f; font-weight: 800; font-size: 13px; margin-top: 6px; }
-  .shop-item .ttl { font-weight: 700; font-size: 13px; }
-  .shop-item .desc { font-size: 11px; color: #aaa; margin-top: 2px; }
-  .shop-head { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
-  .coin-pill {
-    background: rgba(241,196,15,0.18); border: 1px solid #f1c40f; color: #f1c40f;
-    border-radius: 999px; padding: 4px 10px; font-weight: 800; font-size: 14px;
-  }
-  .meter {
-    width: 110px; height: 10px; background: #333; border-radius: 6px; overflow: hidden;
-    border: 1px solid #555; display: inline-block; vertical-align: middle;
-  }
-  .meter > i { display:block; height:100%; width:0%; border-radius:6px; transition: width 0.08s linear; }
-  .meter.skill > i { background: linear-gradient(90deg, #f39c12, #f1c40f); }
-  .meter.charge > i { background: linear-gradient(90deg, #3498db, #9b59b6); }
-  #attack-btn.charging { box-shadow: 0 0 18px rgba(155,89,186,0.8); border-color: #9b59b6; }
-  #dash-btn, #skill-btn {
-    position: absolute; width: 64px; height: 64px; border-radius: 50%;
-    border: 3px solid rgba(255,255,255,0.4); pointer-events: none;
-    display: flex; align-items: center; justify-content: center; font-size: 24px; color: #fff;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.45); opacity: 0.85;
-  }
-  #dash-btn {
-    bottom: 40px; right: 130px;
-    background: radial-gradient(circle at 40% 35%, #5dade2, #2471a3);
-  }
-  #skill-btn {
-    bottom: 115px; right: 42px;
-    background: radial-gradient(circle at 40% 35%, #f7dc6f, #d68910);
-  }
-  #skill-btn.ready { opacity: 1; box-shadow: 0 0 16px rgba(241,196,15,0.9); }
-  #dash-btn.cd, #skill-btn.cd { opacity: 0.4; filter: grayscale(0.4); }
-  .hub-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; text-align:left; margin:6px 0; }
-  .hub-card {
-    background:rgba(255,255,255,0.06); border:2px solid #555; border-radius:10px;
-    padding:8px; cursor:pointer; color:#fff; text-align:left;
-  }
-  .hub-card:hover { border-color:#f1c40f; }
-  .hub-card.sel { border-color:#2ecc71; background:rgba(46,204,113,0.12); }
-  .hub-card.hot { box-shadow: inset 0 0 0 1px rgba(241,196,15,0.45); }
-  .hub-card .ttl { font-weight:700; font-size:12px; line-height:1.25; }
-  .hub-card .desc { font-size:10px; color:#aaa; margin-top:2px; }
-  .hub-card .meta { font-size:10px; color:#f1c40f; margin-top:3px; font-weight:700; }
-  .hub-card.locked { opacity:0.4; cursor:not-allowed; }
-  .hub-tabs { display:flex; gap:6px; margin:8px 0 6px; }
-  .hub-tab {
-    flex:1; padding:10px 8px; border-radius:10px; border:2px solid #555;
-    background:rgba(255,255,255,0.06); color:#fff; font-weight:800; font-size:13px; cursor:pointer;
-  }
-  .hub-tab.on { border-color:#f1c40f; background:rgba(241,196,15,0.15); }
-  .hub-pane { display:none; }
-  .hub-pane.on { display:block; }
-  .book-list { display:flex; flex-direction:column; gap:6px; text-align:left; }
-  .book-row {
-    display:flex; align-items:center; gap:10px; padding:8px 10px;
-    background:rgba(255,255,255,0.06); border:1px solid #444; border-radius:10px;
-  }
-  .book-row .ico {
-    width:48px; height:52px; flex-shrink:0;
-    display:flex; align-items:center; justify-content:center;
-  }
-  .book-row .ico canvas {
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-    max-width:100%; max-height:100%;
-  }
-  .book-row.boss .ico { width:58px; height:64px; }
-  .book-row .nm { flex:1; font-weight:700; font-size:13px; }
-  .book-row .cnt { font-weight:800; color:#f1c40f; font-size:14px; }
-  .book-row.zero { opacity:0.45; }
-  .book-total { text-align:left; margin:4px 0 8px; font-size:12px; color:#aaa; }
-  .wep-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-  .wep-card { display:flex; flex-direction:column; gap:4px; text-align:left; cursor:pointer; }
-  .wep-card .wep-up {
-    margin-top: 2px; width: 100%;
-    background: rgba(241,196,15,0.15); border: 1px solid rgba(241,196,15,0.45);
-    color: #f1c40f; border-radius: 8px; padding: 5px 6px; font-size: 11px; font-weight: 700;
-    cursor: pointer;
-  }
-  .wep-card .wep-up:disabled {
-    opacity: 0.45; cursor: default; border-color: #555; color: #888; background: rgba(255,255,255,0.04);
-  }
-  .wep-card.locked { opacity: 0.45; cursor: default; }
-  .perk-row { display:flex; gap:6px; flex-wrap:wrap; justify-content:stretch; margin:6px 0; }
-  .perk-row .hub-card { flex:1 1 90px; min-width:0; }
-  #boosters-overlay {
-    position: fixed; inset: 0; z-index: 110;
-    display: none; align-items: stretch; justify-content: center;
-    background: rgba(8, 8, 16, 0.94);
-    padding: max(8px, env(safe-area-inset-top, 0px)) 10px max(10px, env(safe-area-inset-bottom, 0px));
-    overflow: hidden;
-    touch-action: pan-y;
-  }
-  #boosters-overlay.show { display: flex; }
-  #boosters-overlay .boosters-panel {
-    max-width: 640px; width: 100%; max-height: 100%;
-    display: flex; flex-direction: column; text-align: center; overflow: hidden;
-    padding: 12px; margin: 0 auto;
-  }
-  #boosters-overlay .boosters-panel h2 { font-size: 18px; margin-bottom: 4px; }
-  .equip-doll {
-    position: relative;
-    width: 180px;
-    height: 320px;
-    margin: 8px auto 12px;
-    flex-shrink: 0;
-  }
-  .gear-silhouette { display: block; margin: 0 auto; pointer-events: none; }
-  .gear-slot-pin {
-    position: absolute;
-    transform: translate(-50%, -50%) rotate(var(--pin-rot, 0deg));
-    border-radius: 8px;
-    color: #fff;
-    cursor: pointer;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: visible;
-    z-index: 3;
-    transition: box-shadow 0.15s;
-  }
-  .gear-pin-img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    object-position: center;
-    image-rendering: auto;
-    display: block;
-    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.45));
-    pointer-events: none;
-  }
-  .gear-slot-pin[data-slot="badge"] .gear-pin-img { object-position: center top; }
-  .gear-slot-pin[data-slot="radio"] .gear-pin-img { object-position: center bottom; }
-  .gear-pin-ico { font-size: 18px; line-height: 1; pointer-events: none; }
-  .gear-slot-pin.filled {
-    border: none;
-    background: transparent;
-    box-shadow: none;
-  }
-  .gear-slot-pin:not(.filled) {
-    border: 2px dashed rgba(255,255,255,0.28);
-    background: rgba(0,0,0,0.18);
-  }
-  .gear-slot-pin.sel {
-    box-shadow: 0 0 0 2px rgba(241,196,15,0.55), 0 0 12px rgba(241,196,15,0.35);
-  }
-  .gear-slot-pin.filled.sel { border-radius: 8px; }
-  .gear-paperdoll-wrap {
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  .gear-detail-panel {
-    flex: 1 1 200px;
-    max-width: 280px;
-    border: 1px solid #444;
-    border-radius: 12px;
-    padding: 10px;
-    background: rgba(255,255,255,0.04);
-    text-align: left;
-  }
-  .gear-detail-head { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
-  .gear-detail-ico { font-size: 28px; }
-  .gear-detail-art { text-align: center; margin-bottom: 8px; }
-  .gear-detail-img {
-    max-width: 140px;
-    max-height: 160px;
-    image-rendering: auto;
-    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.35));
-  }
-  .gear-detail-name { font-weight: 700; font-size: 14px; }
-  .gear-detail-part { font-size: 11px; color: #aaa; }
-  .gear-pips-row { display: flex; gap: 4px; margin: 6px 0; }
-  .gear-pip { width: 10px; height: 10px; border-radius: 50%; background: #333; border: 1px solid #555; }
-  .gear-pip.on { background: #f1c40f; border-color: #f39c12; }
-  .gear-detail-stat { font-size: 13px; color: #2ecc71; margin: 4px 0; }
-  .gear-detail-q { font-size: 11px; color: #aaa; margin-bottom: 8px; }
-  .gear-up-btn { width: 100%; margin-top: 4px; font-size: 12px; }
-  .gear-up-btn.locked { opacity: 0.65; }
-  .gear-up-cost { font-size: 10px; color: #aaa; font-weight: 400; }
-  .gear-mats-bar { font-size: 11px; color: #ccc; margin: 4px 0 8px; text-align: center; }
-  .gear-maxed { font-size: 12px; color: #2ecc71; margin-top: 6px; }
+<!-- Последним: перекрытия по режиму приложения (body.sale-mode и т.п.) -->
+<link rel="stylesheet" href="src/shared/styles/body-state.css">
 
-  #boosters-overlay .boosters-panel > p { font-size: 12px; margin-bottom: 6px; }
-  #boosters-overlay .hub-scroll { text-align: left; flex: 1 1 auto; min-height: 0; }
-  .hub-sec { font-size: 13px; margin: 6px 0 2px; font-weight: 700; text-align: left; }
-  .hub-scroll {
-    flex: 1 1 auto; min-height: 0;
-    overflow-y: auto; -webkit-overflow-scrolling: touch;
-    touch-action: pan-y; overscroll-behavior: contain;
-  }
-  #boosters-overlay .boosters-footer {
-    flex-shrink: 0; padding-top: 8px; margin-top: 4px; border-top: 1px solid #444;
-  }
-  #main-menu-overlay {
-    position: fixed; inset: 0; z-index: 110;
-    display: none; align-items: flex-end; justify-content: center;
-    background: #0a0612 url('assets/images/start_screen.jpg') center center / cover no-repeat;
-    padding: max(8px, env(safe-area-inset-top, 0px)) 16px max(20px, env(safe-area-inset-bottom, 0px));
-  }
-  #main-menu-overlay::after {
-    content: '';
-    position: absolute; inset: auto 0 0 0; height: 50%;
-    background: linear-gradient(transparent, rgba(10, 6, 18, 0.88));
-    pointer-events: none;
-  }
-  #main-menu-overlay.show { display: flex; }
-  .main-menu-panel {
-    position: relative; z-index: 1;
-    max-width: 360px; width: min(92vw, 360px);
-    text-align: center; color: #fff;
-  }
-  .main-menu-title,
-  .main-menu-sub { display: none; }
-  .main-menu-actions {
-    display: flex; flex-direction: column; gap: 10px; width: 100%;
-  }
-  body.dev-env.sale-mode:not(.hub-mode) #sale-ver-corner { display: block; }
-  body:not(.dev-env) #sale-ver-corner,
-  body:not(.dev-env) #sale-dev-panel,
-  body:not(.dev-env) #btn-speed,
-  body:not(.dev-env) #end-balance-upload { display: none !important; }
-  body:not(.dev-env) #hub-version {
-    cursor: default;
-    text-decoration: none;
-    pointer-events: none;
-  }
-  #crash-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    background: rgba(8, 8, 14, 0.92);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-  }
-  #crash-overlay.show { display: flex; }
-  #crash-overlay .crash-box {
-    max-width: 520px;
-    width: 100%;
-    background: #1a1a28;
-    border: 1px solid #3a4560;
-    border-radius: 12px;
-    padding: 20px;
-    color: #e8eef8;
-  }
-  #crash-overlay h3 { margin: 0 0 12px; color: #ff6b6b; font-size: 16px; }
-  #crash-overlay pre {
-    font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
-    color: #9ab;
-    white-space: pre-wrap;
-    word-break: break-word;
-    max-height: 200px;
-    overflow: auto;
-    margin: 0 0 16px;
-  }
-  body.main-menu-mode #battle-bar,
-  body.main-menu-mode #buff-bar,
-  body.main-menu-mode #sale-boss-bar,
-  body.main-menu-mode #desktop-hint,
-  body.main-menu-mode .mobile-only { display: none !important; }
-  body.main-menu-mode #game-container { padding-bottom: 0 !important; }
-  body.sale-mode #attack-zone,
-  body.sale-mode #desktop-hint { display: none !important; }
-  body.sale-mode #joystick-zone {
-    left: 0; width: 100%; height: 100%; bottom: 0;
-  }
-  #hub-version {
-    opacity: 0.55;
-    font-size: 11px;
-    cursor: pointer;
-    text-decoration: underline dotted;
-    -webkit-tap-highlight-color: transparent;
-  }
-  #sale-ver-corner {
-    position: fixed;
-    left: 8px;
-    bottom: max(8px, env(safe-area-inset-bottom, 0px));
-    z-index: 60;
-    color: rgba(200, 190, 210, 0.45);
-    font-size: 11px;
-    letter-spacing: 0.5px;
-    padding: 10px 14px;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    display: none;
-  }
-  #sale-dev-panel {
-    position: fixed;
-    inset: 0;
-    z-index: 220;
-    background: rgba(8, 8, 14, 0.94);
-    color: #d8e0f0;
-    font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
-    padding: 12px 12px max(40px, env(safe-area-inset-bottom, 0px));
-    overflow: auto;
-    display: none;
-    -webkit-overflow-scrolling: touch;
-  }
-  #sale-dev-panel.show { display: block; }
-  #sale-dev-panel h3 {
-    margin: 4px 0 10px;
-    font: bold 14px monospace;
-    color: #7ad4ff;
-    letter-spacing: 1px;
-  }
-  #sale-dev-panel .dvh {
-    margin: 10px 0 4px;
-    color: #9ab;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-  #sale-dev-panel .dvrow {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 4px;
-  }
-  #sale-dev-panel .dvb {
-    background: #22283a;
-    color: #e8eef8;
-    border: 1px solid #3a4560;
-    border-radius: 8px;
-    padding: 8px 10px;
-    font: 12px monospace;
-    cursor: pointer;
-  }
-  #sale-dev-panel .dvb:active { background: #2f3850; }
-  #sale-dev-panel #sale-dev-info {
-    margin-top: 12px;
-    color: #8fa;
-    min-height: 1.2em;
-  }
-  body.sale-mode .hud-meters { display: none !important; }
-  /* без кнопок снизу — поле на весь экран */
-  body.sale-mode #game-container {
-    padding: 0 !important;
-    align-items: stretch;
-    justify-content: stretch;
-  }
-  body.sale-mode #game-container canvas {
-    width: 100% !important;
-    height: 100% !important;
-  }
-  @media (hover: none) and (pointer: coarse) {
-    body.sale-mode #game-container { padding-bottom: 0 !important; }
-  }
-  .hub-back {
-    background: transparent; border: 1px solid #555; color: #ccc;
-    border-radius: 8px; padding: 4px 10px; font-size: 12px; cursor: pointer; margin-bottom: 6px;
-  }
-  .hub-back:hover { border-color: #f1c40f; color: #fff; }
-  @media (max-height: 720px) {
-    .hub-card .desc { display: none; }
-    #boosters-overlay .boosters-panel { padding: 10px; }
-  }
-  #dash-btn.pressed, #skill-btn.pressed { transform: scale(0.9); }
-</style>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
 (function () {
@@ -638,12 +61,6 @@
   } catch (e) {}
 })();
 </script>
-<style>
-  html.tg-miniapp, body.tg-miniapp {
-    /* Telegram chrome + safe areas */
-    padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
-  }
-</style>
 </head>
 <body>
 
@@ -744,7 +161,7 @@
   <div id="upgrade-overlay"></div>
 
   <!-- Игровое меню (пауза / шестерёнка) -->
-  <div class="game-menu-overlay" id="game-menu-overlay">
+  <div class="overlay game-menu-overlay" id="game-menu-overlay">
     <div id="game-menu-root"></div>
   </div>
 
@@ -752,14 +169,24 @@
   <div class="overlay" id="settings-overlay">
     <div class="panel">
       <h2>⚙️ Настройки</h2>
-      <div class="row-btns" style="flex-direction:column;align-items:stretch;">
-        <button class="btn ghost" id="tog-sound" type="button">🔊 Звук: ВКЛ</button>
-        <button class="btn ghost" id="tog-music" type="button">🎵 Музыка: ВКЛ</button>
-        <button class="btn ghost" id="tog-vibro" type="button">📳 Вибрация: ВКЛ</button>
-        <button class="btn ghost" id="tog-dmgnum" type="button">🔢 Цифры урона: ВКЛ</button>
-        <button class="btn" id="btn-settings-close" type="button">Закрыть</button>
+      <div class="settings-popup__actions">
+        <button class="button button--ghost button--sm button--full" id="tog-sound" type="button">
+          <span class="button__label">🔊 Звук: ВКЛ</span>
+        </button>
+        <button class="button button--ghost button--sm button--full" id="tog-music" type="button">
+          <span class="button__label">🎵 Музыка: ВКЛ</span>
+        </button>
+        <button class="button button--ghost button--sm button--full" id="tog-vibro" type="button">
+          <span class="button__label">📳 Вибрация: ВКЛ</span>
+        </button>
+        <button class="button button--ghost button--sm button--full" id="tog-dmgnum" type="button">
+          <span class="button__label">🔢 Цифры урона: ВКЛ</span>
+        </button>
+        <button class="button button--accent button--sm button--full" id="btn-settings-close" type="button">
+          <span class="button__label">Закрыть</span>
+        </button>
       </div>
-      <p style="margin-top:12px;font-size:12px;">Рекорд: <b id="set-record">0</b> · Банк: <b id="set-bank">0</b></p>
+      <p class="settings-popup__stats">Рекорд: <b id="set-record">0</b> · Банк: <b id="set-bank">0</b></p>
     </div>
   </div>
 
@@ -802,15 +229,17 @@
       <div id="end-record" class="end-popup__legacy">0</div>
       <span id="end-newrec" class="end-popup__legacy" style="display:none;">★ НОВЫЙ РЕКОРД!</span>
       <div id="end-challenge-line" class="end-popup__legacy"></div>
-      <div id="end-balance-upload" class="end-balance-upload" style="display:none;">
-        <button class="btn btn-balance-upload" id="btn-upload-balance" type="button">☁ Выгрузить логи</button>
-        <div class="end-balance-status" id="end-balance-status"></div>
+      <div id="end-balance-upload" class="end-popup__upload" style="display:none;">
+        <button class="button button--success button--sm button--full" id="btn-upload-balance" type="button">
+          <span class="button__label">☁ Выгрузить логи</span>
+        </button>
+        <div class="end-popup__upload-status" id="end-balance-status"></div>
       </div>
       <div class="end-popup__actions">
         <button class="button button--success button--full" id="btn-retry" type="button">
           <span class="button__label">Попробовать ещё раз</span>
         </button>
-        <button class="button button--menu-secondary button--full" id="btn-again" type="button">
+        <button class="button button--secondary button--full" id="btn-again" type="button">
           <span class="button__label">В меню</span>
         </button>
       </div>
@@ -880,7 +309,7 @@
         </div>
       </div>
       <div class="boosters-footer">
-        <div class="main-menu-actions" id="boosters-back-wrap"></div>
+        <div class="actions-stack" id="boosters-back-wrap"></div>
       </div>
     </div>
   </div>
@@ -890,7 +319,7 @@
     <div class="main-menu-panel">
       <h1 class="main-menu-title">🛒 Распродажа</h1>
       <p class="main-menu-sub">Выживи смену в торговом центре</p>
-      <div class="main-menu-actions" id="main-menu-actions"></div>
+      <div class="actions-stack" id="main-menu-actions"></div>
     </div>
   </div>
 
@@ -3623,12 +3052,11 @@ class Game {
   }
 
   refreshSettingsUI() {
-    document.getElementById('tog-sound').textContent = sfx.enabled ? '🔊 Звук: ВКЛ' : '🔇 Звук: ВЫКЛ';
-    const togMusic = document.getElementById('tog-music');
-    if (togMusic) togMusic.textContent = music.enabled ? '🎵 Музыка: ВКЛ' : '🔕 Музыка: ВЫКЛ';
-    document.getElementById('tog-vibro').textContent = this.vibro ? '📳 Вибрация: ВКЛ' : '📳 Вибрация: ВЫКЛ';
-    const togDmg = document.getElementById('tog-dmgnum');
-    if (togDmg) togDmg.textContent = this.showDmgNumbers ? '🔢 Цифры урона: ВКЛ' : '🔢 Цифры урона: ВЫКЛ';
+    const setLabel = (id, text) => UiButton.setText(document.getElementById(id), text);
+    setLabel('tog-sound', sfx.enabled ? '🔊 Звук: ВКЛ' : '🔇 Звук: ВЫКЛ');
+    setLabel('tog-music', music.enabled ? '🎵 Музыка: ВКЛ' : '🔕 Музыка: ВЫКЛ');
+    setLabel('tog-vibro', this.vibro ? '📳 Вибрация: ВКЛ' : '📳 Вибрация: ВЫКЛ');
+    setLabel('tog-dmgnum', this.showDmgNumbers ? '🔢 Цифры урона: ВКЛ' : '🔢 Цифры урона: ВЫКЛ');
     document.getElementById('set-record').textContent = this.highScore;
     const bankEl = document.getElementById('set-bank');
     if (bankEl) bankEl.textContent = this.bankCoins;
@@ -5745,7 +5173,9 @@ class Game {
   <div class="crash-box">
     <h3 id="crash-overlay-msg">Ошибка</h3>
     <pre id="crash-overlay-sub"></pre>
-    <button type="button" class="btn" id="crash-reload-btn">Перезагрузить</button>
+    <button type="button" class="button button--sm" id="crash-reload-btn">
+      <span class="button__label">Перезагрузить</span>
+    </button>
   </div>
 </div>
 <div id="sale-ver-corner" title="Дев-панель">v?</div>

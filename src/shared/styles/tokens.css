@@ -1,0 +1,43 @@
+/**
+ * Палитра проекта. Компоненты объявляют свои переменные (--bb-*, --gm-*, --ep-*)
+ * и берут значения отсюда, чтобы цвет менялся в одном месте.
+ */
+
+:root {
+  /* Фон и поверхности */
+  --c-bg: #1a1a2e;
+  --c-surface: rgba(255, 255, 255, 0.06);
+  --c-surface-strong: rgba(0, 0, 0, 0.28);
+  --c-panel-top: #2a2a45;
+  --c-panel-bottom: #1c1c30;
+  --c-scrim: rgba(10, 10, 20, 0.82);
+  --c-scrim-solid: rgba(8, 8, 16, 0.94);
+
+  /* Границы */
+  --c-border: #555;
+  --c-border-dim: #444;
+  --c-border-soft: rgba(255, 255, 255, 0.14);
+
+  /* Текст */
+  --c-text: #fff;
+  --c-text-dim: #ccc;
+  --c-text-muted: #aaa;
+  --c-text-faint: #888;
+
+  /* Акценты */
+  --c-accent: #f1c40f;
+  --c-accent-deep: #f39c12;
+  --c-success: #2ecc71;
+  --c-danger: #e74c3c;
+  --c-info: #3498db;
+  --c-magic: #9b59b6;
+
+  /* Дев-инструменты — своя холодная гамма, чтобы не путать с игровым UI */
+  --c-dev-bg: #1a1a28;
+  --c-dev-surface: #22283a;
+  --c-dev-border: #3a4560;
+  --c-dev-text: #e8eef8;
+  --c-dev-text-dim: #9ab;
+  --c-dev-accent: #7ad4ff;
+  --c-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}

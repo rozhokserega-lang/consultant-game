@@ -1,0 +1,223 @@
+/**
+ * Старый HUD режима «Смена». Сам блок визуально скрыт — разметка осталась
+ * только как источник элементов, которые всё ещё обновляет игровой код.
+ * Видимую строку статуса рисует shared/ui/battle-bar.
+ */
+
+#hud {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.hud-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 0.85fr);
+  align-items: center;
+  gap: 6px;
+  min-height: 0;
+  flex: 1;
+}
+
+.hud-main > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.hud-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  flex-shrink: 0;
+  padding-top: 2px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hud-sub-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.hud-hp-bar,
+.hud-xp-bar {
+  height: 12px;
+  background: #333;
+  border-radius: 7px;
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+}
+
+.hud-hp-bar {
+  width: min(100px, 20vw);
+}
+
+.hud-xp-bar {
+  width: min(72px, 15vw);
+  height: 7px;
+  border-radius: 4px;
+}
+
+.hud-hp-fill {
+  height: 100%;
+  background: var(--c-success);
+  transition: width 0.2s;
+  border-radius: 7px;
+}
+
+.hud-xp-fill {
+  height: 100%;
+  background: var(--c-magic);
+  transition: width 0.2s;
+  border-radius: 4px;
+}
+
+.hud-label {
+  color: var(--c-text-muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.hud-value {
+  font-weight: 700;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.hud-mode {
+  font-weight: 700;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 6.8em;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.hud-mode.chase {
+  background: rgba(231, 76, 60, 0.3);
+  color: var(--c-danger);
+}
+
+.hud-mode.flee {
+  background: rgba(241, 196, 15, 0.3);
+  color: var(--c-accent);
+}
+
+.hud-combo-slot {
+  min-height: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--c-accent);
+  visibility: hidden;
+  white-space: nowrap;
+}
+
+.hud-combo-slot.on {
+  visibility: visible;
+}
+
+.hud-mid {
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.hud-mid-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.hud-mid-top #hud-score {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.hud-meters {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 9px;
+  color: var(--c-text-muted);
+}
+
+.hud-wave-line,
+.hud-enemies-line {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 46vw;
+}
+
+.hud-wave-line {
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.hud-enemies-line {
+  color: var(--c-text-muted);
+  font-size: 11px;
+}
+
+.hud-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: var(--c-text);
+  border-radius: 8px;
+  padding: 3px 7px;
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.coin-pill {
+  background: rgba(241, 196, 15, 0.18);
+  border: 1px solid var(--c-accent);
+  color: var(--c-accent);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+/* Полоски перезарядки дэша и навыка */
+.meter {
+  width: 110px;
+  height: 10px;
+  background: #333;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.meter > i {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: 6px;
+  transition: width 0.08s linear;
+}
+
+.meter.skill > i {
+  background: linear-gradient(90deg, var(--c-accent-deep), var(--c-accent));
+}
+
+.meter.charge > i {
+  background: linear-gradient(90deg, var(--c-info), var(--c-magic));
+}

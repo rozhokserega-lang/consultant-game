@@ -1,0 +1,307 @@
+/**
+ * Экран подготовки к забегу: мета-перки, способности, лоадаут «Распродажи»
+ * и книга жалоб. Гардероб живёт отдельно — widgets/equip-hub.
+ */
+
+#boosters-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: none;
+  align-items: stretch;
+  justify-content: center;
+  background: var(--c-scrim-solid);
+  padding: max(8px, env(safe-area-inset-top, 0px)) 10px max(10px, env(safe-area-inset-bottom, 0px));
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+#boosters-overlay.show {
+  display: flex;
+}
+
+#boosters-overlay .boosters-panel {
+  max-width: 640px;
+  width: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  overflow: hidden;
+  padding: 12px;
+  margin: 0 auto;
+}
+
+#boosters-overlay .boosters-panel h2 {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+#boosters-overlay .boosters-panel > p {
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+#boosters-overlay .boosters-footer {
+  flex-shrink: 0;
+  padding-top: 8px;
+  margin-top: 4px;
+  border-top: 1px solid var(--c-border-dim);
+}
+
+/* ── Прокручиваемая середина ───────────────────────────────────────────── */
+
+.hub-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+
+#boosters-overlay .hub-scroll {
+  text-align: left;
+}
+
+.hub-sec {
+  font-size: 13px;
+  margin: 6px 0 2px;
+  font-weight: 700;
+  text-align: left;
+}
+
+/* ── Вкладки и панели ──────────────────────────────────────────────────── */
+
+.hub-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 8px 0 6px;
+}
+
+.hub-tab {
+  flex: 1;
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 2px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.hub-tab.on {
+  border-color: var(--c-accent);
+  background: rgba(241, 196, 15, 0.15);
+}
+
+.hub-pane {
+  display: none;
+}
+
+.hub-pane.on {
+  display: block;
+}
+
+.hub-back {
+  background: transparent;
+  border: 1px solid var(--c-border);
+  color: var(--c-text-dim);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-bottom: 6px;
+}
+
+.hub-back:hover {
+  border-color: var(--c-accent);
+  color: var(--c-text);
+}
+
+/* ── Карточки покупок ──────────────────────────────────────────────────── */
+
+.hub-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  text-align: left;
+  margin: 6px 0;
+}
+
+.hub-card {
+  background: var(--c-surface);
+  border: 2px solid var(--c-border);
+  border-radius: 10px;
+  padding: 8px;
+  cursor: pointer;
+  color: var(--c-text);
+  text-align: left;
+}
+
+.hub-card:hover {
+  border-color: var(--c-accent);
+}
+
+.hub-card.sel {
+  border-color: var(--c-success);
+  background: rgba(46, 204, 113, 0.12);
+}
+
+.hub-card.hot {
+  box-shadow: inset 0 0 0 1px rgba(241, 196, 15, 0.45);
+}
+
+.hub-card.locked {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.hub-card .ttl {
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.hub-card .desc {
+  font-size: 10px;
+  color: var(--c-text-muted);
+  margin-top: 2px;
+}
+
+.hub-card .meta {
+  font-size: 10px;
+  color: var(--c-accent);
+  margin-top: 3px;
+  font-weight: 700;
+}
+
+.perk-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: stretch;
+  margin: 6px 0;
+}
+
+.perk-row .hub-card {
+  flex: 1 1 90px;
+  min-width: 0;
+}
+
+/* ── Ассортимент оружия ────────────────────────────────────────────────── */
+
+.wep-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.wep-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.wep-card .wep-up {
+  margin-top: 2px;
+  width: 100%;
+  background: rgba(241, 196, 15, 0.15);
+  border: 1px solid rgba(241, 196, 15, 0.45);
+  color: var(--c-accent);
+  border-radius: 8px;
+  padding: 5px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.wep-card .wep-up:disabled {
+  opacity: 0.45;
+  cursor: default;
+  border-color: var(--c-border);
+  color: var(--c-text-faint);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.wep-card.locked {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ── Книга жалоб ───────────────────────────────────────────────────────── */
+
+.book-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.book-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border-dim);
+  border-radius: 10px;
+}
+
+.book-row .ico {
+  width: 48px;
+  height: 52px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.book-row .ico canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.book-row.boss .ico {
+  width: 58px;
+  height: 64px;
+}
+
+.book-row .nm {
+  flex: 1;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.book-row .cnt {
+  font-weight: 800;
+  color: var(--c-accent);
+  font-size: 14px;
+}
+
+.book-row.zero {
+  opacity: 0.45;
+}
+
+.book-total {
+  text-align: left;
+  margin: 4px 0 8px;
+  font-size: 12px;
+  color: var(--c-text-muted);
+}
+
+/* На низких экранах описания карточек съедают всю высоту */
+@media (max-height: 720px) {
+  .hub-card .desc {
+    display: none;
+  }
+
+  #boosters-overlay .boosters-panel {
+    padding: 10px;
+  }
+}
