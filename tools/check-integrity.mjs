@@ -83,6 +83,23 @@ try {
   report('sw.js', String(err.stderr || err.message).trim().split('\n')[0]);
 }
 
+/* ── 5. No two classic scripts declare the same global ──────────────────── */
+
+// Top-level const/let/class in a classic script live in the shared global
+// lexical scope: a second declaration of the same name is a hard SyntaxError
+// that only fires in the browser, so catch it here instead.
+const TOP_LEVEL_DECL = /^(?:const|let|class|function|var)\s+([A-Za-z_$][\w$]*)/;
+const globals = new Map();
+
+for (const ref of scriptSrcs.filter((p) => !/^https?:\/\//.test(p) && exists(p))) {
+  for (const line of read(ref).split('\n')) {
+    const name = TOP_LEVEL_DECL.exec(line)?.[1];
+    if (!name) continue;
+    if (globals.has(name)) report(ref, `global "${name}" already declared in ${globals.get(name)}`);
+    else globals.set(name, ref);
+  }
+}
+
 /* ── Result ─────────────────────────────────────────────────────────────── */
 
 if (problems.length) {
