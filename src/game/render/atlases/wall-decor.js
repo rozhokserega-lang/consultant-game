@@ -1,0 +1,11 @@
+/** Настенные вывески и указатели. */
+
+const WALL_DECOR_FRAMES = {"wall_sale":{"x":5,"y":2,"w":70,"h":106},"wall_burger":{"x":81,"y":14,"w":76,"h":94},"wall_exit":{"x":160,"y":47,"w":77,"h":61},"wall_dir":{"x":239,"y":16,"w":76,"h":92},"wall_nosmoke":{"x":328,"y":30,"w":57,"h":78}};
+const wallDecorImg = new Image();
+let wallDecorReady = false;
+wallDecorImg.onload = () => { wallDecorReady = true; };
+wallDecorImg.src = 'assets/atlases/wall_decor_atlas.png';
+
+function drawWallDecor(ctx, name, x, y, opts = {}) {
+  return drawAtlasFrame(ctx, wallDecorImg, wallDecorReady, WALL_DECOR_FRAMES, name, x, y, opts);
+}
