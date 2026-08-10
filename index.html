@@ -42,80 +42,9 @@
 </head>
 <body>
 
-<header id="battle-bar" class="battle-bar" aria-label="Статус боя">
-  <div class="battle-bar__xp-row" aria-hidden="true">
-    <span class="battle-bar__xp-level" id="battle-xp-level">★1</span>
-    <div class="battle-bar__xp-track" aria-hidden="true">
-      <div class="battle-bar__xp-fill" id="battle-xp-fill"></div>
-    </div>
-  </div>
-  <div class="battle-bar__inner">
-    <div class="battle-bar__coins battle-bar__panel">
-      <div class="battle-bar__coin-icon" aria-hidden="true"></div>
-      <div class="battle-bar__coins-text">
-        <span class="battle-bar__label">МОНЕТЫ:</span>
-        <span class="battle-bar__value battle-bar__value--coins" id="battle-coins">0</span>
-      </div>
-    </div>
-    <div class="battle-bar__timer battle-bar__panel">
-      <span class="battle-bar__label">ВРЕМЯ ИГРЫ:</span>
-      <span class="battle-bar__value battle-bar__value--time" id="battle-time">00:00</span>
-    </div>
-    <div class="battle-bar__actions">
-      <button class="battle-bar__btn" id="btn-battle-pause" type="button" title="Пауза" aria-label="Пауза">
-        <span class="battle-bar__pause-icon" aria-hidden="true"></span>
-      </button>
-      <button class="battle-bar__btn" id="btn-battle-menu" type="button" title="Меню" aria-label="Меню">
-        <span class="battle-bar__gear-icon" aria-hidden="true"></span>
-      </button>
-    </div>
-  </div>
-</header>
-
-<header id="hud" aria-hidden="true">
-  <div class="hud-main">
-    <div>
-      <span style="font-size:15px;">⭐<b id="hud-level">1</b></span>
-      <div>
-        <div style="display:flex;align-items:center;gap:4px;">
-          <span style="font-size:11px;">❤️</span>
-          <div class="hud-hp-bar"><div class="hud-hp-fill" id="hud-hp-fill" style="width:100%"></div></div>
-          <span class="hud-value" id="hud-hp-text">5/5</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:4px;margin-top:2px;">
-          <span class="hud-label">XP</span>
-          <div class="hud-xp-bar"><div class="hud-xp-fill" id="hud-xp-fill" style="width:0%"></div></div>
-          <span class="hud-label" id="hud-xp-text">0/10</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="hud-mid">
-      <div class="hud-mid-top">
-        <span id="hud-score">🔨 0</span>
-        <span class="coin-pill" id="hud-coins">🪙 0</span>
-        <span class="hud-combo-slot" id="hud-combo">🔥 x0</span>
-      </div>
-      <span class="hud-mode chase" id="hud-mode">🔴 ПИК 8.0с</span>
-      <div class="hud-meters">
-        <span>☕ <span class="meter skill"><i id="hud-skill-fill"></i></span></span>
-        <span>⚡ <span class="meter charge"><i id="hud-charge-fill"></i></span></span>
-      </div>
-    </div>
-
-    <div style="justify-content:flex-end;">
-      <button class="hud-btn" id="btn-speed" type="button" title="Скорость игры">▶ ×1</button>
-      <button class="hud-btn" id="btn-pause" type="button" title="Пауза">⏸</button>
-      <button class="hud-btn" id="btn-settings" type="button" title="Настройки">⚙️</button>
-    </div>
-  </div>
-  <div class="hud-sub">
-    <div class="hud-sub-left">
-      <span class="hud-wave-line" id="hud-wave">🌊 Волна 1/10</span>
-      <span class="hud-enemies-line" id="hud-enemies">Убито: 0/30</span>
-    </div>
-  </div>
-</header>
+<!-- Корни виджетов: разметку вставляет src/app/mount-widgets.js -->
+<header id="battle-bar" class="battle-bar" aria-label="Статус боя"></header>
+<header id="hud" aria-hidden="true"></header>
 
 <div id="game-container">
   <canvas id="game"></canvas>
@@ -125,15 +54,8 @@
     <div class="track"><div class="fill" id="sale-boss-fill"></div></div>
   </div>
 
-  <div id="joystick-zone" class="mobile-only">
-    <div id="joystick-base"><div id="joystick-thumb"></div></div>
-  </div>
-  <div id="attack-zone" class="mobile-only">
-    <div id="attack-btn">⚔</div>
-    <div id="dash-btn">💨</div>
-    <div id="skill-btn">☕</div>
-  </div>
-  <div id="desktop-hint">WASD — ход · ЛКМ/Пробел удерж. — заряд · Shift — дэш · F — обед · P — пауза</div>
+  <!-- Джойстик и кнопки действий (виджет mobile-controls) -->
+  <div id="mobile-controls-root"></div>
 
   <!-- Выбор апгрейда (виджет level-up-popup) -->
   <div id="upgrade-overlay"></div>
@@ -144,174 +66,25 @@
   </div>
 
   <!-- Настройки -->
-  <div class="overlay" id="settings-overlay">
-    <div class="panel">
-      <h2>⚙️ Настройки</h2>
-      <div class="settings-popup__actions">
-        <button class="button button--ghost button--sm button--full" id="tog-sound" type="button">
-          <span class="button__label">🔊 Звук: ВКЛ</span>
-        </button>
-        <button class="button button--ghost button--sm button--full" id="tog-music" type="button">
-          <span class="button__label">🎵 Музыка: ВКЛ</span>
-        </button>
-        <button class="button button--ghost button--sm button--full" id="tog-vibro" type="button">
-          <span class="button__label">📳 Вибрация: ВКЛ</span>
-        </button>
-        <button class="button button--ghost button--sm button--full" id="tog-dmgnum" type="button">
-          <span class="button__label">🔢 Цифры урона: ВКЛ</span>
-        </button>
-        <button class="button button--accent button--sm button--full" id="btn-settings-close" type="button">
-          <span class="button__label">Закрыть</span>
-        </button>
-      </div>
-      <p class="settings-popup__stats">Рекорд: <b id="set-record">0</b> · Банк: <b id="set-bank">0</b></p>
-    </div>
-  </div>
+  <div class="overlay" id="settings-overlay"></div>
 
-  <!-- Game over / Win -->
-  <div class="overlay end-overlay" id="end-overlay">
-    <div class="end-popup" id="end-popup">
-      <div class="end-popup__header">
-        <span class="end-popup__header-arrow end-popup__header-arrow--left" aria-hidden="true"></span>
-        <h2 class="end-popup__title" id="end-title">ВАС РАСТОПТАЛИ</h2>
-        <span class="end-popup__header-arrow end-popup__header-arrow--right" aria-hidden="true"></span>
-      </div>
-      <div class="end-popup__art" id="end-art" aria-hidden="true">
-        <svg class="end-popup__cart" viewBox="0 0 96 72" width="96" height="72" role="img" aria-label="">
-          <rect x="8" y="52" width="80" height="6" fill="#5a6470" opacity="0.35"/>
-          <rect x="14" y="18" width="52" height="34" fill="#8a94a4"/>
-          <rect x="14" y="18" width="52" height="4" fill="#a8b0bc"/>
-          <rect x="14" y="48" width="52" height="4" fill="#6a7484"/>
-          <rect x="18" y="22" width="44" height="22" fill="#c8d4e0"/>
-          <rect x="20" y="24" width="40" height="18" fill="#1a2430"/>
-          <rect x="28" y="30" width="4" height="4" fill="#ffffff"/>
-          <rect x="44" y="30" width="4" height="4" fill="#ffffff"/>
-          <rect x="30" y="38" width="20" height="2" fill="#ffffff"/>
-          <rect x="66" y="22" width="10" height="26" fill="#7a8494"/>
-          <rect x="66" y="22" width="10" height="3" fill="#98a4b4"/>
-          <rect x="20" y="52" width="4" height="10" fill="#4a5464"/>
-          <rect x="56" y="52" width="4" height="10" fill="#4a5464"/>
-          <rect x="18" y="60" width="8" height="4" fill="#3a4454"/>
-          <rect x="54" y="60" width="8" height="4" fill="#3a4454"/>
-        </svg>
-      </div>
-      <div class="end-popup__stats">
-        <div class="end-popup__stat">ВРЕМЯ: <span id="end-time">00:00</span></div>
-        <div class="end-popup__stat">ВОЛНА: <span id="end-wave">1</span> ур.</div>
-        <div class="end-popup__stat">РЕКОРД ВОЛНЫ: <span id="end-wave-record">0</span> ур.</div>
-        <div class="end-popup__stat">МОНЕТ В БАНК: <span id="end-bank">0</span></div>
-      </div>
-      <p id="end-sub" class="end-popup__legacy"></p>
-      <div id="end-score" class="end-popup__legacy">0</div>
-      <div id="end-combo" class="end-popup__legacy">0</div>
-      <div id="end-record" class="end-popup__legacy">0</div>
-      <span id="end-newrec" class="end-popup__legacy" style="display:none;">★ НОВЫЙ РЕКОРД!</span>
-      <div id="end-challenge-line" class="end-popup__legacy"></div>
-      <div id="end-balance-upload" class="end-popup__upload" style="display:none;">
-        <button class="button button--success button--sm button--full" id="btn-upload-balance" type="button">
-          <span class="button__label">☁ Выгрузить логи</span>
-        </button>
-        <div class="end-popup__upload-status" id="end-balance-status"></div>
-      </div>
-      <div class="end-popup__actions">
-        <button class="button button--success button--full" id="btn-retry" type="button">
-          <span class="button__label">Попробовать ещё раз</span>
-        </button>
-        <button class="button button--secondary button--full" id="btn-again" type="button">
-          <span class="button__label">В меню</span>
-        </button>
-      </div>
-    </div>
-  </div>
+  <!-- Итоги смены -->
+  <div class="overlay end-overlay" id="end-overlay"></div>
 </div>
 
-  <!-- Усилители и подготовка к забегу -->
-  <div id="boosters-overlay">
-    <div class="panel boosters-panel">
-      <h2>⚡ Усилители</h2>
-      <p>Банк: <b id="boosters-bank">0</b> 🪙 · Рекорд: <b id="boosters-record">0</b> · <span id="hub-version" title="Дев-панель">v?</span></p>
-      <div class="hub-scroll">
-        <div class="hub-pane on" id="hub-pane-prep">
-          <div class="hub-tabs">
-            <button type="button" class="hub-tab on" data-hub-tab="prep" id="hub-tab-prep">Подготовка · Распродажа</button>
-            <button type="button" class="hub-tab" data-hub-tab="gear" id="hub-tab-gear">👕 Гардероб</button>
-            <button type="button" class="hub-tab" data-hub-tab="book" id="hub-tab-book">📖 Книга жалоб</button>
-          </div>
+<!-- Усилители и подготовка к забегу -->
+<div id="boosters-overlay"></div>
 
-          <div class="hub-sec">Мета-перки</div>
-          <p style="font-size:11px;color:#aaa;margin:0 0 6px;">Постоянные бонусы между сменами.</p>
-          <div class="hub-grid" id="boosters-meta"></div>
-          <div class="hub-sec">Способности</div>
-          <p style="font-size:11px;color:#aaa;margin:0 0 6px;">Дэш, обед и сильный удар.</p>
-          <div class="hub-grid" id="boosters-abilities"></div>
+<!-- Главное меню -->
+<div id="main-menu-overlay"></div>
 
-          <div id="hub-sale-loadout">
-            <div class="hub-sec">Консультант</div>
-            <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Выбери героя — у каждого свой старт.</p>
-            <div class="hub-grid" id="hub-sale-heroes"></div>
-            <div class="hub-sec">Этаж ТЦ</div>
-            <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Ранний пул оружия и бонус этажа. Полный каталог откроется позже в забеге.</p>
-            <div class="hub-grid" id="hub-sale-floors"></div>
-            <div class="hub-sec">Контракт смены</div>
-            <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Ограничения забега за множитель монет в банк.</p>
-            <div class="hub-grid" id="hub-sale-contracts"></div>
-            <div class="hub-sec">Ассортимент оружия</div>
-            <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Покупка открывает оружие в пуле левел-апа (не кладёт в руки). В забеге макс. 4 оружия (контракт может снизить). Старт — оружие героя. Подсветка — откроет ветку эво при ключе.</p>
-            <div class="hub-grid" id="hub-sale-weapons"></div>
-            <div class="hub-sec">Стартовые пассивки</div>
-            <p style="font-size:11px;color:#aaa;text-align:left;margin:0 0 6px;">Постоянные бонусы к началу забега (за монеты банка).</p>
-            <div class="perk-row" id="hub-sale-passives"></div>
-            <div class="hub-sec">Зона ТЦ (арена)</div>
-            <div class="hub-grid" id="hub-sale-arenas"></div>
-          </div>
-        </div>
+<!-- Экран падения -->
+<div id="crash-overlay" aria-hidden="true"></div>
 
-        <div class="hub-pane" id="hub-pane-gear">
-          <div class="hub-sec">Гардероб консультанта</div>
-          <p style="font-size:11px;color:#aaa;margin:0 0 6px;">Бейдж, карта, рация — мета между забегами. Только экономика: XP, стартовые монеты, магнит. Без урона и КД.</p>
-          <p id="hub-equip-hero" style="font-size:12px;color:#f1c40f;margin:0 0 4px;"></p>
-          <div id="hub-gear-mats" class="gear-mats-bar"></div>
-          <div class="hub-grid" id="hub-equip-heroes" style="margin-bottom:8px;"></div>
-          <div class="gear-paperdoll-wrap">
-            <div class="equip-doll" id="hub-equip-doll"></div>
-            <div class="gear-detail-panel" id="hub-gear-detail"></div>
-          </div>
-          <p style="font-size:11px;color:#aaa;margin:8px 0 0;">Материалы — с элит и боссов. KPI (+3 за босса) — для высоких тиров.</p>
-        </div>
-
-        <div class="hub-pane" id="hub-pane-book">
-          <button type="button" class="hub-back" id="hub-back-modes-book">← К подготовке</button>
-          <div class="hub-sec">📖 Книга жалоб</div>
-          <p class="book-total" id="book-total">Всего выписано жалоб: 0</p>
-          <div class="book-list" id="hub-book"></div>
-        </div>
-      </div>
-      <div class="boosters-footer">
-        <div class="actions-stack" id="boosters-back-wrap"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Главное меню -->
-  <div id="main-menu-overlay">
-    <div class="main-menu-panel">
-      <h1 class="main-menu-title">🛒 Распродажа</h1>
-      <p class="main-menu-sub">Выживи смену в торговом центре</p>
-      <div class="actions-stack" id="main-menu-actions"></div>
-    </div>
-  </div>
-
-<div id="crash-overlay" aria-hidden="true">
-  <div class="crash-box">
-    <h3 id="crash-overlay-msg">Ошибка</h3>
-    <pre id="crash-overlay-sub"></pre>
-    <button type="button" class="button button--sm" id="crash-reload-btn">
-      <span class="button__label">Перезагрузить</span>
-    </button>
-  </div>
-</div>
+<!-- Дев-панель: наполняется из src/game/modes/sale/dev-panel.js -->
 <div id="sale-ver-corner" title="Дев-панель">v?</div>
 <div id="sale-dev-panel" aria-hidden="true"></div>
+
 <!--
   Порядок значим: скрипты обычные, а не модули, и делятся объявлениями через
   общую область видимости. Файл может обращаться к тому, что объявлено выше.
@@ -437,9 +210,13 @@
 <script src="src/game/modes/gear/economy.js"></script>
 <script src="src/game/modes/gear/hub-ui.js"></script>
 
-<!-- 9. UI-кит, виджеты и их связка с игрой -->
+<!-- 9. UI-кит, виджеты и их связка с игрой.
+     Файл <виджет>.js держит разметку и вёрстку, <виджет>.bindings.js — методы Game. -->
 <script src="src/shared/ui/button/button.js"></script>
+<script src="src/shared/ui/battle-bar/battle-bar.js"></script>
 <script src="src/widgets/crash-overlay/crash-overlay.js"></script>
+<script src="src/widgets/legacy-hud/legacy-hud.js"></script>
+<script src="src/widgets/mobile-controls/mobile-controls.js"></script>
 <script src="src/widgets/complaint-book/complaint-book.js"></script>
 <script src="src/widgets/complaint-book/complaint-book.bindings.js"></script>
 <script src="src/widgets/level-up-popup/level-up-popup.js"></script>
@@ -447,12 +224,17 @@
 <script src="src/widgets/game-menu/game-menu.js"></script>
 <script src="src/widgets/game-menu/game-menu.bindings.js"></script>
 <script src="src/widgets/battle-hud/battle-hud.bindings.js"></script>
+<script src="src/widgets/settings-popup/settings-popup.js"></script>
 <script src="src/widgets/settings-popup/settings-popup.bindings.js"></script>
+<script src="src/widgets/end-popup/end-popup.js"></script>
 <script src="src/widgets/end-popup/end-popup.bindings.js"></script>
+<script src="src/widgets/main-menu/main-menu.js"></script>
 <script src="src/widgets/main-menu/main-menu.bindings.js"></script>
+<script src="src/widgets/boosters-hub/boosters-hub.js"></script>
 <script src="src/widgets/boosters-hub/boosters-hub.bindings.js"></script>
 
-<!-- 10. Запуск -->
+<!-- 10. Сборка разметки виджетов и запуск -->
+<script src="src/app/mount-widgets.js"></script>
 <script src="src/app/bootstrap.js"></script>
 </body>
 </html>

@@ -140,6 +140,26 @@ if (failures.length) {
   process.exit(1);
 }
 
+/* ── Разметка виджетов собрана ───────────────────────────────────────────── */
+
+// index.html держит только пустые корни, поэтому пропущенный mount() не
+// уронит загрузку — узлы просто не появятся, а код молча уйдёт в if (!el).
+const REQUIRED_IDS = [
+  'battle-coins', 'battle-time', 'battle-xp-fill',
+  'hud-level', 'hud-hp-fill', 'btn-speed',
+  'joystick-zone', 'attack-btn', 'desktop-hint',
+  'tog-sound', 'btn-settings-close', 'set-bank',
+  'end-title', 'end-bank', 'btn-retry', 'btn-upload-balance',
+  'boosters-bank', 'hub-tab-gear', 'hub-sale-heroes', 'hub-equip-doll', 'hub-book',
+  'main-menu-actions', 'crash-reload-btn',
+];
+
+const missing = REQUIRED_IDS.filter((id) => !window.document.getElementById(id));
+if (missing.length) {
+  console.error(`FAIL — виджеты не собрали разметку: ${missing.join(', ')}`);
+  process.exit(1);
+}
+
 /* ── Сценарии ────────────────────────────────────────────────────────────── */
 
 const game = window.game;
