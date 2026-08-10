@@ -3,7 +3,7 @@
  */
 'use strict';
 
-const SALE_VERSION = '0.11.8-early-vs';
+const SALE_VERSION = '0.11.9-no-fodder-slow';
 const SALE_DURATION = 20 * 60; // 20 минут
 const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
 const SALE_WORLD_MUL = 2.75;

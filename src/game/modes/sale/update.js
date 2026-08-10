@@ -157,10 +157,10 @@ Game.prototype.updateSale = function (dt) {
         if (this.saleBossHurtPlayer(pr.x, pr.y, pr._saleBossKill || 'Босс')) return;
         this.spawnParticles(this.player.x, this.player.y, 12, '#e74c3c', 140, 0.4);
       } else {
-        this.player.applyComplaint();
-        this.spawnParticles(this.player.x, this.player.y, 10, '#8e44ad', 120, 0.4);
-        sfx.hurt();
-        this.vibrate(35);
+        // Раньше applyComplaint() от рядовых/потолка — постоянный slow бесил.
+        // Теперь без slow: только лёгкий FX (книги события «книга жалоб»).
+        this.spawnParticles(this.player.x, this.player.y, 8, '#8e44ad', 100, 0.3);
+        sfx.pickup();
       }
     }
   }

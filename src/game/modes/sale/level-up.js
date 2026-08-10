@@ -176,17 +176,19 @@ Game.prototype.openSaleUpgradeUI = function () {
   if (!this._saleKeepBanishMode) this._saleBanishMode = false;
   this.upgradeChoices = this.buildSaleUpgradeChoices();
   if (!this.upgradeChoices.length) {
-    // LN noChoices: не сбрасываем уровни в пустоту
+    // LN noChoices: слоты полны — тихий хил без баннера
     const n = Math.max(1, this.pendingUpgrades | 0);
     if (this.player) {
       this.player.maxHp += Math.min(3, n);
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + Math.min(3, n));
+      this.spawnAnimFx('afx_heal', this.player.x, this.player.y - 10, { life: 0.45, scale: 0.75, vy: -18 });
     }
     this.choosingUpgrade = false;
     this.pendingUpgrades = 0;
     this.paused = false;
     this.updateUpgradeRerollBtn();
-    this.showEventBanner(`❤️ Нечего брать — +${Math.min(3, n)} HP`, 1.6);
+    sfx.pickup();
+    this.refreshMusicState();
     return;
   }
   const branchOnly = this.upgradeChoices.length >= 2

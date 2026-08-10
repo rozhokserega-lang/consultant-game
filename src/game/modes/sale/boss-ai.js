@@ -113,6 +113,8 @@ Game.prototype.saleBossHurtPlayer = function (fromX, fromY, killName) {
     this.endSaleGame(false, killName || 'Босс');
     return true;
   }
+  // Slow только от боссов ТЦ — не от рядовых жалобщиков
+  p.slowTimer = Math.max(p.slowTimer || 0, 1.5);
   this.tookDamage = true;
   if (typeof sfx !== 'undefined' && sfx.hurt) sfx.hurt();
   this.vibrate && this.vibrate(40);

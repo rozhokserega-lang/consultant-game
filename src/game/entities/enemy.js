@@ -144,7 +144,8 @@ class Enemy {
     }
 
     // 2) Жалобщик — кидает книгу с дистанции (всегда, не только в «охоте»)
-    if (this.type === 'returner') {
+    // В «Распродаже» книги от рядовых бесят (постоянный slow) — оставляем slow боссам/событиям
+    if (this.type === 'returner' && !(game && game.gameMode === 'sale')) {
       this.throwTimer -= dt;
       const books = game ? game.projectiles.length : 0;
       if (this.throwTimer <= 0 && d < 340 && d > 50 && books < 4) {

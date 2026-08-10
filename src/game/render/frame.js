@@ -131,25 +131,30 @@ Object.assign(Game.prototype, {
     if (this._bfBanner > 0) {
       this._bfBanner -= 1 / 60;
       ctx.save();
-      ctx.fillStyle = 'rgba(0,0,0,0.45)';
-      ctx.fillRect(0, this.H * 0.28, this.W, 70);
       ctx.fillStyle = '#f1c40f';
+      ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+      ctx.lineWidth = 4;
       ctx.font = 'bold 28px "Segoe UI", system-ui, sans-serif';
       ctx.textAlign = 'center';
+      ctx.strokeText('🖤 ЧЁРНАЯ ПЯТНИЦА!', this.W / 2, this.H * 0.35);
       ctx.fillText('🖤 ЧЁРНАЯ ПЯТНИЦА!', this.W / 2, this.H * 0.35);
       ctx.font = '14px "Segoe UI", system-ui, sans-serif';
       ctx.fillStyle = '#fff';
+      ctx.strokeText('Больше покупателей · больше монет', this.W / 2, this.H * 0.35 + 28);
       ctx.fillText('Больше покупателей · больше монет', this.W / 2, this.H * 0.35 + 28);
       ctx.restore();
     }
     if (this._eventBanner && this._eventBanner.t > 0) {
       ctx.save();
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(0, this.H * 0.22, this.W, 64);
       ctx.fillStyle = '#fff';
+      ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+      ctx.lineWidth = 4;
       ctx.font = 'bold 22px "Segoe UI", system-ui, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(this._eventBanner.text, this.W / 2, this.H * 0.28);
+      const tx = this.W / 2;
+      const ty = this.H * 0.28;
+      ctx.strokeText(this._eventBanner.text, tx, ty);
+      ctx.fillText(this._eventBanner.text, tx, ty);
       ctx.restore();
     }
 
