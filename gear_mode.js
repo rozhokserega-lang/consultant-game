@@ -24,7 +24,8 @@
 
   const GEAR_SLOTS = {
     badge: {
-      id: 'badge', name: 'Бейдж', bodyPart: 'Шея', ico: '🪪', dotTop: 44, dotLeft: 78,
+      id: 'badge', name: 'Бейдж', bodyPart: 'Шея', ico: '🪪',
+      pinTop: 74, pinLeft: 90, pinW: 48, pinH: 58,
       statKey: 'xpMul', mat: 'badge_shard',
       tiers: [
         { tier: 1, name: 'STAFF', img: 'gear/badges/badge_t1_staff.png', xpMul: 1.05, unlockCoins: 0, mats: {}, bossGate: 0 },
@@ -35,7 +36,8 @@
       drops: { elite: { chance: 0.35, amount: [1, 2] }, boss: { chance: 1, amount: [2, 4] } },
     },
     card: {
-      id: 'card', name: 'Служебная карта', bodyPart: 'Нагрудный карман', ico: '💳', dotTop: 78, dotLeft: 78,
+      id: 'card', name: 'Служебная карта', bodyPart: 'Нагрудный карман', ico: '💳',
+      pinTop: 116, pinLeft: 70, pinW: 36, pinH: 28,
       statKey: 'coinStart', mat: 'card_film',
       tiers: [
         { tier: 1, name: 'Пропуск на смену', coinStart: 2, unlockCoins: 0, mats: {}, bossGate: 0 },
@@ -46,7 +48,8 @@
       drops: { elite: { chance: 0.25, amount: [1, 1] }, boss: { chance: 1, amount: [1, 3] } },
     },
     radio: {
-      id: 'radio', name: 'Рация', bodyPart: 'На бедре', ico: '📻', dotTop: 96, dotLeft: 130,
+      id: 'radio', name: 'Рация', bodyPart: 'На бедре', ico: '📻',
+      pinTop: 212, pinLeft: 100, pinW: 32, pinH: 44, pinRot: -10,
       statKey: 'magnet', mat: 'radio_cell',
       tiers: [
         { tier: 1, name: 'Дешёвая рация', img: 'gear/radios/radio_t1_basic.png', magnet: 15, unlockCoins: 0, mats: {}, bossGate: 0 },
@@ -349,24 +352,6 @@
         + '<rect x="60" y="148" width="26" height="120" rx="11" fill="#2e2b52" stroke="#4a4a6a" stroke-width="1.5"/>'
         + '<rect x="94" y="148" width="26" height="120" rx="11" fill="#2e2b52" stroke="#4a4a6a" stroke-width="1.5"/>'
         + '</svg>';
-      const badgeTd = this.getGearTierDef('badge', (g.badge && g.badge.tier) || 1);
-      if (badgeTd && badgeTd.img) {
-        const prev = document.createElement('img');
-        prev.className = 'gear-worn-badge';
-        prev.src = badgeTd.img;
-        prev.alt = badgeTd.name;
-        prev.loading = 'lazy';
-        doll.appendChild(prev);
-      }
-      const radioTd = this.getGearTierDef('radio', (g.radio && g.radio.tier) || 1);
-      if (radioTd && radioTd.img) {
-        const prev = document.createElement('img');
-        prev.className = 'gear-worn-radio';
-        prev.src = radioTd.img;
-        prev.alt = radioTd.name;
-        prev.loading = 'lazy';
-        doll.appendChild(prev);
-      }
       for (const sid of GEAR_SLOT_IDS) {
         const slot = GEAR_SLOTS[sid];
         const worn = g[sid] || { tier: 1, quality: 'normal' };
@@ -374,14 +359,18 @@
         const filled = (worn.tier || 1) > 0;
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'gear-slot-dot' + (filled ? ' filled' : '') + (this._gearSelectedSlot === sid ? ' sel' : '');
-        btn.style.top = slot.dotTop + 'px';
-        btn.style.left = slot.dotLeft + 'px';
+        btn.className = 'gear-slot-pin' + (filled ? ' filled' : '') + (this._gearSelectedSlot === sid ? ' sel' : '');
+        btn.dataset.slot = sid;
+        btn.style.top = (slot.pinTop || 0) + 'px';
+        btn.style.left = (slot.pinLeft || 90) + 'px';
+        btn.style.width = (slot.pinW || 40) + 'px';
+        btn.style.height = (slot.pinH || 40) + 'px';
+        if (slot.pinRot) btn.style.setProperty('--pin-rot', slot.pinRot + 'deg');
         btn.title = slot.name;
         if (td && td.img) {
-          btn.innerHTML = gearTierImg(td, td.name, 'gear-dot-img');
+          btn.innerHTML = gearTierImg(td, td.name, 'gear-pin-img');
         } else {
-          btn.innerHTML = '<span class="ico">' + slot.ico + '</span>';
+          btn.innerHTML = '<span class="gear-pin-ico">' + slot.ico + '</span>';
         }
         btn.onclick = () => {
           this._gearSelectedSlot = sid;

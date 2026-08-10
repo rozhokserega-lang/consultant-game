@@ -333,50 +333,49 @@
     width: 180px;
     height: 320px;
     margin: 8px auto 12px;
+    flex-shrink: 0;
   }
-  .gear-silhouette { display: block; margin: 0 auto; }
-  .gear-slot-dot {
+  .gear-silhouette { display: block; margin: 0 auto; pointer-events: none; }
+  .gear-slot-pin {
     position: absolute;
-    transform: translate(-50%, -50%);
-    width: 36px; height: 36px;
-    border-radius: 50%;
-    border: 2px solid #666;
-    background: rgba(0,0,0,0.45);
+    transform: translate(-50%, -50%) rotate(var(--pin-rot, 0deg));
+    border-radius: 8px;
     color: #fff;
     cursor: pointer;
-    padding: 2px;
-    font-size: 16px;
-    line-height: 32px;
-    text-align: center;
-    overflow: hidden;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+    z-index: 3;
+    transition: box-shadow 0.15s;
   }
-  .gear-dot-img { width: 100%; height: 100%; object-fit: contain; image-rendering: auto; display: block; }
-  .gear-worn-badge {
-    position: absolute;
-    top: 8px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 72px;
-    height: auto;
-    pointer-events: none;
+  .gear-pin-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
     image-rendering: auto;
-    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.45));
-    z-index: 2;
-  }
-  .gear-worn-radio {
-    position: absolute;
-    top: 172px;
-    left: 122px;
-    width: 44px;
-    height: auto;
+    display: block;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.45));
     pointer-events: none;
-    image-rendering: auto;
-    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.45));
-    z-index: 2;
-    transform: rotate(-10deg);
   }
-  .gear-slot-dot.filled { border-color: #2ecc71; box-shadow: 0 0 8px rgba(46,204,113,0.35); background: rgba(0,0,0,0.25); }
-  .gear-slot-dot.sel { border-color: #f1c40f; box-shadow: 0 0 10px rgba(241,196,15,0.45); }
+  .gear-slot-pin[data-slot="badge"] .gear-pin-img { object-position: center top; }
+  .gear-slot-pin[data-slot="radio"] .gear-pin-img { object-position: center bottom; }
+  .gear-pin-ico { font-size: 18px; line-height: 1; pointer-events: none; }
+  .gear-slot-pin.filled {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+  }
+  .gear-slot-pin:not(.filled) {
+    border: 2px dashed rgba(255,255,255,0.28);
+    background: rgba(0,0,0,0.18);
+  }
+  .gear-slot-pin.sel {
+    box-shadow: 0 0 0 2px rgba(241,196,15,0.55), 0 0 12px rgba(241,196,15,0.35);
+  }
+  .gear-slot-pin.filled.sel { border-radius: 8px; }
   .gear-paperdoll-wrap {
     display: flex;
     gap: 12px;
