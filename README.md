@@ -6,6 +6,14 @@ HTML-игра для браузера и Telegram Mini App. Без сборщи�
 - **Прод** (`main`): https://rozhokserega-lang.github.io/consultant-game/
 - **Дев** (`dev`): https://rozhokserega-lang.github.io/consultant-game/dev/
 
+## Прежде чем писать код
+
+- [AGENTS.md](AGENTS.md) — короткий контракт: правила, которые нельзя нарушать, и таблица
+  «куда класть новый код». Этот файл автоматически читают Cursor, Claude Code, Codex
+  и Copilot, так что агент подхватит правила сам.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — подробная карта: дерево с зонами
+  ответственности, порядок загрузки, три паттерна кода и пошаговые рецепты.
+
 ## Запуск локально
 
 Нужен http-сервер — через `file://` не заработает service worker:
@@ -34,7 +42,7 @@ src/
   widgets/            самостоятельные куски UI (меню, попапы, хаб, HUD):
                       <виджет>.js — разметка и вёрстка, <виджет>.bindings.js — методы Game
 tools/                скрипты сборки ассетов и проверки целостности
-docs/                 ROADMAP, TELEGRAM, ATTRIBUTION
+docs/                 ARCHITECTURE, ROADMAP, TELEGRAM, ATTRIBUTION
 reference/            сторонний проект для сверки, в сборку не попадает
 ```
 
