@@ -265,4 +265,15 @@ Game.prototype.updateSale = function (dt) {
   if (this.updateBossLineAttacks(realDt)) return;
   // баннер/FX второй жизни (в «Смене» это было в core/update, тут update подменён)
   if (this.flushReviveFx) this.flushReviveFx();
+
+  // попап апгрейда после LEVEL UP FX (иначе под оверлеем не видно)
+  if (this._saleLevelFxT > 0) {
+    this._saleLevelFxT -= realDt;
+    if (this._saleLevelFxT <= 0) {
+      this._saleLevelFxT = 0;
+      if ((this.pendingUpgrades || 0) > 0 && !this.choosingUpgrade && !this.gameOver && !this.won) {
+        this.openSaleUpgradeUI();
+      }
+    }
+  }
 };

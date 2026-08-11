@@ -110,7 +110,7 @@ Game.prototype.applySalePowerup = function (pu) {
     this.showEventBanner('📦 Посылка со склада: бесплатное улучшение!', 1.8);
     this.spawnAnimFx('afx_levelup', p.x, p.y, { life: 0.95, scale: 1.2, scaleEnd: 1.65, anchorY: 0.9 });
     sfx.level();
-    this.openSaleUpgradeUI();
+    this._saleLevelFxT = Math.max(this._saleLevelFxT || 0, 0.75);
   } else if (pu.kind === 'magnet') {
     this.saleVacuumT = 1.8;
     this.showEventBanner('🧲 Промо-магнит: весь XP летит к тебе!', 1.5);

@@ -54,6 +54,7 @@ Game.prototype.resetSaleGame = function () {
   this.upgradeChoices = [];
   this.upgradeRerollsLeft = 3;
   this.choosingUpgrade = false;
+  this._saleLevelFxT = 0;
   this.shopping = false;
   this.paused = false;
   this.gameOver = false;

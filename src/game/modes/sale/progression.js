@@ -46,12 +46,13 @@ Game.prototype.gainSaleXp = function (amount) {
   }
   if (leveled) {
     this.pendingUpgrades += leveled;
-    this.openSaleUpgradeUI();
     sfx.level();
     this.spawnAnimFx('afx_levelup', this.player.x, this.player.y, {
       life: 1.0, scale: 1.35, scaleEnd: 1.85, anchorY: 0.9,
     });
     this.spawnParticles(this.player.x, this.player.y, 22, '#f1c40f', 200, 0.55);
+    // попап после FX — иначе анимация под оверлеем и «не видно»
+    this._saleLevelFxT = Math.max(this._saleLevelFxT || 0, 0.75);
   }
 };
 
