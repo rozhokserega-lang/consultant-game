@@ -1,6 +1,20 @@
 /** Спрайтовые и покадровые эффекты поверх сцены. */
 
 Object.assign(Game.prototype, {
+  /**
+   * Бюджет FX [0..1]: на поздних минутах и при переполненном буфере
+   * автоматически режет частоту мелких эффектов от урона.
+   */
+  _fxBudget() {
+    const sec = this.saleTime || 0;
+    const min = sec / 60;
+    // плавно режем с 12-й по 17-ю минуту: 1.0 → 0.35
+    const timeMul = min <= 12 ? 1.0 : min >= 17 ? 0.35 : 1.0 - (min - 12) / 5 * 0.65;
+    // дополнительный штраф если буфер animFx больше половины
+    const fxLoad = (this.animFx && this.animFx.length > 20) ? 0.6 : 1.0;
+    return timeMul * fxLoad;
+  },
+
   /** Короткий спрайт-эффект из vfx_atlas (кровь, слэш, level up…). */
   spawnSpriteFx(name, x, y, opts = {}) {
     if (!this.spriteFx) this.spriteFx = [];

@@ -39,14 +39,16 @@ Game.prototype.saleHitEnemy = function (e, dmg, srcX, srcY, knock, opts) {
     }
   }
   if (died) {
-    this.spawnParticles(e.x, e.y, 8, opts.color || '#e74c3c', 140, 0.35);
-    if (opts.impact) this.spawnSpriteFx(opts.impact, e.x, e.y, { scale: 0.35, life: 0.28, vy: -8 });
+    const budget = this._fxBudget();
+    const pCount = Math.round(8 * budget);
+    if (pCount > 0) this.spawnParticles(e.x, e.y, pCount, opts.color || '#e74c3c', 140, 0.35);
+    if (opts.impact && budget >= 0.55) this.spawnSpriteFx(opts.impact, e.x, e.y, { scale: 0.35, life: 0.28, vy: -8 });
     this.onSaleEnemyKilled(e);
     if (opts.explodeOnKill || this.saleWeapons.black_friday) {
       this.salePuddles.push({ x: e.x, y: e.y, r: 55, life: 2.5, dmg: 1, tick: 0, color: '#8e0000' });
-      this.spawnSpriteFx('sp_bleed3', e.x, e.y, { scale: 0.4, life: 0.35, vy: 0 });
+      if (budget >= 0.55) this.spawnSpriteFx('sp_bleed3', e.x, e.y, { scale: 0.4, life: 0.35, vy: 0 });
     }
-  } else if (Math.random() < 0.35) {
+  } else if (Math.random() < 0.35 * this._fxBudget()) {
     this.spawnAnimFx('afx_hit', e.x, e.y - 4, { life: 0.22, scale: 0.55, rot: rand(-0.4, 0.4) });
   }
   return died;

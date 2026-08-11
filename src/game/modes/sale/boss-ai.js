@@ -3,6 +3,21 @@
  */
 'use strict';
 
+/**
+ * Обёртка над spawnAnimFx для боссовых эффектов:
+ * на поздних минутах режет scale, чтобы экран не превращался в салют.
+ */
+Game.prototype._spawnBossAnimFx = function (id, x, y, opts) {
+  opts = opts || {};
+  const budget = this._fxBudget();
+  // уменьшаем крупные эффекты пропорционально бюджету, но не ниже 60%
+  const scaleMul = 0.6 + budget * 0.4;
+  this.spawnAnimFx(id, x, y, Object.assign({}, opts, {
+    scale: (opts.scale || 1) * scaleMul,
+    scaleEnd: opts.scaleEnd != null ? opts.scaleEnd * scaleMul : undefined,
+  }));
+};
+
 /** LN-стиль: телеграф рывка → рывок. */
 Game.prototype.saleBossTickCharge = function (enemy, dt, opts) {
   opts = opts || {};
@@ -17,7 +32,7 @@ Game.prototype.saleBossTickCharge = function (enemy, dt, opts) {
       enemy.knockback.x = Math.cos(enemy._saleChargeAng) * spd * (opts.kb || 0.5);
       enemy.knockback.y = Math.sin(enemy._saleChargeAng) * spd * (opts.kb || 0.5);
       enemy.mobPose = 'attack';
-      this.spawnAnimFx('afx_slash', enemy.x + Math.cos(enemy._saleChargeAng) * 40, enemy.y + Math.sin(enemy._saleChargeAng) * 40, {
+      this._spawnBossAnimFx('afx_slash', enemy.x + Math.cos(enemy._saleChargeAng) * 40, enemy.y + Math.sin(enemy._saleChargeAng) * 40, {
         life: 0.32, scale: opts.fxScale || 1.2, rot: enemy._saleChargeAng + Math.PI / 2,
       });
       this.screenShake = Math.max(this.screenShake || 0, 0.2);
@@ -59,7 +74,7 @@ Game.prototype.saleBossVolley = function (enemy, n, opts) {
     pr._saleBossKill = opts.killName || enemy.nameTag || 'Босс';
     this.projectiles.push(pr);
   }
-  this.spawnAnimFx('afx_ring', enemy.x, enemy.y, { life: 0.28, scale: 0.5, scaleEnd: 1.4 });
+  this._spawnBossAnimFx('afx_ring', enemy.x, enemy.y, { life: 0.28, scale: 0.5, scaleEnd: 1.4 });
 };
 
 function saleHexRgba(hex, a) {
@@ -142,7 +157,7 @@ Game.prototype.tickSaleBossAI = function (enemy, dt) {
   // смена фазы — разовый «spike» как в LN
   if (ph > prevPhase) {
     enemy._salePhaseSpike = true;
-    this.spawnAnimFx('afx_darkburst', enemy.x, enemy.y, { life: 0.55, scale: 1.2, scaleEnd: 2.0 });
+    this._spawnBossAnimFx('afx_darkburst', enemy.x, enemy.y, { life: 0.55, scale: 1.2, scaleEnd: 2.0 });
     this.screenShake = Math.max(this.screenShake || 0, 0.35);
     // фаза 3: бан одной роли оружия игрока на ~20с
     if (ph === 3) {
@@ -313,7 +328,7 @@ Game.prototype.tickSaleBossAI = function (enemy, dt) {
         x: enemy.x, y: enemy.y, r: 20, maxR: 200 + ph * 40, dmg: 1, hit: new Set(),
         knock: 280, ico: '🚨', visual: 'siren',
       });
-      this.spawnAnimFx('afx_ring', enemy.x, enemy.y, { life: 0.5, scale: 0.8, scaleEnd: 2.8, tint: '#38bdf8' });
+      this._spawnBossAnimFx('afx_ring', enemy.x, enemy.y, { life: 0.5, scale: 0.8, scaleEnd: 2.8, tint: '#38bdf8' });
     }
   } else if (id === 'promo_witch') {
     // лужи · проклятие · болты · телепорт · кольцо яда на фазе 3
@@ -338,7 +353,7 @@ Game.prototype.tickSaleBossAI = function (enemy, dt) {
       this.salePuddles.push({
         x: p.x, y: p.y, r: 36, life: 3.2, dmg: 1, tick: 0, color: '#a21caf', slow: 0.45, poison: true,
       });
-      this.spawnAnimFx('afx_darkburst', p.x, p.y, { life: 0.45, scale: 0.9, scaleEnd: 1.4 });
+      this._spawnBossAnimFx('afx_darkburst', p.x, p.y, { life: 0.45, scale: 0.9, scaleEnd: 1.4 });
       const n = 2 + (ph > 2 ? 1 : 0);
       for (let i = 0; i < n; i++) {
         const a = (Math.PI * 2 * i) / n;
@@ -354,10 +369,10 @@ Game.prototype.tickSaleBossAI = function (enemy, dt) {
       if (ph >= 2) {
         const a = rand(0, Math.PI * 2);
         const rr = 100 + rand(0, 80);
-        this.spawnAnimFx('afx_darkburst', enemy.x, enemy.y, { life: 0.35, scale: 0.8, scaleEnd: 1.3 });
+        this._spawnBossAnimFx('afx_darkburst', enemy.x, enemy.y, { life: 0.35, scale: 0.8, scaleEnd: 1.3 });
         enemy.x = Math.max(60, Math.min(this.worldW - 60, p.x + Math.cos(a) * rr));
         enemy.y = Math.max(60, Math.min(this.worldH - 60, p.y + Math.sin(a) * rr));
-        this.spawnAnimFx('afx_ring', enemy.x, enemy.y, { life: 0.35, scale: 0.6, scaleEnd: 1.6, tint: '#e879f9' });
+        this._spawnBossAnimFx('afx_ring', enemy.x, enemy.y, { life: 0.35, scale: 0.6, scaleEnd: 1.6, tint: '#e879f9' });
       }
     }
     if (enemy._salePhaseSpike && ph === 3) {
@@ -445,7 +460,7 @@ Game.prototype.tickSaleBossHazards = function (dt) {
         h.boom = true;
         h.life = 0.28;
         const col = h.color || '#f59e0b';
-        this.spawnAnimFx('afx_ring', h.x, h.y, {
+        this._spawnBossAnimFx('afx_ring', h.x, h.y, {
           life: 0.35, scale: 0.55, scaleEnd: 1.35, tint: col, alpha: 0.75,
         });
         this.spawnParticles(h.x, h.y, 12, col, 140, 0.35);

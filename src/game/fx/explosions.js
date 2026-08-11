@@ -20,9 +20,10 @@ Object.assign(Game.prototype, {
   /** Взрыв по координатам: урон игроку и соседям */
   explodeAt(x, y) {
     const R = FATTY_EXPLODE_RADIUS;
-    this.spawnParticles(x, y, 45, '#ff6b00', 420, 0.9);
-    this.spawnParticles(x, y, 25, '#fff200', 280, 0.6);
-    this.spawnParticles(x, y, 18, '#e74c3c', 200, 0.5);
+    const b = this._fxBudget();
+    this.spawnParticles(x, y, Math.round(45 * b), '#ff6b00', 420, 0.9);
+    this.spawnParticles(x, y, Math.round(25 * b), '#fff200', 280, 0.6);
+    this.spawnParticles(x, y, Math.round(18 * b), '#e74c3c', 200, 0.5);
     this.screenShake = Math.max(this.screenShake, 0.35);
     sfx.hurt();
     this.vibrate([40, 30, 60]);

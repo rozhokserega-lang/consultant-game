@@ -66,7 +66,7 @@ Object.assign(Game.prototype, {
             const midX = (line.x1 + line.x2) / 2;
             const midY = (line.y1 + line.y2) / 2;
             if (this.player.takeDamage(midX, midY)) {
-              this.spawnParticles(this.player.x, this.player.y, 36, '#e74c3c', 320, 0.75);
+              this.spawnParticles(this.player.x, this.player.y, Math.round(36 * this._fxBudget()), '#e74c3c', 320, 0.75);
               this.endGame(false, (line.owner && line.owner.nameTag) || 'Босс');
               killed = true;
             } else {
@@ -80,8 +80,9 @@ Object.assign(Game.prototype, {
             }
           }
         } else {
-          // промах — лёгкий FX на линии
-          this.spawnParticles((line.x1 + line.x2) / 2, (line.y1 + line.y2) / 2, 10, '#f1c40f', 120, 0.3);
+          // промах — лёгкий FX на линии (на поздних минутах режем)
+          const missCount = Math.round(10 * this._fxBudget());
+          if (missCount > 0) this.spawnParticles((line.x1 + line.x2) / 2, (line.y1 + line.y2) / 2, missCount, '#f1c40f', 120, 0.3);
         }
         this.screenShake = Math.max(this.screenShake, 0.16);
         sfx.hit();
