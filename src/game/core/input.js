@@ -14,19 +14,21 @@ Object.assign(Game.prototype, {
         this.pickUpgrade(Number(e.key) - 1);
       }
       if (this.paused || this.choosingUpgrade || this.shopping || this.gameOver || this.won) { sfx.ensure(); music.start(); return; }
-      if (e.key === ' ' && !e.repeat && this.gameMode !== 'sale') this.player.startCharge();
-      if (this.gameMode !== 'sale' && (e.key === 'Shift' || e.key === 'ShiftLeft' || e.key === 'ShiftRight') && !e.repeat) {
+      if (e.key === ' ' && !e.repeat && this.gameMode !== 'sale' && this.gameMode !== 'extract') this.player.startCharge();
+      if (this.gameMode !== 'sale' && this.gameMode !== 'extract' && (e.key === 'Shift' || e.key === 'ShiftLeft' || e.key === 'ShiftRight') && !e.repeat) {
         const dir = this.getInputDir();
         if (this.player.tryDash(dir.x, dir.y)) { sfx.mode(); this.vibrate(12); this.spawnParticles(this.player.x, this.player.y, 10, '#5dade2', 160, 0.3); }
       }
-      if (this.gameMode !== 'sale' && (e.key === 'f' || e.key === 'F' || e.key === 'e' || e.key === 'E') && !e.repeat) {
+      if (this.gameMode === 'extract' && (e.key === 'e' || e.key === 'E' || e.key === 'f' || e.key === 'F') && !e.repeat) {
+        if (typeof this.tryExtractInteract === 'function') this.tryExtractInteract();
+      } else if (this.gameMode !== 'sale' && this.gameMode !== 'extract' && (e.key === 'f' || e.key === 'F' || e.key === 'e' || e.key === 'E') && !e.repeat) {
         if (this.player.trySkill()) { sfx.level(); this.vibrate([20, 30, 20]); this.spawnParticles(this.player.x, this.player.y, 24, '#f1c40f', 220, 0.55); }
       }
       sfx.ensure(); music.start();
     });
     window.addEventListener('keyup', e => {
       this.keys[e.key] = false;
-      if (e.key === ' ' && this.gameMode !== 'sale' && !(this.paused || this.choosingUpgrade || this.shopping || this.gameOver)) {
+      if (e.key === ' ' && this.gameMode !== 'sale' && this.gameMode !== 'extract' && !(this.paused || this.choosingUpgrade || this.shopping || this.gameOver)) {
         if (this.player.releaseAttack()) { sfx.hit(); this.vibrate(15); }
       }
     });
@@ -39,7 +41,7 @@ Object.assign(Game.prototype, {
       const rect = canvas.getBoundingClientRect();
       const wpt = this.screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
       this.player.angle = angleTo(this.player.x, this.player.y, wpt.x, wpt.y);
-      if (this.gameMode === 'sale') return;
+      if (this.gameMode === 'sale' || this.gameMode === 'extract') return;
       this.mouseAttack = true;
       this.player.startCharge();
     });
@@ -47,14 +49,14 @@ Object.assign(Game.prototype, {
       if (e.button !== 0) return;
       if (!this.mouseAttack) return;
       this.mouseAttack = false;
-      if (this.gameMode === 'sale') return;
+      if (this.gameMode === 'sale' || this.gameMode === 'extract') return;
       if (this.paused || this.choosingUpgrade || this.shopping || this.gameOver) { this.player.charging = false; this.player.charge = 0; return; }
       if (this.player.releaseAttack()) { sfx.hit(); this.vibrate(15); }
     });
     canvas.addEventListener('mouseleave', () => {
       if (this.mouseAttack) {
         this.mouseAttack = false;
-        if (this.gameMode !== 'sale' && this.player.releaseAttack()) sfx.hit();
+        if (this.gameMode !== 'sale' && this.gameMode !== 'extract' && this.player.releaseAttack()) sfx.hit();
       }
     });
     canvas.addEventListener('mousemove', e => {
@@ -132,8 +134,8 @@ Object.assign(Game.prototype, {
       e.preventDefault(); sfx.ensure(); music.start();
       if (this.gameOver || this.won) { this.hideOverlays(); this.resetGame(); return; }
       if (this.paused || this.choosingUpgrade || this.shopping) return;
-      // В Распродаже атак/дэша/обеда нет — только джойстик на весь экран
-      if (this.gameMode === 'sale') return;
+      // В Распродаже/Вылазке атак/дэша/обеда нет — только джойстик (+ кнопка действия у вылазки)
+      if (this.gameMode === 'sale' || this.gameMode === 'extract') return;
       for (const t of e.changedTouches) {
         if (this.joystickId === t.identifier) continue;
 
@@ -164,7 +166,7 @@ Object.assign(Game.prototype, {
           this.attackTouchId = null; this.attackHeld = false;
           attackBtn.classList.remove('pressed');
           attackBtn.classList.remove('charging');
-          if (this.gameMode !== 'sale' && !(this.paused || this.choosingUpgrade || this.shopping || this.gameOver)) {
+          if (this.gameMode !== 'sale' && this.gameMode !== 'extract' && !(this.paused || this.choosingUpgrade || this.shopping || this.gameOver)) {
             if (this.player.releaseAttack()) { sfx.hit(); this.vibrate(18); }
           } else {
             this.player.charging = false; this.player.charge = 0;

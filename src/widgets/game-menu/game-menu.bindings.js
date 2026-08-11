@@ -9,7 +9,8 @@ Object.assign(Game.prototype, {
       resume: () => this.closeGameMenu(),
       restart: () => {
         this.hideOverlays();
-        this.startGame();
+        if (this.gameMode === 'extract') this.startExtractHub({ resetPack: true });
+        else this.startGame();
       },
       abilities: () => {
         this.renderPauseLoadout('game-menu-loadout');
@@ -18,7 +19,8 @@ Object.assign(Game.prototype, {
       },
       exit: () => {
         this.hideOverlays();
-        this.openMainMenu();
+        if (this.gameMode === 'extract') this.endExtractToMenu();
+        else this.openMainMenu();
       },
       toggleSound: () => {
         sfx.enabled = !sfx.enabled;

@@ -2,7 +2,7 @@
 
 Object.assign(Game.prototype, {
   hideOverlays() {
-    ['upgrade-overlay','game-menu-overlay','settings-overlay','end-overlay','main-menu-overlay','boosters-overlay'].forEach(id => {
+    ['upgrade-overlay','game-menu-overlay','settings-overlay','end-overlay','main-menu-overlay','boosters-overlay','extract-shop-overlay'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.classList.remove('show');
     });

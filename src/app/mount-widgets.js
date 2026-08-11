@@ -16,3 +16,5 @@ mountWidget('end-overlay', EndPopup);
 mountWidget('boosters-overlay', BoostersHub);
 mountWidget('main-menu-overlay', MainMenu);
 mountWidget('crash-overlay', CrashOverlay);
+mountWidget('extract-hud', ExtractHud);
+mountWidget('extract-shop-overlay', ExtractShop);

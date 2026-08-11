@@ -1,0 +1,134 @@
+/**
+ * HUD режима «Вылазка»: слоты рюкзака и кнопка действия.
+ */
+
+#extract-hud {
+  display: none;
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 10px;
+  bottom: 0;
+  z-index: 35;
+  pointer-events: none;
+}
+
+#extract-hud.show {
+  display: block;
+}
+
+.extract-hud-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 420px;
+}
+
+.extract-hud-top {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  color: #fff;
+  font: 600 13px "Segoe UI", system-ui, sans-serif;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.extract-hud-coins b {
+  color: #f1c40f;
+}
+
+.extract-hud-hp {
+  letter-spacing: 1px;
+  color: #e74c3c;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.extract-hud-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.extract-slot {
+  width: 34px;
+  height: 34px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.extract-slot.filled {
+  border-color: #f1c40f;
+  background: rgba(40, 30, 10, 0.65);
+}
+
+.extract-slot.is-gear {
+  border-color: #9b59b6;
+  background: rgba(40, 20, 50, 0.7);
+}
+
+.extract-interact-btn {
+  display: none;
+  pointer-events: auto;
+  position: absolute;
+  left: 50%;
+  bottom: max(88px, calc(12px + env(safe-area-inset-bottom, 0px)));
+  transform: translateX(-50%);
+  min-width: min(280px, 78vw);
+  min-height: 56px;
+  padding: 14px 20px;
+  border: 3px solid #1a1a1a;
+  border-radius: 16px;
+  background: #f1c40f;
+  color: #1a1a1a;
+  font: 700 15px "Segoe UI", system-ui, sans-serif;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.extract-interact-btn.show {
+  display: flex;
+}
+
+.extract-interact-btn:active {
+  transform: translateX(-50%) scale(0.97);
+  filter: brightness(0.95);
+}
+
+.extract-interact-ico {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.extract-interact-label {
+  line-height: 1.2;
+}
+
+.extract-interact-hint {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.75;
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.extract-interact-btn.is-locked {
+  background: #95a5a6;
+  color: #2c3e50;
+}
+
+.extract-interact-hint:empty {
+  display: none;
+}

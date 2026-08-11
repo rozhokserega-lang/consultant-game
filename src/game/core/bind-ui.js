@@ -5,6 +5,8 @@ Object.assign(Game.prototype, {
     this.buildMainMenuButtons();
     this.buildGameMenu();
     this.buildLevelUpPopup();
+    if (typeof this.bindExtractHud === 'function') this.bindExtractHud();
+    if (typeof this.bindExtractShop === 'function') this.bindExtractShop();
     document.getElementById('btn-pause').onclick = () => this.togglePause();
     const battlePause = document.getElementById('btn-battle-pause');
     if (battlePause) battlePause.onclick = () => this.togglePause();

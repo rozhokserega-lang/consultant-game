@@ -5,9 +5,10 @@ Object.assign(Game.prototype, {
     const box = document.getElementById('main-menu-actions');
     if (!box || typeof UiButton === 'undefined') return;
     box.innerHTML = '';
-    ['Играть', 'Усилители', 'Гардероб', 'Выход'].forEach((label, i) => {
+    ['Играть', 'Вылазка', 'Усилители', 'Гардероб', 'Выход'].forEach((label, i) => {
       const actions = [
         () => this.startGame(),
+        () => this.startExtractHub({ resetPack: true }),
         () => this.openBoosters(),
         () => this.openWardrobe(),
         () => this.exitGame(),
@@ -44,8 +45,11 @@ Object.assign(Game.prototype, {
     this.gameOver = false;
     this.won = false;
     this.gameMode = 'sale';
-    document.body.classList.remove('sale-mode', 'hub-mode');
+    this.extractPhase = null;
+    document.body.classList.remove('sale-mode', 'hub-mode', 'extract-mode');
     document.body.classList.add('main-menu-mode');
+    const extractHud = document.getElementById('extract-hud');
+    if (extractHud) extractHud.classList.remove('show');
     this.prepareIdleWorld();
     document.getElementById('main-menu-overlay').classList.add('show');
     this.refreshMusicState();

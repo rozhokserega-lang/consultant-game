@@ -11,6 +11,15 @@ Object.assign(Game.prototype, {
       if (enemy.x < vx0 || enemy.x > vx1 || enemy.y < vy0 || enemy.y > vy1) continue;
       items.push({ y: enemy.y, z: 1, draw: () => enemy.draw(ctx, this.isChaseMode) });
     }
+    if (this.gameMode === 'extract' && this.extractNpcs) {
+      for (const npc of this.extractNpcs) {
+        items.push({
+          y: npc.y,
+          z: 1,
+          draw: () => this.drawExtractNpc(npc),
+        });
+      }
+    }
     items.push({ y: this.player.y, z: 2, draw: () => this.player.draw(ctx) });
     items.sort((a, b) => (a.y - b.y) || (a.z - b.z));
     for (const it of items) it.draw();

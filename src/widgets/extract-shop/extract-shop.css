@@ -1,0 +1,101 @@
+/**
+ * Магазин продавца режима «Вылазка».
+ */
+
+.extract-shop-overlay {
+  z-index: 60;
+}
+
+.extract-shop-panel {
+  width: min(420px, 92vw);
+  max-height: 80vh;
+  overflow: auto;
+}
+
+.extract-shop-meta {
+  margin: 0 0 12px;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.extract-shop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.extract-shop-item {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  cursor: pointer;
+}
+
+.extract-shop-item:hover {
+  background: rgba(241, 196, 15, 0.12);
+  border-color: rgba(241, 196, 15, 0.45);
+}
+
+.extract-shop-ico {
+  font-size: 22px;
+}
+
+.extract-shop-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.extract-shop-body small {
+  opacity: 0.75;
+  font-size: 12px;
+}
+
+.extract-shop-price {
+  font-weight: 700;
+  color: #f1c40f;
+  white-space: nowrap;
+}
+
+.extract-shop-item.sel {
+  border-color: rgba(241, 196, 15, 0.7);
+  background: rgba(241, 196, 15, 0.16);
+}
+
+.extract-shop-empty {
+  margin: 8px 0 4px;
+  font-size: 13px;
+  opacity: 0.8;
+  text-align: center;
+}
+
+.extract-shop-extra {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.extract-shop-sell-all {
+  border-color: rgba(46, 204, 113, 0.45);
+}
+
+.extract-shop-close-wrap {
+  margin-top: 4px;
+}
+
+.extract-evac-shelter {
+  border-color: rgba(46, 204, 113, 0.4);
+}
+
+.extract-evac-up {
+  border-color: rgba(52, 152, 219, 0.45);
+}

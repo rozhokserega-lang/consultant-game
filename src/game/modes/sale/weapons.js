@@ -400,6 +400,13 @@ Game.prototype.updateSaleBoomerangs = function (dt) {
       b.y += Math.sin(a) * b.speed * 1.2 * dt;
       if (dist(b.x, b.y, p.x, p.y) < 22) b.dead = true;
     }
+    if (this.gameMode === 'extract' && typeof this.hitsExtractWall === 'function'
+      && this.hitsExtractWall(b.x, b.y, 10)) {
+      b.returning = true;
+      if (typeof this.spawnParticles === 'function') {
+        this.spawnParticles(b.x, b.y, 4, '#94a3b8', 80, 0.2);
+      }
+    }
     const hitR = 14 * (b.size || 1.1);
     for (const e of this.enemies) {
       if (e.hp <= 0 || b.hit.has(e)) continue;
@@ -417,6 +424,16 @@ Game.prototype.updateSaleProjectiles = function (dt) {
     pr.x += Math.cos(pr.angle) * pr.speed * dt;
     pr.y += Math.sin(pr.angle) * pr.speed * dt;
     pr.life -= dt;
+    if (this.gameMode === 'extract' && typeof this.hitsExtractWall === 'function'
+      && this.hitsExtractWall(pr.x, pr.y, pr.r || 8)) {
+      if (pr.impact && typeof this.spawnSpriteFx === 'function') {
+        this.spawnSpriteFx(pr.impact, pr.x, pr.y, { scale: 0.3, life: 0.15, vy: 0 });
+      } else if (typeof this.spawnParticles === 'function') {
+        this.spawnParticles(pr.x, pr.y, 5, '#94a3b8', 90, 0.2);
+      }
+      pr.life = 0;
+      continue;
+    }
     for (const e of this.enemies) {
       if (e.hp <= 0 || pr.hit.has(e)) continue;
       if (dist(pr.x, pr.y, e.x, e.y) < e.r + pr.r) {
@@ -457,6 +474,14 @@ Game.prototype.updateSaleCharges = function (dt) {
     c.x += Math.cos(c.angle) * c.speed * dt;
     c.y += Math.sin(c.angle) * c.speed * dt;
     c.life -= dt;
+    if (this.gameMode === 'extract' && typeof this.hitsExtractWall === 'function'
+      && this.hitsExtractWall(c.x, c.y, 14)) {
+      c.life = 0;
+      if (typeof this.spawnParticles === 'function') {
+        this.spawnParticles(c.x, c.y, 6, '#94a3b8', 100, 0.22);
+      }
+      continue;
+    }
     if (c.pull) {
       for (const e of this.enemies) {
         if (e.hp <= 0) continue;
@@ -493,6 +518,11 @@ Game.prototype.updateSaleSeekers = function (dt) {
     s.x += s.vx * dt; s.y += s.vy * dt;
     s.life -= dt;
     s.angle = Math.atan2(s.vy, s.vx);
+    if (this.gameMode === 'extract' && typeof this.hitsExtractWall === 'function'
+      && this.hitsExtractWall(s.x, s.y, 10)) {
+      s.life = 0;
+      continue;
+    }
     for (const e of this.enemies) {
       if (e.hp <= 0 || s.hit.has(e)) continue;
       if (dist(s.x, s.y, e.x, e.y) < e.r + 12) {

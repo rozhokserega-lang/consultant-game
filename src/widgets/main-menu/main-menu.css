@@ -34,8 +34,18 @@
   color: var(--c-text);
 }
 
-/* Название и подзаголовок уже нарисованы на фоне */
-.main-menu-title,
+/* Название дублируем текстом: если фон/CDN не загрузились — меню не выглядит «пустым». */
+.main-menu-title {
+  display: block;
+  margin: 0 0 6px;
+  font-size: clamp(22px, 6vw, 28px);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
+}
+
 .main-menu-sub {
-  display: none;
+  display: block;
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
 }

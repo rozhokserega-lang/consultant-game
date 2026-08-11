@@ -105,6 +105,12 @@ Object.assign(Game.prototype, {
     if (this.gameMode === 'sale' && typeof this.renderSaleOverlays === 'function') {
       this.renderSaleOverlays();
     }
+    if (this.gameMode === 'extract' && this.extractPhase === 'raid' && typeof this.renderSaleOverlays === 'function') {
+      this.renderSaleOverlays();
+    }
+    if (this.gameMode === 'extract' && typeof this.renderExtractOverlays === 'function') {
+      this.renderExtractOverlays();
+    }
     this.drawBossLineAttacks();
     ctx.restore();
 
@@ -114,6 +120,9 @@ Object.assign(Game.prototype, {
     // Sale: экранные оверлеи (стрелка на босса и т.п.)
     if (this.gameMode === 'sale' && typeof this.renderSaleScreenUI === 'function') {
       this.renderSaleScreenUI();
+    }
+    if (this.gameMode === 'extract' && typeof this.renderExtractScreenUI === 'function') {
+      this.renderExtractScreenUI();
     }
 
     if (this.modeFlash > 0) {

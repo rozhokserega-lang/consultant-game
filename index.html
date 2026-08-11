@@ -33,11 +33,13 @@
 <link rel="stylesheet" href="src/widgets/equip-hub/equip-hub.css">
 <link rel="stylesheet" href="src/widgets/crash-overlay/crash-overlay.css">
 <link rel="stylesheet" href="src/widgets/dev-panel/dev-panel.css">
+<link rel="stylesheet" href="src/widgets/extract-hud/extract-hud.css">
+<link rel="stylesheet" href="src/widgets/extract-shop/extract-shop.css">
 
 <!-- Последним: перекрытия по режиму приложения (body.sale-mode и т.п.) -->
 <link rel="stylesheet" href="src/shared/styles/body-state.css">
 
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://telegram.org/js/telegram-web-app.js" async></script>
 <script src="src/app/telegram.js"></script>
 </head>
 <body>
@@ -56,6 +58,9 @@
 
   <!-- Джойстик и кнопки действий (виджет mobile-controls) -->
   <div id="mobile-controls-root"></div>
+
+  <!-- Вылазка: рюкзак и кнопка действия -->
+  <div id="extract-hud"></div>
 
   <!-- Выбор апгрейда (виджет level-up-popup) -->
   <div id="upgrade-overlay"></div>
@@ -77,6 +82,9 @@
 
 <!-- Главное меню -->
 <div id="main-menu-overlay"></div>
+
+<!-- Вылазка: магазин на парковке -->
+<div id="extract-shop-overlay"></div>
 
 <!-- Экран падения -->
 <div id="crash-overlay" aria-hidden="true"></div>
@@ -210,6 +218,28 @@
 <script src="src/game/modes/gear/economy.js"></script>
 <script src="src/game/modes/gear/hub-ui.js"></script>
 
+<!-- 8c. Режим «Вылазка» (хаб-парковка → рейд) -->
+<script src="src/game/modes/extract/data/config.js"></script>
+<script src="src/game/modes/extract/data/backpack.js"></script>
+<script src="src/game/modes/extract/data/npcs.js"></script>
+<script src="src/game/modes/extract/data/hub-map.js"></script>
+<script src="src/game/modes/extract/data/loot.js"></script>
+<script src="src/game/modes/extract/data/skills.js"></script>
+<script src="src/game/modes/extract/data/gear.js"></script>
+<script src="src/game/modes/extract/data/raid-map.js"></script>
+<script src="src/game/modes/extract/data/raid-map-f2.js"></script>
+<script src="src/game/modes/extract/hub-world.js"></script>
+<script src="src/game/modes/extract/raid-world.js"></script>
+<script src="src/game/modes/extract/combat.js"></script>
+<script src="src/game/modes/extract/loot.js"></script>
+<script src="src/game/modes/extract/run.js"></script>
+<script src="src/game/modes/extract/interact.js"></script>
+<script src="src/game/modes/extract/shop.js"></script>
+<script src="src/game/modes/extract/update.js"></script>
+<script src="src/game/modes/extract/render.js"></script>
+<script src="src/game/modes/extract/hud.js"></script>
+<script src="src/game/modes/extract/hooks.js"></script>
+
 <!-- 9. UI-кит, виджеты и их связка с игрой.
      Файл <виджет>.js держит разметку и вёрстку, <виджет>.bindings.js — методы Game. -->
 <script src="src/shared/ui/button/button.js"></script>
@@ -232,6 +262,10 @@
 <script src="src/widgets/main-menu/main-menu.bindings.js"></script>
 <script src="src/widgets/boosters-hub/boosters-hub.js"></script>
 <script src="src/widgets/boosters-hub/boosters-hub.bindings.js"></script>
+<script src="src/widgets/extract-hud/extract-hud.js"></script>
+<script src="src/widgets/extract-hud/extract-hud.bindings.js"></script>
+<script src="src/widgets/extract-shop/extract-shop.js"></script>
+<script src="src/widgets/extract-shop/extract-shop.bindings.js"></script>
 
 <!-- 10. Сборка разметки виджетов и запуск -->
 <script src="src/app/mount-widgets.js"></script>

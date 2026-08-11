@@ -14,8 +14,8 @@ Object.assign(Game.prototype, {
     if (!color && boss.saleBossId && typeof SALE_BOSS_DEFS !== 'undefined' && SALE_BOSS_DEFS[boss.saleBossId]) {
       color = SALE_BOSS_DEFS[boss.saleBossId].color;
     }
-    if (!color) color = (opts.soft || this.gameMode === 'sale') ? '#f59e0b' : '#e74c3c';
-    const soft = opts.soft != null ? !!opts.soft : this.gameMode === 'sale';
+    if (!color) color = (opts.soft || this.gameMode === 'sale' || this.gameMode === 'extract') ? '#f59e0b' : '#e74c3c';
+    const soft = opts.soft != null ? !!opts.soft : (this.gameMode === 'sale' || this.gameMode === 'extract');
     // чуть вперёд от текущей позиции игрока (lead)
     const lead = 40 + (boss.bossPhase || 1) * 12;
     const aimX = player.x + Math.cos(player.angle || 0) * lead * 0.25;
@@ -41,6 +41,7 @@ Object.assign(Game.prototype, {
         soft,
         hit: false,
         dead: false,
+        age: 0,
       });
     }
     sfx.mode();
@@ -51,6 +52,12 @@ Object.assign(Game.prototype, {
     let killed = false;
     for (const line of this.bossLines) {
       if (line.dead) continue;
+      line.age = (line.age || 0) + dt;
+      // страховка: линия не должна висеть вечно (например если тик забыли)
+      if (line.age > 3.5) {
+        line.dead = true;
+        continue;
+      }
       if (line.warn > 0) {
         line.warn -= dt;
         continue;
