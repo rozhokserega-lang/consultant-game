@@ -12,7 +12,7 @@ function saleCoinWarmMul(tSec) {
   // ×2 в начале → ×1 к концу warm
   return Math.max(1, 2 - m / SALE_WARM_MINUTES);
 }
-/** Итоговый множитель HP моба (волна Enemy × эта кривая). */
+/** Итоговый множитель HP моба для Распродажи (спавн всегда wave=1 в Enemy). */
 function saleEnemyScaleMul(tSec) {
   const m = Math.max(0, tSec) / 60;
   return SALE_DIFFICULTY.mul
@@ -81,8 +81,4 @@ function saleEnemyType(t) {
   if (f > 0.4 && r < 0.35) return 'manager';
   if (r < 0.12) return 'returner';
   return 'normal';
-}
-
-function saleEnemyWaveApprox(t) {
-  return 1 + Math.floor(saleTimeFactor(t) * 14);
 }

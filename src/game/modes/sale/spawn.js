@@ -26,8 +26,9 @@ Game.prototype.spawnSaleEnemy = function (forcedType) {
   if (!forcedType && this.saleForceTypes && this.saleForceTypes.length) {
     type = this.saleForceTypes[randi(0, this.saleForceTypes.length - 1)];
   }
-  const wave = saleEnemyWaveApprox(this.saleTime);
-  const e = new Enemy(x, y, type, wave);
+  // wave=1: рост HP/скорости только через applySaleEnemyDifficulty (SALE_DIFFICULTY),
+  // иначе конструктор Enemy ещё раз масштабирует по wave и получается ×2 кривая.
+  const e = new Enemy(x, y, type, 1);
   this.applySaleEnemyDifficulty(e);
   // в распродаже все агрессивны
   this.enemies.push(e);
@@ -51,8 +52,7 @@ Game.prototype.applySaleEnemyDifficulty = function (e, opts) {
 Game.prototype.spawnSaleEnemyNear = function (x, y, type, opts) {
   opts = opts || {};
   if (this.enemies.filter((e) => e.hp > 0).length >= SALE_MAX_ENEMIES + (opts.overCap || 0)) return null;
-  const wave = saleEnemyWaveApprox(this.saleTime);
-  const e = new Enemy(x, y, type || 'normal', wave);
+  const e = new Enemy(x, y, type || 'normal', 1);
   if (opts.nameTag) e.nameTag = opts.nameTag;
   if (opts.hp) { e.hp = e.maxHp = opts.hp; }
   if (opts.hpMul) { e.maxHp = Math.max(1, Math.round(e.maxHp * opts.hpMul)); e.hp = e.maxHp; }
