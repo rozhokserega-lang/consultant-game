@@ -73,6 +73,9 @@ class Enemy {
     this.sprite = pick(pool);
     this.mobId = resolveEnemyMobId(this.sprite);
     this.mobPose = 'idle';
+    this._mobAnimPose = 'idle';
+    this._mobAnimFrame = 0;
+    this._mobAnimPhase = 0;
     this.hueRotate = 0;
     this.angle = rand(0, Math.PI * 2);
     this.wanderTimer = rand(0.5, 2);
@@ -113,7 +116,7 @@ class Enemy {
     if (this.stunTimer > 0) {
       this.stunTimer -= dt;
       this.speedBuff = 1;
-      refreshEnemyMobPose(this, player, isRush, stepFromX, stepFromY);
+      refreshEnemyMobPose(this, player, isRush, stepFromX, stepFromY, dt);
       clampEntityToArena(this, worldW, worldH, game);
       return;
     }
@@ -208,7 +211,7 @@ class Enemy {
       this.x += Math.cos(this.angle) * spd * dt;
       this.y += Math.sin(this.angle) * spd * dt;
       this.speedBuff = 1;
-      refreshEnemyMobPose(this, player, isRush, stepFromX, stepFromY);
+      refreshEnemyMobPose(this, player, isRush, stepFromX, stepFromY, dt);
       clampEntityToArena(this, worldW, worldH, game);
       return;
     }
@@ -249,7 +252,7 @@ class Enemy {
         this.y += Math.sin(this.angle) * spd * dt;
       }
       this.speedBuff = 1;
-      refreshEnemyMobPose(this, player, isRush, stepFromX, stepFromY);
+      refreshEnemyMobPose(this, player, isRush, stepFromX, stepFromY, dt);
       clampEntityToArena(this, worldW, worldH, game);
       return;
     }
@@ -308,7 +311,7 @@ class Enemy {
       this.x += Math.cos(this.angle) * spd * dt;
       this.y += Math.sin(this.angle) * spd * dt;
       this.speedBuff = 1;
-      refreshEnemyMobPose(this, player, isRush, stepFromX, stepFromY);
+      refreshEnemyMobPose(this, player, isRush, stepFromX, stepFromY, dt);
       clampEntityToArena(this, worldW, worldH, game);
       return;
     }
@@ -366,7 +369,7 @@ class Enemy {
     }
 
     this.speedBuff = 1;
-    refreshEnemyMobPose(this, player, isRush, stepFromX, stepFromY);
+    refreshEnemyMobPose(this, player, isRush, stepFromX, stepFromY, dt);
     clampEntityToArena(this, worldW, worldH, game);
   }
 
