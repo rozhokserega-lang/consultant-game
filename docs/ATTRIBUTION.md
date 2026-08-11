@@ -18,8 +18,12 @@
 ### Free Pixel Effects Pack — CodeManu
 - https://opengameart.org/content/free-pixel-effects-pack
 - License: CC0 (public domain)
-- Использовано: взрывы, левел-ап, появление/смерть боссов, вихрь магнита,
+- Использовано: взрывы, появление/смерть боссов, вихрь магнита,
   огонь пожара, пузыри яда, хил, искры попаданий, кольца ударной волны.
+  (Старый зелёный level-up из пака заменён кастомным `afx_levelup`.)
+
+### Кастомный level-up (`tools/assets/custom/afx_levelup_spritesheet.png`)
+- Золотой/фиолетовый «LEVEL UP!» (луч → вспышка → спираль), вшит в `anim_fx_atlas.png`.
 
 ### Particle Pack — Kenney (kenney.nl)
 - https://kenney.nl/assets/particle-pack

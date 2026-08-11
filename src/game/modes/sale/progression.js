@@ -49,7 +49,7 @@ Game.prototype.gainSaleXp = function (amount) {
     this.openSaleUpgradeUI();
     sfx.level();
     this.spawnAnimFx('afx_levelup', this.player.x, this.player.y, {
-      life: 0.7, scale: 1.1, scaleEnd: 1.5,
+      life: 1.0, scale: 1.35, scaleEnd: 1.85, anchorY: 0.9,
     });
     this.spawnParticles(this.player.x, this.player.y, 22, '#f1c40f', 200, 0.55);
   }

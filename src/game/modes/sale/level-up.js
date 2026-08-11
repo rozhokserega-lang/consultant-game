@@ -269,8 +269,9 @@ Game.prototype.pickSaleUpgrade = function (i) {
     delete this.saleWeapons[up.from];
     this.saleWeapons[up.id] = 1;
     this.saleWeaponCd[up.id] = 0.1;
-    this.spawnAnimFx('afx_levelup', this.player.x, this.player.y, { life: 0.9, scale: 1.6, scaleEnd: 2.4 });
-    this.spawnAnimFx('afx_ring', this.player.x, this.player.y, { life: 0.55, scale: 1.2, scaleEnd: 3.2 });
+    this.spawnAnimFx('afx_levelup', this.player.x, this.player.y, {
+      life: 1.15, scale: 1.7, scaleEnd: 2.2, anchorY: 0.9,
+    });
     this.spawnParticles(this.player.x, this.player.y, 28, '#f1c40f', 240, 0.6);
     this.applySalePassivesToPlayer();
   } else if (up.kind === 'passive') {

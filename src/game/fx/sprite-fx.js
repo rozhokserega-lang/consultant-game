@@ -64,6 +64,8 @@ Object.assign(Game.prototype, {
       alpha: opts.alpha ?? 1,
       tint: opts.tint,
       fade: opts.fade !== false,
+      anchorX: opts.anchorX,
+      anchorY: opts.anchorY,
     });
   },
 
@@ -80,6 +82,8 @@ Object.assign(Game.prototype, {
         rot: fx.rot,
         alpha,
         tint: fx.tint,
+        anchorX: fx.anchorX,
+        anchorY: fx.anchorY,
       });
     }
   },

@@ -46,18 +46,22 @@ function drawAnimFxFrame(ctx, id, x, y, opts = {}) {
   const target = opts.targetSize ?? 64;
   const scale = opts.scale != null ? opts.scale : target / 100;
   const dw = f.w * scale, dh = f.h * scale;
+  const ax = opts.anchorX ?? 0.5;
+  const ay = opts.anchorY ?? 0.5;
   ctx.save();
   ctx.translate(x, y);
   if (opts.rot) ctx.rotate(opts.rot);
   if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
+  const ox = -dw * ax;
+  const oy = -dh * ay;
   if (opts.tint && def.tint) {
     const tc = tintedAnimFxCanvas(id, idx, opts.tint);
     if (!tc) { ctx.restore(); return false; }
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(tc, -dw * 0.5, -dh * 0.5, dw, dh);
+    ctx.drawImage(tc, ox, oy, dw, dh);
   } else {
     ctx.imageSmoothingEnabled = !!def.tint;
-    ctx.drawImage(animFxImg, f.x, f.y, f.w, f.h, -dw * 0.5, -dh * 0.5, dw, dh);
+    ctx.drawImage(animFxImg, f.x, f.y, f.w, f.h, ox, oy, dw, dh);
   }
   ctx.restore();
   return true;

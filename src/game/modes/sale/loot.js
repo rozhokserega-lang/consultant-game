@@ -101,14 +101,14 @@ Game.prototype.applySalePowerup = function (pu) {
         this.salePassives[key] = (this.salePassives[key] || 0) + 1;
         this.applySalePassivesToPlayer();
         this.showEventBanner(`📦 В посылке ключ: ${SALE_PASSIVES[key].name}!`, 2.0);
-        this.spawnAnimFx('afx_levelup', p.x, p.y, { life: 0.65, scale: 0.9, scaleEnd: 1.3 });
+        this.spawnAnimFx('afx_levelup', p.x, p.y, { life: 0.95, scale: 1.2, scaleEnd: 1.65, anchorY: 0.9 });
         sfx.level();
         return;
       }
     }
     this.pendingUpgrades = (this.pendingUpgrades || 0) + 1;
     this.showEventBanner('📦 Посылка со склада: бесплатное улучшение!', 1.8);
-    this.spawnAnimFx('afx_levelup', p.x, p.y, { life: 0.65, scale: 0.9, scaleEnd: 1.3 });
+    this.spawnAnimFx('afx_levelup', p.x, p.y, { life: 0.95, scale: 1.2, scaleEnd: 1.65, anchorY: 0.9 });
     sfx.level();
     this.openSaleUpgradeUI();
   } else if (pu.kind === 'magnet') {
