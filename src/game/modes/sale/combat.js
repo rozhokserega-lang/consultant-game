@@ -21,12 +21,14 @@ Game.prototype.saleHitEnemy = function (e, dmg, srcX, srcY, knock, opts) {
     if (this.salePassives.guard_pass) knock *= 1 + this.salePassives.guard_pass * 0.10;
     if (floor && floor.knockMul) knock *= floor.knockMul;
   }
-  const dealt = Math.min(dmg, Math.max(0, e.hp || 0));
+  // цифры и лог = реально снятое HP (не «бумажный» урон и не оверкилл)
+  const hpBefore = Math.max(0, e.hp || 0);
   const died = e.hit(dmg, srcX, srcY, knock || 140, opts.stun || 0);
+  const dealt = Math.max(0, hpBefore - Math.max(0, e.hp || 0));
   if (dealt > 0 && this.recordSaleBalanceDmg) {
     this.recordSaleBalanceDmg(dealt, opts.weapon || opts.source || 'other');
   }
-  this.pushSaleDmgNum(e.x, e.y - e.r - 6, Math.min(dmg, e.maxHp || dmg));
+  if (dealt > 0) this.pushSaleDmgNum(e.x, e.y - e.r - 6, dealt);
   if (opts.confuse && !died) {
     e._saleConfuse = Math.max(e._saleConfuse || 0, opts.confuse);
   }
