@@ -272,7 +272,9 @@ Game.prototype.saleMaxWeaponSlots = function () {
 Game.prototype.saleDmgMul = function () {
   const hero = getSaleHero(this.saleHeroId || this.selectedHeroId);
   const over = (this.saleOverflow && this.saleOverflow.power) || 0;
-  return (1 + (this.salePassives.might || 0) * 0.12 + (this.salePassives.discount || 0) * 0.1 + over * 0.08)
+  const p = this.salePassives;
+  return (1 + (p.might || 0) * 0.12 + (p.discount || 0) * 0.1
+    + (p.spray || 0) * 0.08 + (p.sticker || 0) * 0.06 + over * 0.08)
     * (this.saleWeaponDmgMul || 1)
     * (hero.dmgMul || 1)
     * SALE_DIFFICULTY.weaponDmg;
@@ -286,7 +288,9 @@ Game.prototype.saleCdMul = function () {
 };
 Game.prototype.saleAreaMul = function () {
   const over = (this.saleOverflow && this.saleOverflow.space) || 0;
-  let m = 1 + ((this.salePassives.area || 0) + (this.salePassives.gloves || 0) + (this.salePassives.map || 0)) * 0.1 + over * 0.08;
+  const p = this.salePassives;
+  let m = 1 + ((p.area || 0) + (p.gloves || 0) + (p.map || 0)) * 0.1
+    + (p.printer || 0) * 0.08 + (p.broadcast || 0) * 0.08 + over * 0.08;
   const orb = this.saleSynergyOn('orbitBonus');
   if (orb) m += orb;
   return m;

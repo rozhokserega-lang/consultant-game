@@ -17,7 +17,10 @@ Game.prototype.saleHitEnemy = function (e, dmg, srcX, srcY, knock, opts) {
     dmg = Math.max(1, Math.round(dmg * markMul));
   }
   const floor = this.getSaleFloor();
-  if (floor && floor.knockMul && knock) knock *= floor.knockMul;
+  if (knock) {
+    if (this.salePassives.guard_pass) knock *= 1 + this.salePassives.guard_pass * 0.10;
+    if (floor && floor.knockMul) knock *= floor.knockMul;
+  }
   const dealt = Math.min(dmg, Math.max(0, e.hp || 0));
   const died = e.hit(dmg, srcX, srcY, knock || 140, opts.stun || 0);
   if (dealt > 0 && this.recordSaleBalanceDmg) {

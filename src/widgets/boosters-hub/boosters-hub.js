@@ -24,9 +24,8 @@
           <div class="hub-sec">Мета-перки</div>
           <p style="font-size:11px;color:#aaa;margin:0 0 6px;">Постоянные бонусы между сменами.</p>
           <div class="hub-grid" id="boosters-meta"></div>
-          <div class="hub-sec">Способности</div>
-          <p style="font-size:11px;color:#aaa;margin:0 0 6px;">Дэш, обед и сильный удар.</p>
-          <div class="hub-grid" id="boosters-abilities"></div>
+          <div class="hub-grid" id="boosters-abilities" style="display:none"></div>
+          <!-- способности (дэш / обед / сильный удар) скрыты — в Распродаже не используются -->
 
           <div id="hub-sale-loadout">
             <div class="hub-sec">Консультант</div>

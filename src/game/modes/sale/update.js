@@ -233,7 +233,8 @@ Game.prototype.updateSale = function (dt) {
     pk.update(realDt, this.player);
     if (!pk.dead && dist(this.player.x, this.player.y, pk.x, pk.y) < this.player.r + pk.r + 8) {
       if (pk.type === 'coin' || pk.type === 'coins') {
-        const wallet = 1 + (this.salePassives.wallet || 0) * 0.15;
+        const wallet = 1 + (this.salePassives.wallet || 0) * 0.15
+          + (this.salePassives.ribbon || 0) * 0.10;
         const warmCoins = saleCoinWarmMul(this.saleTime || 0);
         const gain = Math.ceil((pk.value || 1) * wallet * (this.coinMult || 1) * warmCoins);
         this.coins += gain;
