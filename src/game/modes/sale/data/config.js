@@ -3,10 +3,15 @@
  */
 'use strict';
 
-const SALE_VERSION = '0.11.13-mob-anims-revert';
+const SALE_VERSION = '0.11.14-stat-scale';
 const SALE_DURATION = 20 * 60; // 20 минут
 const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
 const SALE_WORLD_MUL = 2.75;
+/**
+ * Общий масштаб HP врагов и урона по ним (не HP игрока).
+ * ×10 → цифры «вкуснее», TTK и баланс те же, если крутить только здесь.
+ */
+const SALE_STAT_SCALE = 10;
 
 /** LN-style: жёсткий потолок слотов — билд, а не «собери всё» */
 const SALE_MAX_WEAPONS = 4;

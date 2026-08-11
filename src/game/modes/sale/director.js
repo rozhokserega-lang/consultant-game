@@ -15,8 +15,10 @@ Game.prototype.spawnSaleBoss = function (bossId, opts) {
   x = Math.max(60, Math.min(this.worldW - 60, x));
   y = Math.max(60, Math.min(this.worldH - 60, y));
   const m = (this.saleTime || 0) / 60;
-  const bossHp = Math.max(def.hp, Math.round(
-    def.hp * SALE_DIFFICULTY.bossHp(m) * SALE_DIFFICULTY.mul * SALE_DIFFICULTY.warm(m)
+  const bossHp = Math.max(1, Math.round(
+    Math.max(def.hp, Math.round(
+      def.hp * SALE_DIFFICULTY.bossHp(m) * SALE_DIFFICULTY.mul * SALE_DIFFICULTY.warm(m)
+    )) * (SALE_STAT_SCALE || 1)
   ));
   const e = this.spawnSaleEnemyNear(x, y, 'boss', {
     overCap: 4,
@@ -108,7 +110,7 @@ Game.prototype.applySaleBossDrop = function (bossId, x, y) {
       const a = (Math.PI * 2 * i) / 4;
       this.salePuddles.push({
         x: p.x + Math.cos(a) * 70, y: p.y + Math.sin(a) * 70,
-        r: 32, life: 5, dmg: 1, tick: 0, color: '#c026d3', slow: 0.5, poison: true,
+        r: 32, life: 5, dmg: this.saleFlatDmg(1), tick: 0, color: '#c026d3', slow: 0.5, poison: true,
       });
     }
   } else if (drop.kind === 'heal_max' && p) {

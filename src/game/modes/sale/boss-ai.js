@@ -325,7 +325,7 @@ Game.prototype.tickSaleBossAI = function (enemy, dt) {
       // свисток: кольцо отталкивания
       this.saleRings = this.saleRings || [];
       this.saleRings.push({
-        x: enemy.x, y: enemy.y, r: 20, maxR: 200 + ph * 40, dmg: 1, hit: new Set(),
+        x: enemy.x, y: enemy.y, r: 20, maxR: 200 + ph * 40, dmg: this.saleFlatDmg(1), hit: new Set(),
         knock: 280, ico: '🚨', visual: 'siren',
       });
       this._spawnBossAnimFx('afx_ring', enemy.x, enemy.y, { life: 0.5, scale: 0.8, scaleEnd: 2.8, tint: '#38bdf8' });
@@ -340,7 +340,7 @@ Game.prototype.tickSaleBossAI = function (enemy, dt) {
         const d = rand(50, 160);
         this.salePuddles.push({
           x: enemy.x + Math.cos(a) * d, y: enemy.y + Math.sin(a) * d,
-          r: 28 + ph * 4, life: 5.5, dmg: 1, tick: 0, color: '#c026d3', slow: 0.5, poison: true,
+          r: 28 + ph * 4, life: 5.5, dmg: this.saleFlatDmg(1), tick: 0, color: '#c026d3', slow: 0.5, poison: true,
         });
       }
       if (typeof SpeechBubble === 'function') {
@@ -351,7 +351,7 @@ Game.prototype.tickSaleBossAI = function (enemy, dt) {
       enemy._saleBossCd2 = Math.max(4.2, 6.8 - ph);
       this.salePuddles = this.salePuddles || [];
       this.salePuddles.push({
-        x: p.x, y: p.y, r: 36, life: 3.2, dmg: 1, tick: 0, color: '#a21caf', slow: 0.45, poison: true,
+        x: p.x, y: p.y, r: 36, life: 3.2, dmg: this.saleFlatDmg(1), tick: 0, color: '#a21caf', slow: 0.45, poison: true,
       });
       this._spawnBossAnimFx('afx_darkburst', p.x, p.y, { life: 0.45, scale: 0.9, scaleEnd: 1.4 });
       const n = 2 + (ph > 2 ? 1 : 0);

@@ -365,7 +365,7 @@ Game.prototype.updateSaleOrbits = function (dt) {
     o.x = p.x + Math.cos(o.angle) * o.radius;
     o.y = p.y + Math.sin(o.angle) * o.radius;
     if (o.trail && Math.random() < 0.2) {
-      this.salePuddles.push({ x: o.x, y: o.y, r: 22, life: 1.2, dmg: 1, tick: 0, color: '#27ae60', poison: true });
+      this.salePuddles.push({ x: o.x, y: o.y, r: 22, life: 1.2, dmg: this.saleFlatDmg(1), tick: 0, color: '#27ae60', poison: true });
     }
     for (const e of this.enemies) {
       if (e.hp <= 0) continue;
@@ -376,7 +376,7 @@ Game.prototype.updateSaleOrbits = function (dt) {
         if (o.explodeHit) {
           this.spawnAnimFx('afx_ring', e.x, e.y, { life: 0.28, scale: 0.4, scaleEnd: 1.1 });
           this.salePuddles.push({
-            x: e.x, y: e.y, r: 26, life: 0.95, dmg: 1, tick: 0, color: '#f59e0b',
+            x: e.x, y: e.y, r: 26, life: 0.95, dmg: this.saleFlatDmg(1), tick: 0, color: '#f59e0b',
           });
         }
       }
@@ -429,7 +429,7 @@ Game.prototype.updateSaleProjectiles = function (dt) {
         if (pr.impact) this.spawnSpriteFx(pr.impact, pr.x, pr.y, { scale: 0.45, life: 0.2, vy: 0 });
         if (pr.puddle) {
           this.salePuddles.push({
-            x: e.x, y: e.y, r: 40, life: 2.8, dmg: 1, tick: 0,
+            x: e.x, y: e.y, r: 40, life: 2.8, dmg: this.saleFlatDmg(1), tick: 0,
             color: pr.puddleColor || '#d35400',
             slow: pr.puddleSlow != null ? pr.puddleSlow : 0.55,
             poison: !!pr.poison || !!this.saleSynergyOn('poisonPuddle'),
@@ -550,7 +550,7 @@ Game.prototype.updateSaleBeams = function (dt) {
           this.saleHitEnemy(e, b.dmg, px, py, 60, { color: '#f1c40f', spark: 'sp_fire1', weapon: b.weaponId });
           if (b.burn && Math.random() < 0.35) {
             this.salePuddles.push({
-              x: e.x, y: e.y, r: 22, life: 1.6, dmg: 1, tick: 0, color: '#ea580c',
+              x: e.x, y: e.y, r: 22, life: 1.6, dmg: this.saleFlatDmg(1), tick: 0, color: '#ea580c',
             });
           }
           if (b.summonBats && Math.random() < 0.1) {
@@ -595,7 +595,7 @@ Game.prototype.updateSaleSwords = function (dt) {
         sw.cd = 0.22;
         if (sw.trail) {
           this.salePuddles.push({
-            x: sw.x, y: sw.y, r: 20, life: 1.1, dmg: 1, tick: 0, color: '#27ae60', poison: true,
+            x: sw.x, y: sw.y, r: 20, life: 1.1, dmg: this.saleFlatDmg(1), tick: 0, color: '#27ae60', poison: true,
           });
         }
       }
@@ -657,7 +657,7 @@ Game.prototype.updateSalePuddles = function (dt) {
           }
           this.tookDamage = true;
           sfx.hurt();
-          this.applySaleFragileExtra();
+          if (this.applySaleFragileExtra()) return true;
         }
       }
     }

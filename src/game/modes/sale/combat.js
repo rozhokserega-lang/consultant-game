@@ -47,7 +47,7 @@ Game.prototype.saleHitEnemy = function (e, dmg, srcX, srcY, knock, opts) {
     if (opts.impact && budget >= 0.55) this.spawnSpriteFx(opts.impact, e.x, e.y, { scale: 0.35, life: 0.28, vy: -8 });
     this.onSaleEnemyKilled(e);
     if (opts.explodeOnKill || this.saleWeapons.black_friday) {
-      this.salePuddles.push({ x: e.x, y: e.y, r: 55, life: 2.5, dmg: 1, tick: 0, color: '#8e0000' });
+      this.salePuddles.push({ x: e.x, y: e.y, r: 55, life: 2.5, dmg: this.saleFlatDmg(1), tick: 0, color: '#8e0000' });
       if (budget >= 0.55) this.spawnSpriteFx('sp_bleed3', e.x, e.y, { scale: 0.4, life: 0.35, vy: 0 });
     }
   } else if (Math.random() < 0.35 * this._fxBudget()) {
@@ -68,6 +68,8 @@ Game.prototype.nearestSaleEnemy = function (x, y, maxDist) {
 
 Game.prototype.applySaleFragileExtra = function () {
   if (!this.saleFragile || !this.player || this.player.hp <= 0) return false;
+  // смертельный удар уже потратил вторую жизнь в takeDamage — не добиваем тем же хитом
+  if (this.player._justRevived) return false;
   this.player.hp -= 1;
   if (this.recordSaleBalanceHurt) this.recordSaleBalanceHurt(1);
   if (this.player.hp <= 0) {
@@ -75,6 +77,8 @@ Game.prototype.applySaleFragileExtra = function () {
       this.player.extraLives -= 1;
       this.player.hp = Math.max(1, Math.ceil(this.player.maxHp * 0.5));
       this.player.invincible = 2.2;
+      this.player._justRevived = true;
+      if (this.recordSaleBalanceRevive) this.recordSaleBalanceRevive();
       return false;
     }
     this.endSaleGame(false, 'Распродажа оружия (хрупкость)');

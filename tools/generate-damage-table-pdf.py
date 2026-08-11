@@ -17,6 +17,7 @@ FONT = Path('C:/Windows/Fonts/arial.ttf')
 FONT_BOLD = Path('C:/Windows/Fonts/arialbd.ttf')
 
 WDMG = 0.85
+STAT_SCALE = 10
 ORB_HIT_CD = 0.42
 BEAM_TICK = 0.1
 PUDDLE_TICK = 0.35
@@ -106,7 +107,7 @@ def theoretical_st_dps(w: dict, level: int) -> float:
     raw = (dmg * cnt / cd) + (1.0 / PUDDLE_TICK)
   else:
     raw = dmg * cnt / cd
-  return raw * WDMG
+  return raw * WDMG * STAT_SCALE
 
 
 def fmt(n: float) -> str:
@@ -217,7 +218,7 @@ def build():
   pdf.h1('Таблица урона — режим «Распродажа»')
   pdf.body(
     'Цифры из data/weapons.js. «ST DPS» — теоретический урон в секунду по одной цели '
-    'без пассивок и героя, но с глобальным множителем weaponDmg = 0.85. '
+    'без пассивок и героя, но с глобальным множителем weaponDmg = 0.85 и SALE_STAT_SCALE = 10. '
     'Это оценка для сравнения оружия, не точная копия логов забега.'
   )
 
@@ -225,6 +226,7 @@ def build():
   pdf.data_table(
     ['Источник', 'Формула / значение', 'Комментарий'],
     [
+      ['SALE_STAT_SCALE', 'x10', 'HP врагов и урон по ним (не HP игрока)'],
       ['weaponDmg (SALE_DIFFICULTY)', 'x0.85', 'Всегда в saleDmgMul'],
       ['Лена', 'x1.06', 'Герой'],
       ['Игорь', 'x0.95', 'Герой'],
@@ -235,8 +237,8 @@ def build():
       ['overflow power', '+8% за стак', 'Дроп босса'],
       ['Метка (mark)', 'x1.30 (+sticker)', 'После попадания pricetag/auto_claimer'],
       ['Орбиты orbHitCd', '0.42 с', 'Общий КД хита орбитой на враге'],
-      ['Лужа DoT', '1 урона / 0.35 с', 'Источник в логе: puddle'],
-      ['Хлопушка bomb', 'фиксированный удар', 'Источник в логе: bomb'],
+      ['Лужа DoT', '10 урона / 0.35 с', 'saleFlatDmg(1) при SCALE=10'],
+      ['Хлопушка bomb', 'фиксированный удар x SCALE', 'Источник в логе: bomb'],
     ],
     col_widths=(55, 50, 160),
   )
@@ -293,12 +295,12 @@ def build():
   )
 
   pdf.h2('4. Как считается ST DPS (упрощение)')
-  pdf.bullet(f'Обычные (залп / бумеранг / волна / метка / щит / тележка / струя): dmg x count / CD x {WDMG}')
-  pdf.bullet(f'Орбита (чек, пакеты): dmg / {ORB_HIT_CD} x {WDMG}  — count не ускоряет хит по одной цели')
-  pdf.bullet(f'Аура / радио: dmg / CD x {WDMG}')
-  pdf.bullet(f'Луч (фонарик): dmg / {BEAM_TICK} x {WDMG}  — тик луча')
-  pdf.bullet('Швабра: dmg x count / 0.35 x 0.85  — грубая оценка касаний')
-  pdf.bullet(f'Лужи (кофе): удар снаряда + DoT 1/{PUDDLE_TICK}с пока враг в луже')
+  pdf.bullet(f'Обычные (залп / бумеранг / волна / метка / щит / тележка / струя): dmg x count / CD x {WDMG} x {STAT_SCALE}')
+  pdf.bullet(f'Орбита (чек, пакеты): dmg / {ORB_HIT_CD} x {WDMG} x {STAT_SCALE}  — count не ускоряет хит по одной цели')
+  pdf.bullet(f'Аура / радио: dmg / CD x {WDMG} x {STAT_SCALE}')
+  pdf.bullet(f'Луч (фонарик): dmg / {BEAM_TICK} x {WDMG} x {STAT_SCALE}  — тик луча')
+  pdf.bullet(f'Швабра: dmg x count / 0.35 x {WDMG} x {STAT_SCALE}  — грубая оценка касаний')
+  pdf.bullet(f'Лужи (кофе): удар снаряда + DoT {STAT_SCALE}/{PUDDLE_TICK}с пока враг в луже')
   pdf.bullet('Не учтено: AoE по толпе, рикошеты, mark x1.3, пассивки, герой, синергии, bomb/puddle от убийств')
 
   pdf.h2('5. Что видно в логах забега (реальный урон)')
@@ -330,8 +332,8 @@ def build():
   pdf.body(
     'Базовый урон оружия умножается на saleDmgMul. Пример для Лены с discount 5 + spray 3 + sticker 2:'
   )
-  mul = (1 + 5 * 0.1 + 3 * 0.08 + 2 * 0.06) * 1.06 * WDMG
-  pdf.bullet(f'saleDmgMul = (1 + 0.50 + 0.24 + 0.12) x 1.06 x 0.85 = {mul:.3f}')
+  mul = (1 + 5 * 0.1 + 3 * 0.08 + 2 * 0.06) * 1.06 * WDMG * STAT_SCALE
+  pdf.bullet(f'saleDmgMul = (1 + 0.50 + 0.24 + 0.12) x 1.06 x 0.85 x {STAT_SCALE} = {mul:.3f}')
   pdf.bullet('То есть табличный урон 3 на экране станет round(3 x %.2f) = %d' % (mul, max(1, round(3 * mul))))
   pdf.bullet('С меткой ещё x1.30 (и больше со sticker) — поэтому late-game цифры выглядят огромными')
 

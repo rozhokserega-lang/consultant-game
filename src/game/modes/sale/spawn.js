@@ -40,7 +40,7 @@ Game.prototype.applySaleEnemyDifficulty = function (e, opts) {
   opts = opts || {};
   if (!e || opts.noScale) return e;
   const t = this.saleTime || 0;
-  const hpMul = saleEnemyScaleMul(t);
+  const hpMul = saleEnemyScaleMul(t) * (SALE_STAT_SCALE || 1);
   const spdMul = saleEnemySpdScale(t);
   e.maxHp = Math.max(1, Math.round(e.maxHp * hpMul));
   e.hp = e.maxHp;

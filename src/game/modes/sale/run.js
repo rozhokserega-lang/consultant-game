@@ -277,7 +277,13 @@ Game.prototype.saleDmgMul = function () {
     + (p.spray || 0) * 0.08 + (p.sticker || 0) * 0.06 + over * 0.08)
     * (this.saleWeaponDmgMul || 1)
     * (hero.dmgMul || 1)
-    * SALE_DIFFICULTY.weaponDmg;
+    * SALE_DIFFICULTY.weaponDmg
+    * (SALE_STAT_SCALE || 1);
+};
+
+/** Фиксированный DoT/бомба в масштабе SALE_STAT_SCALE (лужи dmg:1 → 10). */
+Game.prototype.saleFlatDmg = function (n) {
+  return Math.max(1, Math.round((n == null ? 1 : n) * (SALE_STAT_SCALE || 1)));
 };
 Game.prototype.saleCdMul = function () {
   const haste = (this.salePassives.haste || 0) + (this.salePassives.charger || 0) + (this.salePassives.energy || 0);

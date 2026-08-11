@@ -130,15 +130,16 @@ Game.prototype.initSaleBalanceLog = function () {
     minutes: [],
     weaponDmg: {},
     bosses: [],
-    totals: {
-      dmg: 0,
-      kills: 0,
-      elites: 0,
-      xp: 0,
-      gold: 0,
-      hurt: 0,
-    },
-    _acc: { dmg: 0, kills: 0, elites: 0, xp: 0, gold: 0, hurt: 0 },
+      totals: {
+        dmg: 0,
+        kills: 0,
+        elites: 0,
+        xp: 0,
+        gold: 0,
+        hurt: 0,
+        revives: 0,
+      },
+      _acc: { dmg: 0, kills: 0, elites: 0, xp: 0, gold: 0, hurt: 0 },
     _lastSampleMin: -1,
     _sampleT: 0,
   };
@@ -150,12 +151,25 @@ Game.prototype.hookSaleBalancePlayerHurt = function () {
   const orig = this.player.takeDamage.bind(this.player);
   this.player.takeDamage = function (fromX, fromY) {
     const before = this.hp;
+    const livesBefore = this.extraLives || 0;
     const dead = orig(fromX, fromY);
-    const lost = Math.max(0, before - this.hp);
-    if (lost > 0 && self.recordSaleBalanceHurt) self.recordSaleBalanceHurt(lost);
+    if (this._justRevived && (this.extraLives || 0) < livesBefore) {
+      // смертельный удар + ревайв: HP вырос, но удар был — считаем hurt и revive
+      if (self.recordSaleBalanceHurt) self.recordSaleBalanceHurt(1);
+      if (self.recordSaleBalanceRevive) self.recordSaleBalanceRevive();
+    } else {
+      const lost = Math.max(0, before - this.hp);
+      if (lost > 0 && self.recordSaleBalanceHurt) self.recordSaleBalanceHurt(lost);
+    }
     return dead;
   };
   this.player._saleBalHurtHooked = true;
+};
+
+Game.prototype.recordSaleBalanceRevive = function () {
+  const bal = this._saleBal;
+  if (!bal) return;
+  bal.totals.revives = (bal.totals.revives || 0) + 1;
 };
 
 Game.prototype.recordSaleBalanceDmg = function (amount, source) {
@@ -301,6 +315,7 @@ Game.prototype.finalizeSaleBalanceLog = function (won, killer) {
     kills: bal.totals.kills,
     elites: bal.totals.elites,
     hurt: bal.totals.hurt,
+    revives: bal.totals.revives || 0,
     dmg: Math.round(bal.totals.dmg),
     xp: Math.round(bal.totals.xp),
     gold: Math.round(bal.totals.gold),

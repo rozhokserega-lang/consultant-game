@@ -233,6 +233,27 @@
   color: #eee;
 }
 
+.game-menu__loadout .pause-chip--wep {
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.game-menu__loadout .pause-chip--wep:hover,
+.game-menu__loadout .pause-chip--wep:focus-visible {
+  background: rgba(241, 196, 15, 0.14);
+  border-color: rgba(241, 196, 15, 0.55);
+  outline: none;
+}
+
+.game-menu__loadout .pause-chip--wep.is-active {
+  background: rgba(241, 196, 15, 0.22);
+  border-color: #f1c40f;
+}
+
 .game-menu__loadout .pause-chip .lv {
   color: #f1c40f;
   font-weight: 700;
@@ -247,6 +268,82 @@
 .game-menu__loadout .pause-empty {
   font-size: 11px;
   color: #888;
+}
+
+.game-menu__loadout .pause-wep-detail {
+  margin: 8px 0 4px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(241, 196, 15, 0.35);
+  font-size: 11px;
+  line-height: 1.35;
+  color: #e8e8e8;
+}
+
+.game-menu__loadout .pause-wep-detail__head {
+  margin-bottom: 4px;
+  color: #fff;
+}
+
+.game-menu__loadout .pause-wep-detail__stats {
+  margin-bottom: 2px;
+}
+
+.game-menu__loadout .pause-wep-detail__stats b {
+  color: #f1c40f;
+}
+
+.game-menu__loadout .pause-wep-detail__muted {
+  font-size: 10px;
+  color: #999;
+  margin-top: 2px;
+}
+
+.game-menu__loadout .pause-wep-detail__sec {
+  margin: 8px 0 4px;
+  font-size: 10px;
+  color: #f1c40f;
+  letter-spacing: 0.02em;
+}
+
+.game-menu__loadout .pause-wep-detail__evo {
+  padding: 6px 8px;
+  margin-top: 4px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.game-menu__loadout .pause-wep-detail__evo.is-ready {
+  border-color: rgba(46, 204, 113, 0.55);
+  background: rgba(46, 204, 113, 0.1);
+}
+
+.game-menu__loadout .pause-wep-detail__evo.is-done {
+  color: #aaa;
+}
+
+.game-menu__loadout .pause-wep-detail__evo-title {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.game-menu__loadout .pause-wep-detail__evo-need {
+  font-size: 10px;
+  color: #ccc;
+}
+
+.game-menu__loadout .pause-wep-detail__ready {
+  color: #2ecc71;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.game-menu__loadout .pause-wep-detail__wait {
+  color: #e67e22;
+  font-size: 10px;
+  font-weight: 700;
 }
 
 @media (max-width: 380px) {

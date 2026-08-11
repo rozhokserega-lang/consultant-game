@@ -191,7 +191,7 @@ Game.prototype._saleSeedFirePuddles = function (n) {
       y: p.y + rand(-240, 240),
       r: 38 + rand(0, 28),
       life: 8 + rand(0, 6),
-      dmg: 1,
+      dmg: this.saleFlatDmg(1),
       tick: rand(0, 0.3),
       color: '#e67e22',
       hurtPlayer: true,

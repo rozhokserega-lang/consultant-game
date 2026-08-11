@@ -129,7 +129,9 @@ Game.prototype.applySalePowerup = function (pu) {
     for (const e of this.enemies) {
       if (e.hp <= 0) continue;
       if (dist(p.x, p.y, e.x, e.y) > R) continue;
-      const dmg = e.saleBossId ? 12 : (e.type === 'boss' || e.type === 'director' || e.type === 'miniboss') ? 20 : 999;
+      const dmg = this.saleFlatDmg(
+        e.saleBossId ? 12 : (e.type === 'boss' || e.type === 'director' || e.type === 'miniboss') ? 20 : 999
+      );
       this.saleHitEnemy(e, dmg, p.x, p.y, 300, { impact: 'sp_fwave2', color: '#ff6b00', raw: true, source: 'bomb' });
     }
   } else if (pu.kind === 'heart') {
@@ -174,7 +176,7 @@ Game.prototype.pushSaleDmgNum = function (x, y, dmg) {
     x: x + rand(-6, 6),
     y,
     txt: String(dmg),
-    big: dmg >= 5,
+    big: dmg >= 25,
     life: 0.65,
     max: 0.65,
     vy: -52,

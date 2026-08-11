@@ -263,4 +263,6 @@ Game.prototype.updateSale = function (dt) {
 
   // линейные удары босса (телеграф → удар → исчезновение)
   if (this.updateBossLineAttacks(realDt)) return;
+  // баннер/FX второй жизни (в «Смене» это было в core/update, тут update подменён)
+  if (this.flushReviveFx) this.flushReviveFx();
 };
