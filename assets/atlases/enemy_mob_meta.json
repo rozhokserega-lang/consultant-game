@@ -1,314 +1,170 @@
 {
   "frames": {
     "mob_tank_idle": {
-      "x": 2,
-      "y": 2,
-      "w": 71,
-      "h": 88
-    },
-    "mob_tank_walk_0": {
-      "x": 75,
-      "y": 2,
-      "w": 78,
-      "h": 88
-    },
-    "mob_tank_run_0": {
-      "x": 155,
-      "y": 2,
-      "w": 107,
-      "h": 88
-    },
-    "mob_tank_attack_windup": {
-      "x": 264,
-      "y": 2,
-      "w": 142,
-      "h": 88
+      "x": 37,
+      "y": 11,
+      "w": 65,
+      "h": 84
     },
     "mob_tank_walk": {
-      "x": 408,
-      "y": 2,
+      "x": 173,
+      "y": 11,
       "w": 70,
       "h": 84
     },
     "mob_tank_run": {
-      "x": 480,
-      "y": 2,
+      "x": 296,
+      "y": 11,
       "w": 99,
       "h": 84
     },
     "mob_tank_attack": {
-      "x": 581,
-      "y": 2,
+      "x": 416,
+      "y": 12,
       "w": 136,
       "h": 83
     },
     "mob_purple_idle": {
-      "x": 719,
+      "x": 587,
       "y": 2,
-      "w": 73,
-      "h": 97
-    },
-    "mob_purple_walk_0": {
-      "x": 794,
-      "y": 2,
-      "w": 82,
-      "h": 97
-    },
-    "mob_purple_run_0": {
-      "x": 878,
-      "y": 2,
-      "w": 105,
-      "h": 97
-    },
-    "mob_purple_attack_windup": {
-      "x": 985,
-      "y": 2,
-      "w": 98,
-      "h": 97
+      "w": 69,
+      "h": 93
     },
     "mob_purple_walk": {
-      "x": 1085,
+      "x": 723,
       "y": 2,
       "w": 74,
       "h": 93
     },
     "mob_purple_run": {
-      "x": 1161,
-      "y": 2,
+      "x": 849,
+      "y": 3,
       "w": 97,
       "h": 92
     },
     "mob_purple_attack": {
-      "x": 1260,
+      "x": 974,
       "y": 2,
       "w": 123,
       "h": 93
     },
-    "mob_fast_walk_0": {
-      "x": 1385,
-      "y": 2,
-      "w": 63,
-      "h": 85
-    },
-    "mob_fast_walk_1": {
-      "x": 1450,
-      "y": 2,
-      "w": 75,
-      "h": 85
-    },
-    "mob_fast_run_0": {
-      "x": 1527,
-      "y": 2,
-      "w": 110,
-      "h": 85
-    },
-    "mob_fast_attack_windup": {
-      "x": 1639,
-      "y": 2,
-      "w": 121,
-      "h": 85
-    },
     "mob_fast_idle": {
-      "x": 1762,
-      "y": 2,
+      "x": 1145,
+      "y": 14,
       "w": 57,
       "h": 81
     },
     "mob_fast_walk": {
-      "x": 1821,
-      "y": 2,
+      "x": 1278,
+      "y": 14,
       "w": 67,
       "h": 81
     },
     "mob_fast_run": {
-      "x": 1890,
-      "y": 2,
+      "x": 1399,
+      "y": 14,
       "w": 102,
       "h": 81
     },
     "mob_fast_attack": {
-      "x": 1994,
-      "y": 2,
+      "x": 1530,
+      "y": 14,
       "w": 115,
       "h": 81
     },
-    "mob_elder_walk_0": {
-      "x": 2111,
-      "y": 2,
-      "w": 62,
-      "h": 86
-    },
-    "mob_elder_walk_1": {
-      "x": 2175,
-      "y": 2,
-      "w": 74,
-      "h": 86
-    },
-    "mob_elder_run_0": {
-      "x": 2251,
-      "y": 2,
-      "w": 92,
-      "h": 86
-    },
-    "mob_elder_attack_windup": {
-      "x": 2345,
-      "y": 2,
-      "w": 127,
-      "h": 86
-    },
     "mob_elder_idle": {
-      "x": 2474,
-      "y": 2,
+      "x": 1698,
+      "y": 13,
       "w": 56,
       "h": 82
     },
     "mob_elder_walk": {
-      "x": 2532,
-      "y": 2,
+      "x": 1831,
+      "y": 13,
       "w": 66,
       "h": 82
     },
     "mob_elder_run": {
-      "x": 2600,
-      "y": 2,
+      "x": 1960,
+      "y": 14,
       "w": 84,
       "h": 81
     },
     "mob_elder_attack": {
-      "x": 2686,
-      "y": 2,
+      "x": 2079,
+      "y": 14,
       "w": 121,
       "h": 81
     },
     "mob_muscle_idle": {
-      "x": 2809,
-      "y": 2,
-      "w": 73,
-      "h": 87
-    },
-    "mob_muscle_walk_0": {
-      "x": 2884,
-      "y": 2,
-      "w": 78,
-      "h": 87
-    },
-    "mob_muscle_run_0": {
-      "x": 2964,
-      "y": 2,
-      "w": 112,
-      "h": 87
-    },
-    "mob_muscle_attack_windup": {
-      "x": 3078,
-      "y": 2,
-      "w": 115,
-      "h": 87
+      "x": 2244,
+      "y": 12,
+      "w": 67,
+      "h": 83
     },
     "mob_muscle_walk": {
-      "x": 3195,
-      "y": 2,
+      "x": 2381,
+      "y": 12,
       "w": 70,
       "h": 83
     },
     "mob_muscle_run": {
-      "x": 3267,
-      "y": 2,
+      "x": 2502,
+      "y": 13,
       "w": 104,
       "h": 82
     },
     "mob_muscle_attack": {
-      "x": 3373,
-      "y": 2,
+      "x": 2637,
+      "y": 13,
       "w": 109,
       "h": 82
     },
     "mob_pink_idle": {
-      "x": 3484,
-      "y": 2,
-      "w": 59,
-      "h": 87
-    },
-    "mob_pink_walk_0": {
-      "x": 3545,
-      "y": 2,
-      "w": 73,
-      "h": 87
-    },
-    "mob_pink_run_0": {
-      "x": 3620,
-      "y": 2,
-      "w": 95,
-      "h": 87
-    },
-    "mob_pink_attack_windup": {
-      "x": 3717,
-      "y": 2,
-      "w": 137,
-      "h": 87
+      "x": 2803,
+      "y": 12,
+      "w": 53,
+      "h": 83
     },
     "mob_pink_walk": {
-      "x": 3856,
-      "y": 2,
+      "x": 2935,
+      "y": 12,
       "w": 65,
       "h": 83
     },
     "mob_pink_run": {
-      "x": 3923,
-      "y": 2,
+      "x": 3062,
+      "y": 12,
       "w": 88,
       "h": 83
     },
     "mob_pink_attack": {
-      "x": 4013,
-      "y": 2,
+      "x": 3178,
+      "y": 12,
       "w": 131,
       "h": 83
     },
-    "mob_cane_walk_0": {
-      "x": 4146,
-      "y": 2,
-      "w": 69,
-      "h": 78
-    },
-    "mob_cane_walk_1": {
-      "x": 4217,
-      "y": 2,
-      "w": 73,
-      "h": 78
-    },
-    "mob_cane_run_0": {
-      "x": 4292,
-      "y": 2,
-      "w": 100,
-      "h": 78
-    },
-    "mob_cane_attack_windup": {
-      "x": 4394,
-      "y": 2,
-      "w": 110,
-      "h": 78
-    },
     "mob_cane_idle": {
-      "x": 4506,
-      "y": 2,
+      "x": 3350,
+      "y": 21,
       "w": 63,
       "h": 74
     },
     "mob_cane_walk": {
-      "x": 4571,
-      "y": 2,
+      "x": 3487,
+      "y": 21,
       "w": 65,
       "h": 74
     },
     "mob_cane_run": {
-      "x": 4638,
-      "y": 2,
+      "x": 3612,
+      "y": 21,
       "w": 92,
       "h": 74
     },
     "mob_cane_attack": {
-      "x": 4732,
-      "y": 2,
+      "x": 3744,
+      "y": 21,
       "w": 104,
       "h": 74
     }
@@ -319,15 +175,12 @@
         "mob_tank_idle"
       ],
       "walk": [
-        "mob_tank_walk_0",
         "mob_tank_walk"
       ],
       "run": [
-        "mob_tank_run_0",
         "mob_tank_run"
       ],
       "attack": [
-        "mob_tank_attack_windup",
         "mob_tank_attack"
       ]
     },
@@ -336,15 +189,12 @@
         "mob_purple_idle"
       ],
       "walk": [
-        "mob_purple_walk_0",
         "mob_purple_walk"
       ],
       "run": [
-        "mob_purple_run_0",
         "mob_purple_run"
       ],
       "attack": [
-        "mob_purple_attack_windup",
         "mob_purple_attack"
       ]
     },
@@ -353,16 +203,12 @@
         "mob_fast_idle"
       ],
       "walk": [
-        "mob_fast_walk_0",
-        "mob_fast_walk_1",
         "mob_fast_walk"
       ],
       "run": [
-        "mob_fast_run_0",
         "mob_fast_run"
       ],
       "attack": [
-        "mob_fast_attack_windup",
         "mob_fast_attack"
       ]
     },
@@ -371,16 +217,12 @@
         "mob_elder_idle"
       ],
       "walk": [
-        "mob_elder_walk_0",
-        "mob_elder_walk_1",
         "mob_elder_walk"
       ],
       "run": [
-        "mob_elder_run_0",
         "mob_elder_run"
       ],
       "attack": [
-        "mob_elder_attack_windup",
         "mob_elder_attack"
       ]
     },
@@ -389,15 +231,12 @@
         "mob_muscle_idle"
       ],
       "walk": [
-        "mob_muscle_walk_0",
         "mob_muscle_walk"
       ],
       "run": [
-        "mob_muscle_run_0",
         "mob_muscle_run"
       ],
       "attack": [
-        "mob_muscle_attack_windup",
         "mob_muscle_attack"
       ]
     },
@@ -406,15 +245,12 @@
         "mob_pink_idle"
       ],
       "walk": [
-        "mob_pink_walk_0",
         "mob_pink_walk"
       ],
       "run": [
-        "mob_pink_run_0",
         "mob_pink_run"
       ],
       "attack": [
-        "mob_pink_attack_windup",
         "mob_pink_attack"
       ]
     },
@@ -423,22 +259,18 @@
         "mob_cane_idle"
       ],
       "walk": [
-        "mob_cane_walk_0",
-        "mob_cane_walk_1",
         "mob_cane_walk"
       ],
       "run": [
-        "mob_cane_run_0",
         "mob_cane_run"
       ],
       "attack": [
-        "mob_cane_attack_windup",
         "mob_cane_attack"
       ]
     }
   },
-  "w": 4838,
-  "h": 101,
+  "w": 3866,
+  "h": 97,
   "legacy": {
     "enemy_tank": "mob_tank",
     "enemy_woman_purple": "mob_purple",
