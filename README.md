@@ -38,6 +38,7 @@ src/
     audio/            звуки и музыка
     data/             таблицы баланса и координаты кадров атласов
     modes/sale/       режим «Распродажа»: данные, боссы, оружие, события, хаб
+    modes/extract/    режим «Вылазка»: хаб-парковка → рейд ТЦ → эвакуация (extraction)
     modes/gear/       снаряжение и KPI-прогрессия
   widgets/            самостоятельные куски UI (меню, попапы, хаб, HUD):
                       <виджет>.js — разметка и вёрстка, <виджет>.bindings.js — методы Game
@@ -45,6 +46,10 @@ tools/                скрипты сборки ассетов и провер
 docs/                 ARCHITECTURE, ROADMAP, TELEGRAM, ATTRIBUTION
 reference/            сторонний проект для сверки, в сборку не попадает
 ```
+
+Кнопка **Вылазка** в главном меню — extraction-луп (отдельный мета-прогресс в `persist()`:
+монеты/слоты/рюкзак). Подробнее: раздел в [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+и пункт в [docs/ROADMAP.md](docs/ROADMAP.md).
 
 Порядок подключения скриптов в `index.html` значим: файлы объявляют глобальные
 `const`/`class`, а `src/game/modes/**` и `src/widgets/**` дописывают методы в

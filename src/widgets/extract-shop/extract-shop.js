@@ -9,12 +9,18 @@
   'use strict';
 
   const TEMPLATE = `
-    <div class="panel extract-shop-panel">
+    <div class="panel extract-shop-panel" id="extract-shop-panel">
       <h2 id="extract-shop-title">Панель</h2>
       <p class="extract-shop-meta" id="extract-shop-meta"></p>
       <div id="extract-shop-list" class="extract-shop-list"></div>
       <div id="extract-shop-extra" class="extract-shop-extra"></div>
       <div id="extract-shop-close-wrap" class="extract-shop-close-wrap"></div>
+    </div>
+    <div id="extract-confirm" class="extract-confirm" hidden>
+      <div class="extract-confirm-card panel">
+        <p id="extract-confirm-text" class="extract-confirm-text">Подтвердить?</p>
+        <div class="extract-confirm-actions" id="extract-confirm-actions"></div>
+      </div>
     </div>
   `;
 

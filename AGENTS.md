@@ -54,7 +54,7 @@ node tools/smoke.mjs
 | 3–5 | `render/`, `audio/`, `arena/`, `entities/` | классы сущностей до `Game` |
 | 6 | `src/game/core/game.js` | объявляет `class Game` |
 | 7 | остальные `core/`, `arena/`, `fx/`, `render/` | дописывают `Game.prototype` |
-| 8 | `src/game/modes/sale/`, затем `gear/` | сначала `data/`, потом логика |
+| 8 | `src/game/modes/sale/`, затем `extract/`, затем `gear/` | сначала `data/`, потом логика |
 | 9 | `src/shared/ui/`, `src/widgets/` | виджеты и их `bindings` |
 | 10 | `mount-widgets.js`, `bootstrap.js` | сборка разметки и `new Game()` |
 
@@ -67,6 +67,7 @@ node tools/smoke.mjs
 |---|---|
 | Число баланса, таблицу | `src/game/data/*` или `src/game/modes/<режим>/data/*` |
 | Метод забега «Распродажа» | подходящий по смыслу `src/game/modes/sale/<зона>.js` |
+| Метод «Вылазка» | `src/game/modes/extract/<зона>.js` (+ `data/` для таблиц) |
 | Новое оружие | описание в `modes/sale/data/weapons.js` + логика в `modes/sale/weapons.js` |
 | Нового босса | описание в `modes/sale/data/bosses.js` + поведение в `boss-ai.js` |
 | Поведение врага | `src/game/entities/enemy.js` |

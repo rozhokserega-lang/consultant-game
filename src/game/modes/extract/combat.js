@@ -51,6 +51,10 @@ Object.assign(Game.prototype, {
 
     const meta = this.ensureExtractMeta();
     let starter = meta.starterWeapon || EXTRACT_DEFAULT_STARTER;
+    if (typeof this.isExtractStarterUnlocked === 'function' && !this.isExtractStarterUnlocked(starter)) {
+      starter = EXTRACT_DEFAULT_STARTER;
+      meta.starterWeapon = starter;
+    }
     if (typeof SALE_WEAPONS !== 'undefined') {
       if (!SALE_WEAPONS[starter] || SALE_WEAPONS[starter].evolved) starter = EXTRACT_DEFAULT_STARTER;
     }
@@ -79,14 +83,29 @@ Object.assign(Game.prototype, {
   applyExtractBackpackGear() {
     this.salePassives = this.salePassives || {};
     let mug = 0;
+    let gearCount = 0;
     for (const it of this.extractBackpack || []) {
-      if (!it || it.kind !== 'gear' || !it.passiveId) continue;
+      if (!it || it.kind === 'bulkPad') continue;
+      if (it.kind !== 'gear' || !it.passiveId) continue;
+      gearCount++;
       const id = it.passiveId;
       const add = Math.max(1, it.passiveLv | 0 || 1);
       const def = (typeof SALE_PASSIVES !== 'undefined') ? SALE_PASSIVES[id] : null;
       const max = def && def.max ? def.max : 5;
       this.salePassives[id] = Math.min(max, (this.salePassives[id] || 0) + add);
       if (id === 'mug' || id === 'vitality') mug += add;
+    }
+    const need = (typeof EXTRACT_MOD_SET_NEED !== 'undefined') ? EXTRACT_MOD_SET_NEED : 3;
+    this._extractModSetOn = gearCount >= need;
+    if (this._extractModSetOn) {
+      const dmg = (typeof EXTRACT_MOD_SET_DMG !== 'undefined') ? EXTRACT_MOD_SET_DMG : 1.1;
+      this.saleWeaponDmgMul = (this.saleWeaponDmgMul || 1) * dmg;
+      if (this.player) {
+        const spd = (typeof EXTRACT_MOD_SET_SPEED !== 'undefined') ? EXTRACT_MOD_SET_SPEED : 1.08;
+        this.player._extractModSetSpeed = spd;
+      }
+    } else if (this.player) {
+      this.player._extractModSetSpeed = 1;
     }
     if (this.player && mug > 0) {
       this.player.maxHp += mug;
@@ -168,33 +187,120 @@ Object.assign(Game.prototype, {
         this.showExtractBanner(`${loot.def.ico} ${loot.def.name} можно забрать`);
       }
     }
+    if (enemy._extractIsQueueLeader && typeof this.onExtractQueueLeaderKilled === 'function') {
+      this.onExtractQueueLeaderKilled(enemy);
+    }
     if (enemy._extractExitBoss || (enemy._extractId && this.extractElevator && this.extractElevator.lockedBy === enemy._extractId)) {
       if (this.extractElevator) this.extractElevator.locked = false;
       this.extractExitBossAlive = false;
+      this.beginExtractEvacWindow();
       const maxFloor = (typeof EXTRACT_MAX_FLOOR !== 'undefined') ? EXTRACT_MAX_FLOOR : 1;
       const canGoUp = (this.extractFloor || 1) < maxFloor;
+      const win = (typeof EXTRACT_EVAC_WINDOW !== 'undefined') ? EXTRACT_EVAC_WINDOW : 48;
       this.showExtractBanner(
         canGoUp
-          ? 'Лифт разблокирован — выбери убежище или этаж выше'
-          : 'Лифт разблокирован — можно в убежище',
-        3.2,
+          ? `Лифт открыт · ${Math.round(win)}с до подкрепления — убежище или этаж выше`
+          : `Лифт открыт · ${Math.round(win)}с до подкрепления — в убежище!`,
+        3.4,
       );
     }
     // Мелкий дроп монет вылазки с элиты / босса выхода
     if (enemy._extractElite || enemy._extractExitBoss) {
       const meta = this.ensureExtractMeta();
       meta.coins = (meta.coins | 0) + (enemy._extractExitBoss ? 25 : 8);
+      this.persistExtract();
       this.refreshExtractHud();
+    }
+    // Рабочие жетоны → мини-апгрейд забега
+    if (typeof this.grantExtractRaidTokens === 'function') {
+      if (enemy._extractExitBoss) {
+        const n = (typeof EXTRACT_TOKEN_EXIT_BOSS !== 'undefined') ? EXTRACT_TOKEN_EXIT_BOSS : 2;
+        this.grantExtractRaidTokens(n);
+      } else if (enemy._extractElite) {
+        const n = (typeof EXTRACT_TOKEN_ELITE !== 'undefined') ? EXTRACT_TOKEN_ELITE : 1;
+        this.grantExtractRaidTokens(n);
+      }
     }
     sfx.kill();
   },
 
+  beginExtractEvacWindow() {
+    let win = (typeof EXTRACT_EVAC_WINDOW !== 'undefined') ? EXTRACT_EVAC_WINDOW : 48;
+    if ((this.extractFloor || 1) >= 3) win = Math.max(28, Math.round(win * 0.7));
+    this._extractEvacT = win;
+    this._extractEvacFired = false;
+  },
+
+  tickExtractEvacWindow(dt) {
+    if (this.extractPhase !== 'raid') return;
+    if (this._extractEvacT == null || this._extractEvacT < 0) return;
+    if (this._extractEvacFired) return;
+    this._extractEvacT -= dt;
+    if (this._extractEvacT > 0) return;
+    this._extractEvacT = 0;
+    this._extractEvacFired = true;
+    this.spawnExtractElevatorReinforce();
+    this.showExtractBanner('Подкрепление у лифта! Прорывайся или дерись', 3.2);
+    sfx.mode();
+  },
+
+  spawnExtractElevatorReinforce() {
+    const el = this.extractElevator;
+    if (!el || !this.player) return;
+    let n = (typeof EXTRACT_EVAC_REINFORCE !== 'undefined') ? EXTRACT_EVAC_REINFORCE : 7;
+    if ((this.extractFloor || 1) >= 3) n += 4;
+    const cx = el.x + (el.w || 0) * 0.5;
+    const cy = el.y + (el.h || 0) * 0.5;
+    const types = ['fast', 'normal', 'queue', 'manager', 'tank', 'returner', 'blogger'];
+    const floor = this.extractFloor || 1;
+    const floorDef = this.getExtractFloorDef(floor);
+    const globalHp = (typeof EXTRACT_MOB_HP_MUL !== 'undefined') ? EXTRACT_MOB_HP_MUL : 1;
+    const globalSpd = (typeof EXTRACT_MOB_SPD_MUL !== 'undefined') ? EXTRACT_MOB_SPD_MUL : 1;
+    for (let i = 0; i < n; i++) {
+      const ang = (Math.PI * 2 * i) / n + rand(-0.2, 0.2);
+      const rad = 70 + (i % 3) * 28;
+      const x = cx + Math.cos(ang) * rad;
+      const y = cy + Math.sin(ang) * rad;
+      const type = types[i % types.length];
+      const e = new Enemy(x, y, type, 1);
+      e._extractId = 'evac_wave_' + i;
+      e._extractAggro = true;
+      e._extractAggroR = 420;
+      e.nameTag = 'Подкрепление';
+      const hpMul = 1.35 * globalHp * (floorDef.hpMul || 1);
+      e.maxHp = Math.max(1, Math.round(e.maxHp * hpMul));
+      e.hp = e.maxHp;
+      e.speed *= 1.12 * globalSpd * (floorDef.spdMul || 1);
+      this.enemies.push(e);
+    }
+  },
+
   failExtractRaid(reason) {
     const meta = this.ensureExtractMeta();
-    // Смерть: лут, моды и купленные карманы сгорают — снова стартовый рюкзак
-    const slots = EXTRACT_BACKPACK_START_SLOTS;
+    const slots = Math.max(
+      EXTRACT_BACKPACK_START_SLOTS,
+      meta.backpackSlots | 0,
+    );
     meta.backpackSlots = slots;
+    const insured = this.extractRunInsurance && this.extractRunInsurance.item
+      ? Object.assign({}, this.extractRunInsurance.item)
+      : null;
+    this.extractRunInsurance = null;
+    this._extractEvacT = -1;
+    this._extractEvacFired = false;
+    this._extractLootBuff = null;
+    if (typeof this.resetExtractRaidPressure === 'function') this.resetExtractRaidPressure(false);
     this.extractBackpack = new Array(slots).fill(null);
+    if (insured) {
+      delete insured.insured;
+      const need = extractItemSlotSize(insured) || 1;
+      let at = this.findExtractPackSpace(need);
+      if (at < 0 && need > 1) {
+        insured.slots = 1;
+        at = this.findExtractPackSpace(1);
+      }
+      if (at >= 0) this.placeExtractPackItem(at, insured);
+    }
     this.salePassives = {};
     this.saleWeapons = null;
     this.extractFocus = null;
@@ -204,10 +310,13 @@ Object.assign(Game.prototype, {
     this.gameOver = false;
     this.extractFloor = 1;
     this.extractPhase = 'hub';
+    this.persistExtract();
     this.buildExtractHubWorld();
     this.refreshExtractHud();
-    const tip = `Смерть! Рюкзак сброшен (${slots} слотов). ${reason || ''}`.trim();
-    this.showExtractBanner(tip, 3.5);
+    let tip = `Смерть! Лут сгорел (${slots} слотов).`;
+    if (insured) tip = `Смерть! Страховка вернула ${insured.ico || ''} ${insured.name}.`;
+    if (reason) tip += ' ' + reason;
+    this.showExtractBanner(tip.trim(), 3.5);
     sfx.hurt();
     this.refreshMusicState();
   },
@@ -217,18 +326,29 @@ Object.assign(Game.prototype, {
     let n = 0;
     let value = 0;
     for (const it of pack) {
-      if (!it) continue;
+      if (!it || it.kind === 'bulkPad') continue;
       n++;
       value += it.value || 0;
     }
+    const meta = this.ensureExtractMeta();
+    meta.totalExtractedValue = (meta.totalExtractedValue | 0) + value;
+    this.extractRunInsurance = null;
+    this._extractEvacT = -1;
+    this._extractEvacFired = false;
+    this._extractLootBuff = null;
+    if (typeof this.resetExtractRaidPressure === 'function') this.resetExtractRaidPressure(false);
     this.extractFloor = 1;
     this.extractPhase = 'hub';
     this.extractFocus = null;
     this.closeExtractShop();
+    this.persistExtract();
     this.buildExtractHubWorld();
     this.refreshExtractHud();
     if (n > 0) {
-      this.showExtractBanner(`Эвакуация! В рюкзаке ${n} предметов (~${value}🪙)`, 3.2);
+      this.showExtractBanner(
+        `Эвакуация! ${n} шт. (~${value}🪙) · вынос всего ${meta.totalExtractedValue|0}`,
+        3.4,
+      );
     } else {
       this.showExtractBanner('Эвакуация без лута. Можно вернуться.', 2.6);
     }
@@ -270,27 +390,40 @@ Object.assign(Game.prototype, {
       if (this.updateBossLineAttacks(realDt)) return true;
     }
 
+    if (typeof this.tickExtractTempWalls === 'function') this.tickExtractTempWalls(realDt);
+    // Паттерны до chase — windup/dash актуальны в том же кадре
+    if (typeof this.tickExtractMobPatterns === 'function') this.tickExtractMobPatterns(realDt);
+    if (typeof this.tickExtractBossPatterns === 'function') this.tickExtractBossPatterns(realDt);
+
     // Мобы: агр по радиусу, потом chase (без глобального Enemy-агро 420)
     for (const enemy of this.enemies) {
       if (enemy.hp <= 0) continue;
       const d = dist(this.player.x, this.player.y, enemy.x, enemy.y);
-      if (!enemy._extractAggro && d < (enemy._extractAggroR || 160)) {
+      if (!enemy._extractAggro && !enemy._extractPassive && d < (enemy._extractAggroR || 160)) {
         enemy._extractAggro = true;
       }
 
+      const skipUp = typeof this.extractEnemySkipUpdate === 'function' && this.extractEnemySkipUpdate(enemy);
       if (!enemy._extractAggro) {
         // Стоят на точке / слегка вертятся — не бегут через полкарты
-        enemy.wanderTimer = (enemy.wanderTimer || 1) - realDt;
-        if (enemy.wanderTimer <= 0) {
-          enemy.angle = rand(0, Math.PI * 2);
-          enemy.wanderTimer = rand(1.5, 3);
+        // (trainee/patrol двигает tickExtractMobPatterns)
+        if (!skipUp) {
+          enemy.wanderTimer = (enemy.wanderTimer || 1) - realDt;
+          if (enemy.wanderTimer <= 0) {
+            enemy.angle = rand(0, Math.PI * 2);
+            enemy.wanderTimer = rand(1.5, 3);
+          }
         }
         if (enemy.hitFlash > 0) enemy.hitFlash -= realDt;
         if (enemy.stunTimer > 0) enemy.stunTimer -= realDt;
-      } else {
+      } else if (!skipUp) {
         if (!(enemy.saleBossId && enemy._saleChargeT > 0)) {
           enemy.update(realDt, this.player, this.worldW, this.worldH, true, this);
         }
+        this.pushOutOfObstacles(enemy, enemy.r);
+      } else {
+        if (enemy.hitFlash > 0) enemy.hitFlash -= realDt;
+        if (enemy.stunTimer > 0) enemy.stunTimer -= realDt;
         this.pushOutOfObstacles(enemy, enemy.r);
       }
 
@@ -317,6 +450,9 @@ Object.assign(Game.prototype, {
       pr.update(realDt);
       if (!pr.dead && dist(pr.x, pr.y, this.player.x, this.player.y) < this.player.r + pr.r) {
         pr.dead = true;
+        if (pr.owner && pr.owner.type === 'returner') {
+          this.player.slowTimer = Math.max(this.player.slowTimer || 0, 1.5);
+        }
         if (this.player.invincible <= 0 && this.player.takeDamage(pr.x, pr.y)) {
           this.failExtractRaid(pr._saleBossKill || 'Снаряд');
           return true;

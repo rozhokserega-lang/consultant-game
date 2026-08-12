@@ -59,16 +59,76 @@
   align-items: center;
   justify-content: center;
   font-size: 16px;
+  padding: 0;
+  color: inherit;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.extract-slot:disabled {
+  pointer-events: none;
 }
 
 .extract-slot.filled {
   border-color: #f1c40f;
   background: rgba(40, 30, 10, 0.65);
+  cursor: pointer;
 }
 
 .extract-slot.is-gear {
   border-color: #9b59b6;
   background: rgba(40, 20, 50, 0.7);
+}
+
+.extract-slot.is-consumable {
+  border-color: #2ecc71;
+  background: rgba(20, 50, 30, 0.75);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.extract-slot.is-consumable:active {
+  transform: scale(0.94);
+}
+
+.extract-hud-evac {
+  color: #f39c12;
+  font-weight: 700;
+}
+
+.extract-hud-heat {
+  color: #e67e22;
+  font-weight: 700;
+}
+
+.extract-hud-heat.is-hard {
+  color: #e74c3c;
+}
+
+.extract-hud-upg {
+  color: #9b59b6;
+  font-weight: 700;
+}
+
+.extract-hud-total {
+  opacity: 0.9;
+}
+
+.extract-hud-total b {
+  color: #ecf0f1;
+}
+
+.extract-slot.is-bulk-pad {
+  border-style: dashed;
+  opacity: 0.75;
+}
+
+.extract-slot.is-bulky {
+  border-color: #e67e22;
+}
+
+.extract-slot.is-insured {
+  box-shadow: 0 0 0 2px #3498db;
 }
 
 .extract-interact-btn {

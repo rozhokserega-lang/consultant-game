@@ -99,3 +99,41 @@
 .extract-evac-up {
   border-color: rgba(52, 152, 219, 0.45);
 }
+
+.extract-shop-overlay.extract-confirm-open .extract-shop-panel {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.extract-confirm {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 3;
+}
+
+.extract-confirm[hidden] {
+  display: none !important;
+}
+
+.extract-confirm-card {
+  width: min(340px, 92vw);
+  padding: 18px 16px 14px;
+}
+
+.extract-confirm-text {
+  margin: 0 0 14px;
+  font-size: 15px;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.extract-confirm-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

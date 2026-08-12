@@ -13,7 +13,11 @@
       <div class="extract-hud-top">
         <span id="extract-hud-phase">Парковка</span>
         <span id="extract-hud-hp" class="extract-hud-hp" style="display:none"></span>
+        <span id="extract-hud-heat" class="extract-hud-heat" style="display:none"></span>
+        <span id="extract-hud-upg" class="extract-hud-upg" style="display:none"></span>
+        <span id="extract-hud-evac" class="extract-hud-evac" style="display:none"></span>
         <span class="extract-hud-coins">🪙 <b id="extract-hud-coins">0</b></span>
+        <span class="extract-hud-total" title="Суммарный вынесенный лут">📦 <b id="extract-hud-total">0</b></span>
       </div>
       <div class="extract-hud-slots" id="extract-hud-slots"></div>
     </div>

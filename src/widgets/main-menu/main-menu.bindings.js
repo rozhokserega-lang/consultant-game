@@ -8,7 +8,7 @@ Object.assign(Game.prototype, {
     ['Играть', 'Вылазка', 'Усилители', 'Гардероб', 'Выход'].forEach((label, i) => {
       const actions = [
         () => this.startGame(),
-        () => this.startExtractHub({ resetPack: true }),
+        () => this.startExtractHub(),
         () => this.openBoosters(),
         () => this.openWardrobe(),
         () => this.exitGame(),

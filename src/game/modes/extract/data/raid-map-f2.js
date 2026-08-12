@@ -7,7 +7,7 @@
 const EXTRACT_RAID_MAP_F2 = {
   spawn: { x: 0.12, y: 0.90 },
 
-  /** Лифт — справа сверху; с 2 этажа только вниз в убежище. */
+  /** Лифт — справа сверху; с 2 этажа можно выше на VIP или вниз. */
   elevator: {
     x: 0.88,
     y: 0.08,
@@ -67,7 +67,7 @@ const EXTRACT_RAID_MAP_F2 = {
     { id: 'spawn4', type: 'returner', x: 0.14, y: 0.92, hpMul: 1.35, aggro: 200 },
 
     // холл
-    { id: 'h1', type: 'manager', x: 0.44, y: 0.52, hpMul: 1.55, aggro: 220 },
+    { id: 'h1', type: 'manager', x: 0.44, y: 0.52, hpMul: 1.55, aggro: 140, pattern: 'radio_guard', nameTag: 'Охрана с рацией' },
     { id: 'h2', type: 'fatty', x: 0.56, y: 0.52, hpMul: 1.5, aggro: 210 },
     { id: 'h3', type: 'fast', x: 0.50, y: 0.40, hpMul: 1.3, aggro: 240 },
     { id: 'h4', type: 'fast', x: 0.50, y: 0.64, hpMul: 1.3, aggro: 240 },
@@ -78,7 +78,7 @@ const EXTRACT_RAID_MAP_F2 = {
     // спорт
     { id: 'sp1', type: 'tank', x: 0.12, y: 0.24, hpMul: 1.7, aggro: 210 },
     { id: 'sp2', type: 'fast', x: 0.30, y: 0.30, hpMul: 1.35, aggro: 230 },
-    { id: 'sp3', type: 'manager', x: 0.18, y: 0.36, hpMul: 1.5, aggro: 210 },
+    { id: 'sp3', type: 'manager', x: 0.18, y: 0.36, hpMul: 1.5, aggro: 140, pattern: 'radio_guard', nameTag: 'Охрана с рацией' },
     { id: 'sp4', type: 'returner', x: 0.26, y: 0.22, hpMul: 1.4, aggro: 200 },
     { id: 'sp5', type: 'fatty', x: 0.14, y: 0.34, hpMul: 1.5, aggro: 200 },
     { id: 'sp_elite', type: 'tank', x: 0.20, y: 0.20, hpMul: 3.1, elite: true, lootId: 'loot_sneakers', aggro: 260 },
@@ -126,7 +126,8 @@ const EXTRACT_RAID_MAP_F2 = {
       hpMul: 3.0,
       elite: true,
       exitBoss: true,
-      nameTag: 'Охранник лифта',
+      bossPattern: 'security_chief',
+      nameTag: 'Начальник охраны',
       aggro: 360,
       spdMul: 1.08,
     },

@@ -29,6 +29,13 @@ Object.assign(Game.prototype, {
       gearByHero: this.gearByHero || {},
       gearMaterials: this.gearMaterials || {},
       killLog: this.killLog,
+      // не затирать прогресс Вылазки, если meta ещё не поднимали в этой сессии
+      extractMeta: this.extractMeta || (this.save && this.save.extractMeta) || null,
+      extractBackpack: Array.isArray(this.extractBackpack)
+        ? this.extractBackpack.map((it) => (it ? Object.assign({}, it) : null))
+        : (this.save && Array.isArray(this.save.extractBackpack)
+          ? this.save.extractBackpack
+          : null),
     });
   },
 });

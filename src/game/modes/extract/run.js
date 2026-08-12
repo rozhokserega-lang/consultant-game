@@ -20,15 +20,18 @@ Object.assign(Game.prototype, {
     this.extractFocus = null;
     this._extractBanner = null;
     this._extractInteractCd = 0;
+    this._extractEvacT = -1;
+    this._extractEvacFired = false;
+    this._extractLootBuff = null;
+    if (!opts.keepInsurance) this.extractRunInsurance = null;
     document.body.classList.remove('hub-mode', 'main-menu-mode', 'sale-mode');
     document.body.classList.add('extract-mode');
     this.ensureExtractMeta();
-    if (opts.resetPack || !this.extractBackpack) {
+    this.syncExtractBackpackSize();
+    if (opts.resetPack) {
       this.extractBackpack = new Array(this.extractMeta.backpackSlots).fill(null);
-    } else {
-      while (this.extractBackpack.length < this.extractMeta.backpackSlots) {
-        this.extractBackpack.push(null);
-      }
+      this.extractRunInsurance = null;
+      this.persistExtract();
     }
     this.saleWeapons = null;
     this.extractLoot = [];
@@ -38,7 +41,12 @@ Object.assign(Game.prototype, {
     requestAnimationFrame(() => this.resize());
     this.refreshMusicState();
     sfx.click();
-    this.showExtractBanner('Парковка ТЦ · Игорь / Коля / Маша / Семён или лифт в ТЦ');
+    const meta = this.extractMeta;
+    const tot = meta.totalExtractedValue | 0;
+    this.showExtractBanner(
+      `Парковка · вынос ${tot}🪙 · жетоны в рейде · крупный лут = 2 слота`,
+      3.0,
+    );
   },
 
   startExtractRaid(opts) {
@@ -59,6 +67,12 @@ Object.assign(Game.prototype, {
     this.extractPhase = 'raid';
     this.extractFocus = null;
     this.shopping = false;
+    this._extractEvacT = -1;
+    this._extractEvacFired = false;
+    if (!continueRun) this._extractLootBuff = null;
+    if (typeof this.resetExtractRaidPressure === 'function') {
+      this.resetExtractRaidPressure(continueRun);
+    }
     this.closeExtractShop();
     this.buildExtractRaidWorld();
 
@@ -68,12 +82,16 @@ Object.assign(Game.prototype, {
       if (snap.saleWeapons) this.saleWeapons = snap.saleWeapons;
       if (snap.saleWeaponCd) this.saleWeaponCd = snap.saleWeaponCd;
     }
+    if (continueRun && typeof this.reapplyExtractRaidMods === 'function') {
+      this.reapplyExtractRaidMods({ skipHp: true });
+    }
 
     this.refreshExtractHud();
     const floorDef = this.getExtractFloorDef(floor);
-    const tip = continueRun
-      ? `${floorDef.label} · мобы сильнее, лут дороже`
-      : `${floorDef.label} · лут в комнатах, выход за боссом`;
+    let tip = continueRun
+      ? `${floorDef.label} · мобы сильнее, лут дороже · давление растёт`
+      : `${floorDef.label} · жетоны с элит · давление по времени/грузу`;
+    if (this._extractModSetOn) tip += ' · сет модов ×';
     this.showExtractBanner(tip);
     sfx.mode();
   },
@@ -90,6 +108,13 @@ Object.assign(Game.prototype, {
       this.succeedExtractRaid();
       return;
     }
+    if (typeof this.canAscendExtractFloor === 'function' && !this.canAscendExtractFloor(next)) {
+      const need = this.extractFloorUnlockNeed(next);
+      const have = this.ensureExtractMeta().totalExtractedValue | 0;
+      this.showExtractBanner(`${next} этаж с выноса ${need}🪙 (сейчас ${have})`);
+      sfx.hurt();
+      return;
+    }
     this.startExtractRaid({ floor: next, continueRun: true });
   },
 
@@ -99,6 +124,7 @@ Object.assign(Game.prototype, {
 
   endExtractToMenu() {
     this.closeExtractShop();
+    this.persistExtract();
     this.extractPhase = null;
     this.extractFocus = null;
     this.extractNpcs = null;

@@ -6,6 +6,7 @@
 Object.assign(Game.prototype, {
   getExtractRaidMap(floor) {
     const f = floor || this.extractFloor || 1;
+    if (f >= 3 && typeof EXTRACT_RAID_MAP_F3 !== 'undefined') return EXTRACT_RAID_MAP_F3;
     if (f >= 2 && typeof EXTRACT_RAID_MAP_F2 !== 'undefined') return EXTRACT_RAID_MAP_F2;
     return EXTRACT_RAID_MAP;
   },
@@ -20,7 +21,9 @@ Object.assign(Game.prototype, {
 
   buildExtractRaidWorld() {
     const floor = this.extractFloor || 1;
-    const map = this.getExtractRaidMap(floor);
+    const map = (typeof this.composeExtractRaidMap === 'function')
+      ? this.composeExtractRaidMap(floor)
+      : this.getExtractRaidMap(floor);
     const floorDef = this.getExtractFloorDef(floor);
     this.worldW = EXTRACT_RAID_W;
     this.worldH = EXTRACT_RAID_H;
@@ -102,7 +105,8 @@ Object.assign(Game.prototype, {
       const e = new Enemy(x, y, m.type || 'normal', 1);
       e._extractId = m.id;
       e._extractAggro = false;
-      e._extractAggroR = m.aggro || 160;
+      e._extractAggroBase = m.aggro || 160;
+      e._extractAggroR = e._extractAggroBase;
       e._extractElite = !!m.elite;
       e._extractLootId = m.lootId || null;
       e._extractExitBoss = !!m.exitBoss;
@@ -122,8 +126,13 @@ Object.assign(Game.prototype, {
         e.nameTag = (e.nameTag || 'Охрана') + ' ★';
         e.r = Math.max(e.r, e.r * 1.08);
       }
+      if (typeof this.applyExtractEnemyPattern === 'function') {
+        this.applyExtractEnemyPattern(e, m, floor);
+      }
       this.enemies.push(e);
     }
+
+    if (typeof this.linkExtractQueues === 'function') this.linkExtractQueues();
 
     const sx = this.worldW * map.spawn.x;
     const sy = this.worldH * map.spawn.y;

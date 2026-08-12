@@ -15,7 +15,10 @@ Game.prototype.updateExtract = function (dt) {
 
   const dir = this.getInputDir();
   if (this.player.dashTime <= 0) {
-    const speedMul = (this.player._saleSpeedMul || 1);
+    const lootSpd = this.tickExtractLootBuff ? this.tickExtractLootBuff(realDt) : 1;
+    const setSpd = (this.player._extractModSetSpeed || 1);
+    const raidSpd = (this.player._extractRaidSpeed || 1);
+    const speedMul = (this.player._saleSpeedMul || 1) * lootSpd * setSpd * raidSpd;
     this.player.x += dir.x * this.player.speed * speedMul * realDt;
     this.player.y += dir.y * this.player.speed * speedMul * realDt;
   }
@@ -49,6 +52,17 @@ Game.prototype.updateExtract = function (dt) {
   this.camera.y += (targetCY - this.camera.y) * Math.min(1, realDt * 5);
 
   if (this.extractPhase === 'raid') {
+    if (this.tickExtractRaidPressure) this.tickExtractRaidPressure(realDt);
+    if ((this._extractUpgradeQueue | 0) > 0 && typeof this.tryOpenExtractRaidUpgrade === 'function') {
+      this.tryOpenExtractRaidUpgrade();
+    }
+    // HUD: таймер давления / жар — раз в ~0.5с
+    this._extractHudAcc = (this._extractHudAcc || 0) + realDt;
+    if (this._extractHudAcc >= 0.5) {
+      this._extractHudAcc = 0;
+      this.refreshExtractHud();
+    }
+    if (this.tickExtractEvacWindow) this.tickExtractEvacWindow(realDt);
     if (this.tickExtractCombat(realDt)) return;
   }
 

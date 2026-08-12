@@ -68,8 +68,8 @@ const EXTRACT_RAID_MAP = {
     { id: 'spawn4', type: 'queue', x: 0.46, y: 0.90, hpMul: 1.2, aggro: 190 },
 
     // атриум / коридоры
-    { id: 'a1', type: 'normal', x: 0.42, y: 0.82, hpMul: 1.2, aggro: 200 },
-    { id: 'a2', type: 'normal', x: 0.58, y: 0.82, hpMul: 1.2, aggro: 200 },
+    { id: 'a1', type: 'normal', x: 0.42, y: 0.82, hpMul: 1.2, aggro: 200, pattern: 'trainee', passive: true, nameTag: 'Стажёр' },
+    { id: 'a2', type: 'normal', x: 0.58, y: 0.82, hpMul: 1.2, aggro: 200, pattern: 'trainee', passive: true, nameTag: 'Стажёр' },
     { id: 'a3', type: 'fast', x: 0.50, y: 0.70, hpMul: 1.15, aggro: 220 },
     { id: 'a4', type: 'queue', x: 0.50, y: 0.42, hpMul: 1.25, aggro: 190 },
     { id: 'a5', type: 'returner', x: 0.44, y: 0.52, hpMul: 1.3, aggro: 200 },
@@ -81,12 +81,12 @@ const EXTRACT_RAID_MAP = {
     { id: 'a11', type: 'blogger', x: 0.50, y: 0.36, hpMul: 1.3, aggro: 210 },
 
     // обувь
-    { id: 's1', type: 'normal', x: 0.10, y: 0.26, hpMul: 1.25, aggro: 180 },
+    { id: 's1', type: 'normal', x: 0.10, y: 0.26, hpMul: 1.25, aggro: 180, pattern: 'trainee', passive: true, nameTag: 'Стажёр' },
     { id: 's2', type: 'returner', x: 0.30, y: 0.30, hpMul: 1.3, aggro: 180 },
     { id: 's3', type: 'fast', x: 0.22, y: 0.38, hpMul: 1.2, aggro: 200 },
     { id: 's4', type: 'queue', x: 0.14, y: 0.34, hpMul: 1.25, aggro: 180 },
     { id: 's5', type: 'tank', x: 0.28, y: 0.38, hpMul: 1.5, aggro: 190 },
-    { id: 's6', type: 'normal', x: 0.18, y: 0.42, hpMul: 1.2, aggro: 180 },
+    { id: 's6', type: 'queue', x: 0.18, y: 0.42, hpMul: 1.2, aggro: 180 },
     { id: 's_elite', type: 'tank', x: 0.20, y: 0.20, hpMul: 2.8, elite: true, lootId: 'loot_sneakers', aggro: 240 },
 
     // электроника
@@ -138,7 +138,8 @@ const EXTRACT_RAID_MAP = {
       hpMul: 2.6,
       elite: true,
       exitBoss: true,
-      nameTag: 'Охранник лифта',
+      bossPattern: 'floor_manager',
+      nameTag: 'Старший смены',
       aggro: 340,
       spdMul: 1.05,
     },

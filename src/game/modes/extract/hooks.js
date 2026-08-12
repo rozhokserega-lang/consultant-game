@@ -27,7 +27,10 @@ Game.prototype.onSaleEnemyKilled = function (enemy) {
 const extractPrevSaleHitEnemy = Game.prototype.saleHitEnemy;
 if (typeof extractPrevSaleHitEnemy === 'function') {
   Game.prototype.saleHitEnemy = function (e, dmg, srcX, srcY, knock, opts) {
-    if (this.gameMode === 'extract' && e) e._extractAggro = true;
+  if (this.gameMode === 'extract' && e) {
+      e._extractAggro = true;
+      e._extractPassive = false;
+    }
     return extractPrevSaleHitEnemy.call(this, e, dmg, srcX, srcY, knock, opts);
   };
 }

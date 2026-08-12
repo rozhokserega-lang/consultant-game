@@ -18,17 +18,91 @@ Object.assign(Game.prototype, {
 
   ensureExtractMeta() {
     if (!this.extractMeta) {
+      const saved = (this.save && this.save.extractMeta) || {};
+      const startSlots = (typeof EXTRACT_BACKPACK_START_SLOTS !== 'undefined')
+        ? EXTRACT_BACKPACK_START_SLOTS
+        : 5;
+      const maxSlots = (typeof EXTRACT_BACKPACK_MAX_SLOTS !== 'undefined')
+        ? EXTRACT_BACKPACK_MAX_SLOTS
+        : 12;
+      let slots = saved.backpackSlots | 0;
+      if (slots < startSlots) slots = startSlots;
+      if (slots > maxSlots) slots = maxSlots;
       this.extractMeta = {
-        backpackSlots: EXTRACT_BACKPACK_START_SLOTS,
-        stash: [],
-        coins: 80,
-        starterWeapon: EXTRACT_DEFAULT_STARTER,
+        backpackSlots: slots,
+        coins: Math.max(0, saved.coins != null ? (saved.coins | 0) : 80),
+        starterWeapon: saved.starterWeapon || EXTRACT_DEFAULT_STARTER,
+        totalExtractedValue: Math.max(0, saved.totalExtractedValue | 0),
       };
     }
     if (!this.extractMeta.starterWeapon) {
       this.extractMeta.starterWeapon = EXTRACT_DEFAULT_STARTER;
     }
+    if (this.extractMeta.totalExtractedValue == null) {
+      this.extractMeta.totalExtractedValue = 0;
+    }
+    if (!Array.isArray(this.extractBackpack)) {
+      this.extractBackpack = this._loadExtractBackpackFromSave(this.extractMeta.backpackSlots);
+    }
     return this.extractMeta;
+  },
+
+  isExtractStarterUnlocked(id) {
+    const needMap = (typeof EXTRACT_STARTER_UNLOCKS !== 'undefined') ? EXTRACT_STARTER_UNLOCKS : {};
+    const need = needMap[id] != null ? needMap[id] : 0;
+    const meta = this.ensureExtractMeta();
+    return (meta.totalExtractedValue | 0) >= need;
+  },
+
+  /** Можно ли подняться на targetFloor (по умолчанию — следующий). */
+  canAscendExtractFloor(targetFloor) {
+    const next = targetFloor != null ? (targetFloor | 0) : ((this.extractFloor || 1) + 1);
+    const needMap = (typeof EXTRACT_FLOOR_NEED !== 'undefined') ? EXTRACT_FLOOR_NEED : {
+      2: (typeof EXTRACT_FLOOR2_NEED !== 'undefined') ? EXTRACT_FLOOR2_NEED : 0,
+      3: (typeof EXTRACT_FLOOR3_NEED !== 'undefined') ? EXTRACT_FLOOR3_NEED : 0,
+    };
+    const need = needMap[next] != null ? needMap[next] : 0;
+    const meta = this.ensureExtractMeta();
+    return (meta.totalExtractedValue | 0) >= need;
+  },
+
+  extractFloorUnlockNeed(targetFloor) {
+    const needMap = (typeof EXTRACT_FLOOR_NEED !== 'undefined') ? EXTRACT_FLOOR_NEED : {};
+    if (needMap[targetFloor] != null) return needMap[targetFloor] | 0;
+    if (targetFloor === 2 && typeof EXTRACT_FLOOR2_NEED !== 'undefined') return EXTRACT_FLOOR2_NEED | 0;
+    if (targetFloor === 3 && typeof EXTRACT_FLOOR3_NEED !== 'undefined') return EXTRACT_FLOOR3_NEED | 0;
+    return 0;
+  },
+
+  _loadExtractBackpackFromSave(slots) {
+    const n = Math.max(1, slots | 0);
+    const raw = this.save && Array.isArray(this.save.extractBackpack)
+      ? this.save.extractBackpack
+      : null;
+    const out = new Array(n).fill(null);
+    if (!raw) return out;
+    for (let i = 0; i < n; i++) {
+      const it = raw[i];
+      if (it && typeof it === 'object') out[i] = Object.assign({}, it);
+    }
+    return out;
+  },
+
+  /** Синхронизировать длину рюкзака со слотами меты. */
+  syncExtractBackpackSize() {
+    const meta = this.ensureExtractMeta();
+    const n = meta.backpackSlots | 0;
+    if (!Array.isArray(this.extractBackpack)) {
+      this.extractBackpack = new Array(n).fill(null);
+      return;
+    }
+    while (this.extractBackpack.length < n) this.extractBackpack.push(null);
+    if (this.extractBackpack.length > n) this.extractBackpack.length = n;
+  },
+
+  persistExtract() {
+    this.syncExtractBackpackSize();
+    if (typeof this.persist === 'function') this.persist();
   },
 
   buildExtractHubWorld() {

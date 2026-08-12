@@ -1,5 +1,5 @@
 /**
- * Вылазка: подбор лута в рюкзак на этаже.
+ * Вылазка: подбор лута в рюкзак на этаже (слоты, крупногабарит, баффы редкости).
  */
 'use strict';
 
@@ -7,32 +7,118 @@ Object.assign(Game.prototype, {
   isExtractLootUnlocked(loot) {
     if (!loot || loot.taken) return false;
     if (!loot.lockedBy) return true;
-    // пока жив страж с этим lootId — закрыто
     if (loot.locked) return false;
     return true;
   },
 
+  /** Индекс свободного непрерывного ряда из need ячеек, или -1. */
+  findExtractPackSpace(need) {
+    need = Math.max(1, need | 0);
+    const pack = this.extractBackpack || [];
+    for (let i = 0; i <= pack.length - need; i++) {
+      let ok = true;
+      for (let k = 0; k < need; k++) {
+        if (pack[i + k]) { ok = false; break; }
+      }
+      if (ok) return i;
+    }
+    return -1;
+  },
+
+  /** Положить предмет в pack[at], при slots>1 заполнить bulkPad. */
+  placeExtractPackItem(at, item) {
+    const pack = this.extractBackpack || [];
+    const size = extractItemSlotSize(item);
+    if (at < 0 || at + size > pack.length) return false;
+    for (let k = 0; k < size; k++) {
+      if (pack[at + k]) return false;
+    }
+    const entry = Object.assign({}, item, { slots: size });
+    pack[at] = entry;
+    for (let k = 1; k < size; k++) {
+      pack[at + k] = { kind: 'bulkPad', link: at, ico: '⋯', name: entry.name };
+    }
+    return true;
+  },
+
+  /** Убрать предмет и его pad-ячейки. Возвращает копию предмета. */
+  removeExtractPackAt(idx) {
+    const pack = this.extractBackpack || [];
+    let i = idx | 0;
+    if (i < 0 || i >= pack.length) return null;
+    let it = pack[i];
+    if (!it) return null;
+    if (it.kind === 'bulkPad') {
+      i = it.link | 0;
+      it = pack[i];
+      if (!it || it.kind === 'bulkPad') return null;
+    }
+    const size = extractItemSlotSize(it);
+    const copy = Object.assign({}, it);
+    for (let k = 0; k < size; k++) pack[i + k] = null;
+    return copy;
+  },
+
   tryPickupExtractLoot(loot) {
     if (!this.isExtractLootUnlocked(loot) || loot.taken) return false;
-    const pack = this.extractBackpack || [];
-    const empty = pack.findIndex((s) => !s);
-    if (empty < 0) {
-      this.showExtractBanner('Рюкзак полон');
+    const need = Math.max(1, (loot.def && loot.def.slots) | 0 || 1);
+    const at = this.findExtractPackSpace(need);
+    if (at < 0) {
+      this.showExtractBanner(need > 1
+        ? `Нужно ${need} свободных слота подряд`
+        : 'Рюкзак полон');
       sfx.hurt();
       return false;
     }
-    pack[empty] = {
+    const item = {
       id: loot.def.id,
       name: loot.def.name,
       ico: loot.def.ico,
       value: loot.def.value || 0,
       rarity: loot.def.rarity || 'common',
+      slots: need,
     };
+    if (!this.placeExtractPackItem(at, item)) {
+      this.showExtractBanner('Рюкзак полон');
+      sfx.hurt();
+      return false;
+    }
     loot.taken = true;
+    this.applyExtractLootRarityBuff(item.rarity);
     this.refreshExtractHud();
-    this.showExtractBanner(`${loot.def.ico} ${loot.def.name} → рюкзак`);
+    const bulky = need > 1 ? ` · ${need} слота` : '';
+    let msg = `${loot.def.ico} ${loot.def.name} → рюкзак${bulky}`;
+    if (this._extractLootBuff && this._extractLootBuff.label) {
+      msg += ` · ${this._extractLootBuff.label}`;
+    }
+    this.showExtractBanner(msg);
     sfx.coin();
     return true;
+  },
+
+  applyExtractLootRarityBuff(rarity) {
+    const table = (typeof EXTRACT_RARITY_BUFFS !== 'undefined') ? EXTRACT_RARITY_BUFFS : null;
+    const buff = table && table[rarity];
+    if (!buff) return;
+    this._extractLootBuff = {
+      speedMul: buff.speedMul || 1,
+      t: buff.t || 15,
+      label: buff.label || '',
+    };
+    if (buff.heal && this.player && this.extractPhase === 'raid') {
+      this.player.hp = Math.min(this.player.maxHp, (this.player.hp | 0) + (buff.heal | 0));
+    }
+  },
+
+  tickExtractLootBuff(dt) {
+    const b = this._extractLootBuff;
+    if (!b) return 1;
+    b.t -= dt;
+    if (b.t <= 0) {
+      this._extractLootBuff = null;
+      return 1;
+    }
+    return b.speedMul || 1;
   },
 
   getExtractLootFocus() {

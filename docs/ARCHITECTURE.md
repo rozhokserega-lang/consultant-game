@@ -91,7 +91,7 @@ flowchart TD
   T2 --> T3["3-5. render, audio, arena, entities"]
   T3 --> T4["6. class Game"]
   T4 --> T5["7. методы Game: core, arena, fx, render"]
-  T5 --> T6["8. modes/sale (data → логика), modes/gear"]
+  T5 --> T6["8. modes/sale (data → логика), modes/extract, modes/gear"]
   T6 --> T7["9. shared/ui, widgets"]
   T7 --> T8["10. mount-widgets → bootstrap: new Game()"]
 ```
@@ -137,8 +137,8 @@ Object.assign(Game.prototype, {
 });
 ```
 
-Один файл — одна зона ответственности. Режимы (`modes/sale`, `modes/gear`) используют
-тот же приём и вдобавок перехватывают базовые методы:
+Один файл — одна зона ответственности. Режимы (`modes/sale`, `modes/extract`, `modes/gear`)
+используют тот же приём и вдобавок перехватывают базовые методы:
 
 ```js
 // modes/sale/hooks.js
@@ -151,6 +151,28 @@ Game.prototype.resize = function () {
 
 Имя сохранённого метода обязательно с префиксом режима: это глобальное имя,
 короткое `_resize` рано или поздно с чем-нибудь столкнётся.
+
+### Режим «Вылазка» (`modes/extract/`)
+
+Extraction-петля поверх авто-оружия Распродажи: хаб-парковка → 1–3 этажа ТЦ → эвакуация.
+
+| Что | Где |
+|---|---|
+| Константы / лут / карты | `data/config.js`, `loot.js`, `raid-map*.js`, `pressure.js`, `hub-map.js` |
+| Старт / тик / бой | `run.js`, `update.js`, `combat.js` |
+| Давление / мини-апгрейды | `pressure.js`, `raid-upgrades.js`, `map-enrich.js` |
+| Паттерны мобов/боссов | `mob-patterns.js` (`_extractPattern` / `_extractBossPattern`) |
+| NPC-шоп / рюкзак | `shop.js`, `hub-world.js`, виджеты `extract-shop`, `extract-hud` |
+| Перехват Sale | `hooks.js` (`gameMode === 'extract'`) |
+
+Мета (`extractMeta`, `extractBackpack`) пишется в общий `persist()` / `localStorage`.
+При смерти сгорает **содержимое** рюкзака (лут и моды); купленные слоты остаются.
+Страховка у Игоря спасает 1 предмет за забег. Крупный лут (`slots: 2`) занимает две ячейки.
+В рейде: жетоны с элит/босса → до 5 мини-апгрейдов за забег; давление растёт со временем и ценностью рюкзака.
+База силы = стартер Семёна + моды Коли (+ сет 3+).
+`totalExtractedValue` открывает стартеры и этажи 2–3. После босса лифта — окно эвакуации, затем подкрепление.
+Клик по слоту рюкзака: аптечка (если ранен) лечит, иначе — уничтожить предмет и освободить слоты.
+Аптечку Игоря в рейде при неполном HP используют через диалог → +1❤.
 
 ## Паттерн 3. Виджеты
 
