@@ -36,13 +36,14 @@ const EXTRACT_STARTER_UNLOCKS = {
   card: 1200,
 };
 
-/** Порог выноса, чтобы подниматься на этаж (ключ = целевой этаж). */
-const EXTRACT_FLOOR_NEED = {
-  2: 350,
-  3: 900,
-};
+/** Порог выноса для стартеров Семёна; этажи 2–3 — босс / VIP-карта. */
+const EXTRACT_FLOOR_NEED = {};
 
-/** @deprecated используй EXTRACT_FLOOR_NEED[2] */
-const EXTRACT_FLOOR2_NEED = 350;
-/** Порог выноса на 3 этаж VIP. */
-const EXTRACT_FLOOR3_NEED = 900;
+/** Радиус, в котором видна/берётся спрятанная VIP-карта на 2 этаже. */
+const EXTRACT_HIDDEN_LOOT_REVEAL = 140;
+const EXTRACT_HIDDEN_LOOT_FOCUS = 110;
+
+/** @deprecated 2 этаж — после босса лифта, не по выносy */
+const EXTRACT_FLOOR2_NEED = 0;
+/** 3 этаж — только VIP-карта на 2-м (не по выносy). */
+const EXTRACT_FLOOR3_NEED = 0;

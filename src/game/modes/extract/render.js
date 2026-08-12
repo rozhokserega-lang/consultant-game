@@ -197,9 +197,18 @@ Object.assign(Game.prototype, {
     if (this.extractPhase === 'raid') {
       for (const loot of this.extractLoot || []) {
         if (loot.taken) continue;
+        if (typeof this.isExtractLootVisible === 'function' && !this.isExtractLootVisible(loot)) continue;
         const unlocked = this.isExtractLootUnlocked(loot);
+        const nearHidden = loot.hidden && this.player
+          ? dist(this.player.x, this.player.y, loot.x, loot.y)
+          : 999;
         ctx.save();
-        ctx.globalAlpha = unlocked ? 1 : 0.45;
+        if (loot.hidden) {
+          const reveal = (typeof EXTRACT_HIDDEN_LOOT_REVEAL !== 'undefined') ? EXTRACT_HIDDEN_LOOT_REVEAL : 140;
+          ctx.globalAlpha = Math.min(1, 0.25 + (reveal - nearHidden) / reveal * 0.75);
+        } else {
+          ctx.globalAlpha = unlocked ? 1 : 0.45;
+        }
         ctx.font = '26px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(loot.def.ico || '📦', loot.x, loot.y);

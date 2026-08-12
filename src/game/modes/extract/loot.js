@@ -11,6 +11,44 @@ Object.assign(Game.prototype, {
     return true;
   },
 
+  /** Спрятанный лут (VIP-карта) виден только вблизи. */
+  isExtractLootVisible(loot) {
+    if (!loot || loot.taken) return false;
+    if (!loot.hidden || !this.player) return true;
+    const r = (typeof EXTRACT_HIDDEN_LOOT_REVEAL !== 'undefined') ? EXTRACT_HIDDEN_LOOT_REVEAL : 140;
+    return dist(this.player.x, this.player.y, loot.x, loot.y) <= r;
+  },
+
+  isExtractLootFocusable(loot) {
+    if (!this.isExtractLootVisible(loot)) return false;
+    if (!loot.hidden || !this.player) return true;
+    const r = (typeof EXTRACT_HIDDEN_LOOT_FOCUS !== 'undefined') ? EXTRACT_HIDDEN_LOOT_FOCUS : 110;
+    return dist(this.player.x, this.player.y, loot.x, loot.y) <= r;
+  },
+
+  hasExtractVipCard() {
+    for (const it of this.extractBackpack || []) {
+      if (!it || it.kind === 'bulkPad') continue;
+      if (it.id === 'vip_access_card' || it.key === 'floor3') return true;
+    }
+    return false;
+  },
+
+  /** Снять VIP-карту из рюкзака при подъёме 2→3. */
+  consumeExtractVipCard() {
+    const pack = this.extractBackpack || [];
+    for (let i = 0; i < pack.length; i++) {
+      const it = pack[i];
+      if (!it || it.kind === 'bulkPad') continue;
+      if (it.id === 'vip_access_card' || it.key === 'floor3') {
+        this.removeExtractPackAt(i);
+        this.refreshExtractHud();
+        return true;
+      }
+    }
+    return false;
+  },
+
   /** Индекс свободного непрерывного ряда из need ячеек, или -1. */
   findExtractPackSpace(need) {
     need = Math.max(1, need | 0);
@@ -78,12 +116,19 @@ Object.assign(Game.prototype, {
       rarity: loot.def.rarity || 'common',
       slots: need,
     };
+    if (loot.def.key) item.key = loot.def.key;
     if (!this.placeExtractPackItem(at, item)) {
       this.showExtractBanner('Рюкзак полон');
       sfx.hurt();
       return false;
     }
     loot.taken = true;
+    if (loot.def.key === 'floor3') {
+      this.refreshExtractHud();
+      this.showExtractBanner('🪪 VIP-карта в рюкзаке — открыт 3 этаж', 3.2);
+      sfx.win();
+      return true;
+    }
     this.applyExtractLootRarityBuff(item.rarity);
     this.refreshExtractHud();
     const bulky = need > 1 ? ` · ${need} слота` : '';
@@ -127,6 +172,7 @@ Object.assign(Game.prototype, {
     let bestD = EXTRACT_INTERACT_R;
     for (const loot of this.extractLoot || []) {
       if (loot.taken) continue;
+      if (!this.isExtractLootFocusable(loot)) continue;
       const d = dist(this.player.x, this.player.y, loot.x, loot.y);
       if (d < bestD) {
         bestD = d;

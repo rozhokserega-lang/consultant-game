@@ -30,6 +30,7 @@ Object.assign(Game.prototype, {
     if (this.extractPhase === 'raid') {
       for (const loot of this.extractLoot || []) {
         if (loot.taken) continue;
+        if (typeof this.isExtractLootFocusable === 'function' && !this.isExtractLootFocusable(loot)) continue;
         list.push({
           x: loot.x,
           y: loot.y,

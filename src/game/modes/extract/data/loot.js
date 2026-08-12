@@ -22,6 +22,16 @@ const EXTRACT_LOOT_DEFS = {
   tablet: { id: 'tablet', name: 'Планшет', ico: '📱', value: 180, rarity: 'epic', slots: 2 },
   vault_case: { id: 'vault_case', name: 'Кейс из хранилища', ico: '💼', value: 240, rarity: 'legendary', slots: 2 },
 
+  /** Ключ на 3 этаж — спрятан на 2-м, занимает 1 слот рюкзака. */
+  vip_access_card: {
+    id: 'vip_access_card',
+    name: 'VIP-карта',
+    ico: '🪪',
+    value: 0,
+    rarity: 'legendary',
+    key: 'floor3',
+  },
+
   // 3 этаж — VIP
   vip_watch: { id: 'vip_watch', name: 'VIP-хронограф', ico: '⌚', value: 160, rarity: 'epic' },
   server_blade: { id: 'server_blade', name: 'Серверный диск', ico: '💾', value: 220, rarity: 'epic', slots: 2 },

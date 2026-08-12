@@ -92,6 +92,7 @@ Object.assign(Game.prototype, {
         y: this.worldH * L.y,
         lockedBy: L.lockedBy || null,
         locked: !!L.lockedBy,
+        hidden: !!L.hidden,
         taken: false,
         def,
       };

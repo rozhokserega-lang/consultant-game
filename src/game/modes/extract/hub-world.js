@@ -54,23 +54,50 @@ Object.assign(Game.prototype, {
     return (meta.totalExtractedValue | 0) >= need;
   },
 
+  /** Босс лифта на текущем этаже повержен — лифт открыт. */
+  isExtractExitBossCleared() {
+    if (this.extractExitBossAlive) return false;
+    if (this.extractElevator && this.extractElevator.locked) return false;
+    return true;
+  },
+
   /** Можно ли подняться на targetFloor (по умолчанию — следующий). */
   canAscendExtractFloor(targetFloor) {
     const next = targetFloor != null ? (targetFloor | 0) : ((this.extractFloor || 1) + 1);
-    const needMap = (typeof EXTRACT_FLOOR_NEED !== 'undefined') ? EXTRACT_FLOOR_NEED : {
-      2: (typeof EXTRACT_FLOOR2_NEED !== 'undefined') ? EXTRACT_FLOOR2_NEED : 0,
-      3: (typeof EXTRACT_FLOOR3_NEED !== 'undefined') ? EXTRACT_FLOOR3_NEED : 0,
-    };
-    const need = needMap[next] != null ? needMap[next] : 0;
-    const meta = this.ensureExtractMeta();
-    return (meta.totalExtractedValue | 0) >= need;
+    const bossOk = typeof this.isExtractExitBossCleared === 'function'
+      ? this.isExtractExitBossCleared()
+      : true;
+    if (next === 3) {
+      return bossOk
+        && typeof this.hasExtractVipCard === 'function'
+        && this.hasExtractVipCard();
+    }
+    if (next === 2) {
+      return bossOk;
+    }
+    return true;
+  },
+
+  /** Текст блокировки подъёма на этаж. */
+  extractFloorLockHint(targetFloor) {
+    const f = targetFloor | 0;
+    const bossOk = typeof this.isExtractExitBossCleared === 'function'
+      ? this.isExtractExitBossCleared()
+      : true;
+    if (f === 2) {
+      return bossOk ? '2 этаж открыт' : '2 этаж: победи босса лифта';
+    }
+    if (f === 3) {
+      if (!bossOk) return '3 этаж: победи босса лифта';
+      if (typeof this.hasExtractVipCard === 'function' && !this.hasExtractVipCard()) {
+        return '3 этаж: найди спрятанную 🪪 VIP-карту на 2 этаже';
+      }
+      return '3 этаж открыт';
+    }
+    return `${f} этаж закрыт`;
   },
 
   extractFloorUnlockNeed(targetFloor) {
-    const needMap = (typeof EXTRACT_FLOOR_NEED !== 'undefined') ? EXTRACT_FLOOR_NEED : {};
-    if (needMap[targetFloor] != null) return needMap[targetFloor] | 0;
-    if (targetFloor === 2 && typeof EXTRACT_FLOOR2_NEED !== 'undefined') return EXTRACT_FLOOR2_NEED | 0;
-    if (targetFloor === 3 && typeof EXTRACT_FLOOR3_NEED !== 'undefined') return EXTRACT_FLOOR3_NEED | 0;
     return 0;
   },
 

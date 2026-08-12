@@ -70,8 +70,9 @@ Object.assign(Game.prototype, {
         const max = (typeof EXTRACT_RAID_UPGRADE_MAX !== 'undefined') ? EXTRACT_RAID_UPGRADE_MAX : 5;
         const done = this.extractRaidUpgrades | 0;
         const q = this._extractUpgradeQueue | 0;
-        if (done > 0 || q > 0) {
-          upgEl.textContent = '🎫' + done + '/' + max + (q ? ('+' + q) : '');
+        const card = (typeof this.hasExtractVipCard === 'function' && this.hasExtractVipCard()) ? ' 🪪' : '';
+        if (done > 0 || q > 0 || card) {
+          upgEl.textContent = '🎫' + done + '/' + max + (q ? ('+' + q) : '') + card;
           upgEl.style.display = '';
         } else {
           upgEl.textContent = '';

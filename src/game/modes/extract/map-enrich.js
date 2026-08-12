@@ -165,6 +165,7 @@ Object.assign(Game.prototype, {
           map.loot.push(Object.assign({}, L, {
             id: L.id + '_f' + floor,
             lockedBy: L.lockedBy ? L.lockedBy + '_f' + floor : null,
+            hidden: !!L.hidden,
           }));
         }
       }

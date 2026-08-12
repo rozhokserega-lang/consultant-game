@@ -225,9 +225,7 @@ Object.assign(Game.prototype, {
     );
     const extra = document.getElementById('extract-shop-extra');
     if (extra) {
-      const need2 = this.extractFloorUnlockNeed(2);
-      const need3 = this.extractFloorUnlockNeed(3);
-      extra.innerHTML = `<p class="extract-shop-empty">2 этаж с ${need2}🪙 · 3 VIP с ${need3}🪙. Клик по слоту — выбросить предмет.</p>`;
+      extra.innerHTML = '<p class="extract-shop-empty">2 этаж — после босса лифта · 3 VIP — 🪪 на 2-м. Клик по слоту — выбросить.</p>';
     }
     const list = document.getElementById('extract-shop-list');
     if (!list) return;
@@ -626,8 +624,9 @@ Object.assign(Game.prototype, {
     const canGoUp = floor < maxFloor;
     const next = floor + 1;
     const unlockedUp = !canGoUp || this.canAscendExtractFloor(next);
-    const needNext = this.extractFloorUnlockNeed(next);
-    const have = this.ensureExtractMeta().totalExtractedValue | 0;
+    const lockHint = (typeof this.extractFloorLockHint === 'function')
+      ? this.extractFloorLockHint(next)
+      : '';
     const evacLeft = (this._extractEvacT != null && this._extractEvacT > 0)
       ? Math.ceil(this._extractEvacT)
       : null;
@@ -641,8 +640,10 @@ Object.assign(Game.prototype, {
     const extra = document.getElementById('extract-shop-extra');
     if (extra) {
       extra.innerHTML = canGoUp && !unlockedUp
-        ? `<p class="extract-shop-empty">${next} этаж: нужен вынос ${needNext}🪙 (сейчас ${have}).</p>`
-        : '';
+        ? `<p class="extract-shop-empty">${lockHint || 'Этаж выше закрыт.'}</p>`
+        : (canGoUp && next === 3 && this.hasExtractVipCard && this.hasExtractVipCard()
+          ? '<p class="extract-shop-empty">🪪 VIP-карта активна — можно подняться.</p>'
+          : '');
     }
     const list = document.getElementById('extract-shop-list');
     if (!list) return;
@@ -674,7 +675,9 @@ Object.assign(Game.prototype, {
           <b>На этаж выше</b>
           <small>${unlockedUp
             ? (nextDef.label + ': мобы сильнее, лут дороже')
-            : ('🔒 вынос ' + needNext + '🪙')}</small>
+            : (next === 3
+              ? '🔒 нужна VIP-карта на 2 этаже'
+              : (next === 2 ? '🔒 победи босса лифта' : lockHint))}</small>
         </span>
         <span class="extract-shop-price">${unlockedUp ? '↑' : '🔒'}</span>`;
       if (unlockedUp) {

@@ -141,5 +141,6 @@ const EXTRACT_RAID_MAP_F2 = {
     { id: 'loot_perfume', x: 0.70, y: 0.62, defId: 'perfume_xl', lockedBy: null },
     { id: 'loot_ring', x: 0.50, y: 0.50, defId: 'diamond_ring', lockedBy: null },
     { id: 'loot_safe', x: 0.82, y: 0.60, defId: 'vault_case', lockedBy: 'b_elite' },
+    { id: 'loot_vip_card', x: 0.06, y: 0.54, defId: 'vip_access_card', hidden: true },
   ],
 };

@@ -69,7 +69,9 @@ Object.assign(Game.prototype, {
     this.shopping = false;
     this._extractEvacT = -1;
     this._extractEvacFired = false;
-    if (!continueRun) this._extractLootBuff = null;
+    if (!continueRun) {
+      this._extractLootBuff = null;
+    }
     if (typeof this.resetExtractRaidPressure === 'function') {
       this.resetExtractRaidPressure(continueRun);
     }
@@ -90,8 +92,10 @@ Object.assign(Game.prototype, {
     const floorDef = this.getExtractFloorDef(floor);
     let tip = continueRun
       ? `${floorDef.label} · мобы сильнее, лут дороже · давление растёт`
-      : `${floorDef.label} · жетоны с элит · давление по времени/грузу`;
+      : `${floorDef.label} · жетоны с элит · выход за боссом лифта`;
+    if (floor === 2) tip += ' · ищи 🪪 для VIP';
     if (this._extractModSetOn) tip += ' · сет модов ×';
+    if (opts.vipUsed) tip = '🪪 VIP-карта использована · ' + tip;
     this.showExtractBanner(tip);
     sfx.mode();
   },
@@ -103,19 +107,25 @@ Object.assign(Game.prototype, {
 
   ascendExtractFloor() {
     const maxFloor = (typeof EXTRACT_MAX_FLOOR !== 'undefined') ? EXTRACT_MAX_FLOOR : 1;
-    const next = (this.extractFloor || 1) + 1;
+    const from = this.extractFloor || 1;
+    const next = from + 1;
     if (next > maxFloor) {
       this.succeedExtractRaid();
       return;
     }
     if (typeof this.canAscendExtractFloor === 'function' && !this.canAscendExtractFloor(next)) {
-      const need = this.extractFloorUnlockNeed(next);
-      const have = this.ensureExtractMeta().totalExtractedValue | 0;
-      this.showExtractBanner(`${next} этаж с выноса ${need}🪙 (сейчас ${have})`);
+      const hint = (typeof this.extractFloorLockHint === 'function')
+        ? this.extractFloorLockHint(next)
+        : `${next} этаж закрыт`;
+      this.showExtractBanner(hint);
       sfx.hurt();
       return;
     }
-    this.startExtractRaid({ floor: next, continueRun: true });
+    let vipUsed = false;
+    if (from === 2 && next === 3 && typeof this.consumeExtractVipCard === 'function') {
+      vipUsed = this.consumeExtractVipCard();
+    }
+    this.startExtractRaid({ floor: next, continueRun: true, vipUsed });
   },
 
   returnExtractToHub() {
