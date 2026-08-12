@@ -19,6 +19,7 @@ Object.assign(Game.prototype, {
     this.extractFloor = 1;
     this.extractFocus = null;
     this._extractBanner = null;
+    this._eventBanner = null;
     this._extractInteractCd = 0;
     this._extractEvacT = -1;
     this._extractEvacFired = false;
@@ -67,6 +68,7 @@ Object.assign(Game.prototype, {
     this.extractPhase = 'raid';
     this.extractFocus = null;
     this.shopping = false;
+    this._eventBanner = null;
     this._extractEvacT = -1;
     this._extractEvacFired = false;
     if (!continueRun) {

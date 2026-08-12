@@ -361,9 +361,8 @@ Object.assign(Game.prototype, {
           const partner = this.enemies.find(
             (o) => o !== enemy && o._extractPairId === enemy._extractPairId && o.hp > 0,
           );
-          if (partner) {
-            enemy.armorHits = Math.max(enemy.armorHits || 0, 1);
-          } else if (!enemy._extractEnraged) {
+          if (partner) break;
+          if (!enemy._extractEnraged) {
             enemy._extractEnraged = true;
             enemy.armorHits = 0;
             enemy.speed *= 1.6;

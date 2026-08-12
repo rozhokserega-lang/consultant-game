@@ -12,6 +12,10 @@ Game.prototype.updateExtract = function (dt) {
     this._extractBanner.t -= realDt;
     if (this._extractBanner.t <= 0) this._extractBanner = null;
   }
+  if (this._eventBanner) {
+    this._eventBanner.t -= realDt;
+    if (this._eventBanner.t <= 0) this._eventBanner = null;
+  }
 
   const dir = this.getInputDir();
   if (this.player.dashTime <= 0) {
