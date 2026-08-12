@@ -57,6 +57,7 @@ Game.prototype.updateExtract = function (dt) {
 
   if (this.extractPhase === 'raid') {
     if (this.tickExtractRaidPressure) this.tickExtractRaidPressure(realDt);
+    if (typeof this.tickExtractBalanceLog === 'function') this.tickExtractBalanceLog(realDt);
     if ((this._extractUpgradeQueue | 0) > 0 && typeof this.tryOpenExtractRaidUpgrade === 'function') {
       this.tryOpenExtractRaidUpgrade();
     }

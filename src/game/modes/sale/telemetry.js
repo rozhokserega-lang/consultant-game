@@ -9,7 +9,7 @@ const SALE_BALANCE_LOG_MAX = 40;
 const SALE_BALANCE_SHEET_URL_KEY = 'consultant_balance_sheet_url';
 const SALE_BALANCE_UPLOADED_KEY = 'consultant_balance_uploaded_v1';
 /** URL Google Apps Script Web App для выгрузки balance-логов */
-const SALE_BALANCE_SHEET_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbwWvYODfyDkoON9MAbT3Q7gYFr8ZA7D4JT4cwAf1QA5EUDRBVZ0gt-dMrUg1OcTCoK7/exec';
+const SALE_BALANCE_SHEET_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbzXuMcoFPBqmvx4eHZEeY9ocSnSl5Z8P_gar_NOhi7b3lotYqrwWieIaauXQ2ZIYlHC/exec';
 
 function isSaleBalanceLogEnabled() {
   return typeof isDevEnvironment === 'function' && isDevEnvironment();

@@ -17,7 +17,11 @@ Object.assign(Game.prototype, {
     const uploadBal = document.getElementById('btn-upload-balance');
     if (uploadBal) {
       uploadBal.onclick = () => {
-        if (typeof this.uploadSaleBalanceLog === 'function') this.uploadSaleBalanceLog();
+        if (this.gameMode === 'extract' && typeof this.uploadExtractBalanceLog === 'function') {
+          this.uploadExtractBalanceLog();
+        } else if (typeof this.uploadSaleBalanceLog === 'function') {
+          this.uploadSaleBalanceLog();
+        }
       };
     }
     document.getElementById('hub-tab-prep').onclick = () => this.setHubTab('prep');

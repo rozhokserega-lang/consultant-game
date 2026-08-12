@@ -77,6 +77,7 @@ Object.assign(Game.prototype, {
     this.applyExtractBackpackGear();
     if (typeof this.applySalePassivesToPlayer === 'function') this.applySalePassivesToPlayer();
     if (typeof this.applySaleHeroToPlayer === 'function') this.applySaleHeroToPlayer();
+    if (typeof this.hookExtractBalancePlayerHurt === 'function') this.hookExtractBalancePlayerHurt();
   },
 
   /** Моды из рюкзака → salePassives на время рейда (при смерти слоты очищаются). */
@@ -168,6 +169,7 @@ Object.assign(Game.prototype, {
   },
 
   onExtractEnemyKilled(enemy) {
+    if (typeof this.recordExtractBalanceKill === 'function') this.recordExtractBalanceKill(enemy);
     this.score = (this.score || 0) + 1;
     this.spawnParticles(enemy.x, enemy.y, 10, '#e74c3c', 140, 0.35);
     if (typeof this.spawnSpriteFx === 'function') {
@@ -276,15 +278,36 @@ Object.assign(Game.prototype, {
   },
 
   failExtractRaid(reason) {
+    const floorDeath = this.extractFloor || 1;
+    const survivedSec = this.extractRaidTime || 0;
+    const backpackLost = typeof this.getExtractBackpackValue === 'function' ? this.getExtractBackpackValue() : 0;
+    const heat = typeof this.getExtractHeatLevel === 'function' ? this.getExtractHeatLevel() : 0;
+    const pressureWaves = this._extractPressureTicks || 0;
+    const upgrades = this.extractRaidUpgrades || 0;
+    const kills = (this._extractBal && this._extractBal.totals) ? this._extractBal.totals.kills : (this.score || 0);
+    const floorMax = (this._extractBal && this._extractBal.floorMax) ? this._extractBal.floorMax : floorDeath;
+    const insuredSrc = this.extractRunInsurance && this.extractRunInsurance.item
+      ? this.extractRunInsurance.item
+      : null;
+    const insuredLabel = insuredSrc ? `${insuredSrc.ico || ''} ${insuredSrc.name}`.trim() : '';
+    if (typeof this.finalizeExtractBalanceLog === 'function') {
+      this.finalizeExtractBalanceLog(false, reason, {
+        floorDeath,
+        backpackLost,
+        heat,
+        pressureWaves,
+        upgrades,
+        insured: insuredLabel,
+      });
+    }
+
     const meta = this.ensureExtractMeta();
     const slots = Math.max(
       EXTRACT_BACKPACK_START_SLOTS,
       meta.backpackSlots | 0,
     );
     meta.backpackSlots = slots;
-    const insured = this.extractRunInsurance && this.extractRunInsurance.item
-      ? Object.assign({}, this.extractRunInsurance.item)
-      : null;
+    const insured = insuredSrc ? Object.assign({}, insuredSrc) : null;
     this.extractRunInsurance = null;
     this._extractEvacT = -1;
     this._extractEvacFired = false;
@@ -306,19 +329,31 @@ Object.assign(Game.prototype, {
     this.extractFocus = null;
     this.choosingUpgrade = false;
     this.shopping = false;
-    this.paused = false;
-    this.gameOver = false;
     this.extractFloor = 1;
     this.extractPhase = 'hub';
     this.persistExtract();
     this.buildExtractHubWorld();
     this.refreshExtractHud();
-    let tip = `Смерть! Лут сгорел (${slots} слотов).`;
-    if (insured) tip = `Смерть! Страховка вернула ${insured.ico || ''} ${insured.name}.`;
-    if (reason) tip += ' ' + reason;
-    this.showExtractBanner(tip.trim(), 3.5);
-    sfx.hurt();
-    this.refreshMusicState();
+    if (typeof this.showExtractEndOverlay === 'function') {
+      this.showExtractEndOverlay(false, reason, {
+        floorDeath,
+        floorMax,
+        survivedSec,
+        backpackLost,
+        heat,
+        pressureWaves,
+        upgrades,
+        kills,
+        insured: insuredLabel,
+      });
+    } else {
+      let tip = `Смерть! Лут сгорел (${backpackLost}🪙).`;
+      if (insured) tip = `Смерть! Страховка вернула ${insured.ico || ''} ${insured.name}.`;
+      if (reason) tip += ' ' + reason;
+      this.showExtractBanner(tip.trim(), 3.5);
+      sfx.hurt();
+      this.refreshMusicState();
+    }
   },
 
   succeedExtractRaid() {

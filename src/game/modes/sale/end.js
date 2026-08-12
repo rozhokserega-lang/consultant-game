@@ -61,6 +61,10 @@ Game.prototype.endSaleGame = function (won, killer) {
     if (isSaleBalanceLogEnabled()) line += ' · balance log ✓';
     cl.textContent = line;
   }
+  const retryLbl = document.querySelector('#btn-retry .button__label');
+  if (retryLbl) retryLbl.textContent = 'Попробовать ещё раз';
+  const againLbl = document.querySelector('#btn-again .button__label');
+  if (againLbl) againLbl.textContent = 'В меню';
   this.refreshSaleBalanceUploadBtn();
   document.getElementById('end-overlay').classList.add('show');
   this.refreshMusicState();

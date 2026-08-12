@@ -3,7 +3,7 @@
  */
 'use strict';
 
-const EXTRACT_VERSION = '0.5.3-boss-gate';
+const EXTRACT_VERSION = '0.5.4-extract-logs';
 
 /** Размер хаб-парковки (мир в пикселях). */
 const EXTRACT_HUB_W = 1200;

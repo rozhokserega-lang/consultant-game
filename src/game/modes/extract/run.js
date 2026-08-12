@@ -73,6 +73,9 @@ Object.assign(Game.prototype, {
     this._extractEvacFired = false;
     if (!continueRun) {
       this._extractLootBuff = null;
+      if (typeof this.initExtractBalanceLog === 'function') this.initExtractBalanceLog();
+    } else if (typeof this.recordExtractFloorAscend === 'function') {
+      this.recordExtractFloorAscend(floor);
     }
     if (typeof this.resetExtractRaidPressure === 'function') {
       this.resetExtractRaidPressure(continueRun);

@@ -27,6 +27,7 @@ Game.prototype.onSaleEnemyKilled = function (enemy) {
 const extractPrevSaleHitEnemy = Game.prototype.saleHitEnemy;
 if (typeof extractPrevSaleHitEnemy === 'function') {
   Game.prototype.saleHitEnemy = function (e, dmg, srcX, srcY, knock, opts) {
+    opts = opts || {};
     if (this.gameMode === 'extract' && e) {
       e._extractAggro = true;
       e._extractPassive = false;
@@ -39,6 +40,13 @@ if (typeof extractPrevSaleHitEnemy === 'function') {
           return false;
         }
       }
+      const hpBefore = Math.max(0, e.hp || 0);
+      const died = extractPrevSaleHitEnemy.call(this, e, dmg, srcX, srcY, knock, opts);
+      const dealt = Math.max(0, hpBefore - Math.max(0, e.hp || 0));
+      if (dealt > 0 && typeof this.recordExtractBalanceDmg === 'function') {
+        this.recordExtractBalanceDmg(dealt, opts.weapon || opts.source || 'other');
+      }
+      return died;
     }
     return extractPrevSaleHitEnemy.call(this, e, dmg, srcX, srcY, knock, opts);
   };
@@ -71,8 +79,19 @@ Game.prototype.endGame = function (won, killer) {
 const extractPrevResetGame = Game.prototype.resetGame;
 Game.prototype.resetGame = function () {
   if (this.gameMode === 'extract') {
-    if (this.extractPhase === 'raid') this.startExtractRaid({ floor: this.extractFloor || 1 });
-    else this.startExtractHub({ resetPack: true });
+    if (this.extractPhase === 'raid') {
+      this.startExtractRaid({ floor: this.extractFloor || 1 });
+      return;
+    }
+    if (this.gameOver || this.won) {
+      this.gameOver = false;
+      this.won = false;
+      this.paused = false;
+      this.killedBy = '';
+      this.refreshMusicState();
+      return;
+    }
+    this.startExtractHub({ resetPack: true });
     return;
   }
   return extractPrevResetGame.call(this);
