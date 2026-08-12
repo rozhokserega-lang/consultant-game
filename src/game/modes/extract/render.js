@@ -7,51 +7,12 @@ Object.assign(Game.prototype, {
   drawExtractHubBackground() {
     const WW = this.worldW;
     const WH = this.worldH;
+    if (typeof drawExtractHubBg === 'function' && drawExtractHubBg(ctx, WW, WH)) return;
+
     ctx.fillStyle = '#2b3036';
     ctx.fillRect(0, 0, WW, WH);
-
-    // Асфальт
     ctx.fillStyle = '#3a4048';
     ctx.fillRect(24, 96, WW - 48, WH - 120);
-
-    // Парковочная разметка
-    ctx.strokeStyle = 'rgba(245,245,245,0.55)';
-    ctx.lineWidth = 3;
-    const lanes = [0.28, 0.42, 0.56, 0.70];
-    for (const ly of lanes) {
-      const y = WH * ly;
-      for (let i = 0; i < 2; i++) {
-        const x0 = WW * (0.08 + i * 0.55);
-        ctx.strokeRect(x0, y - 28, WW * 0.28, 56);
-      }
-    }
-
-    // Пешеходная зебра к лифту
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    for (let i = 0; i < 7; i++) {
-      ctx.fillRect(WW * 0.46, 108 + i * 14, WW * 0.08, 7);
-    }
-
-    // Фасад ТЦ сверху
-    ctx.fillStyle = '#5d6d7e';
-    ctx.fillRect(0, 0, WW, 92);
-    ctx.fillStyle = '#1abc9c';
-    ctx.fillRect(40, 18, 160, 52);
-    ctx.fillStyle = '#3498db';
-    ctx.fillRect(220, 18, 140, 52);
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('МЕГА МАРКЕТ', 52, 48);
-    ctx.fillText('ЭЛЕКТРОНИКА', 232, 48);
-
-    ctx.fillStyle = '#f1c40f';
-    ctx.font = 'bold 16px "Segoe UI", system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('ПАРКОВКА ТЦ', WW / 2, 36);
-    ctx.font = '12px "Segoe UI", system-ui, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    ctx.fillText('Хаб вылазки', WW / 2, 56);
   },
 
   drawExtractRaidBackground() {
@@ -78,6 +39,9 @@ Object.assign(Game.prototype, {
   drawExtractObstacle(ob) {
     const cx = ob.x + ob.w / 2;
     const by = ob.y + ob.h;
+    if (ob.type === 'extract_car' || ob.type === 'extract_pillar') {
+      if (typeof isExtractHubBgReady === 'function' && isExtractHubBgReady()) return;
+    }
     if (ob.type === 'extract_car') {
       ctx.save();
       ctx.fillStyle = ob.color || '#7f8c8d';
@@ -162,7 +126,10 @@ Object.assign(Game.prototype, {
 
   renderExtractOverlays() {
     const el = this.extractElevator;
-    if (el) {
+    const hubArt = this.extractPhase === 'hub'
+      && typeof isExtractHubBgReady === 'function'
+      && isExtractHubBgReady();
+    if (el && !hubArt) {
       ctx.save();
       ctx.fillStyle = el.locked ? '#5d6d7e' : '#7f8c8d';
       ctx.fillRect(el.x - el.w / 2, el.y - el.h / 2, el.w, el.h);

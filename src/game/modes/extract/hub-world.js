@@ -5,14 +5,13 @@
 
 Object.assign(Game.prototype, {
   getExtractHubBounds() {
-    const pad = 28;
     return {
-      x0: pad,
-      y0: pad + 70,
-      x1: this.worldW - pad,
-      y1: this.worldH - pad,
+      x0: 54,
+      y0: 136,
+      x1: this.worldW - 59,
+      y1: 716,
       doorCx: this.worldW / 2,
-      doorW: 80,
+      doorW: 112,
     };
   },
 
@@ -164,6 +163,19 @@ Object.assign(Game.prototype, {
         type: 'extract_car',
         color: car.color || '#7f8c8d',
         van: !!car.van,
+      });
+    }
+
+    for (const pillar of map.pillars || []) {
+      const w = pillar.w;
+      const h = pillar.h;
+      const x = this.worldW * pillar.x - w / 2;
+      const y = this.worldH * pillar.y - h / 2;
+      this.obstacles.push({
+        x, y, w, h,
+        dw: w, dh: h,
+        sprite: 'extract_pillar',
+        type: 'extract_pillar',
       });
     }
 
