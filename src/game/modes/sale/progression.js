@@ -68,6 +68,9 @@ Game.prototype.saleWeaponInCatalog = function (id) {
   if (typeof this.isSaleWeaponHeroUnlocked === 'function' && !this.isSaleWeaponHeroUnlocked(id)) {
     return false;
   }
+  if (typeof this.isSaleWeaponFindLocked === 'function' && this.isSaleWeaponFindLocked(id)) {
+    return false;
+  }
   const banTypes = (this.saleContract && this.saleContract.banTypes) || [];
   if (banTypes.includes(def.type)) return false;
   if (id === 'receipt') return true;

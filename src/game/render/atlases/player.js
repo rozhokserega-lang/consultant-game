@@ -11,9 +11,46 @@ playerAnimImg.src = 'assets/atlases/player_anim_atlas.png';
 /** Масштаб спрайта героя — подогнан под врагов (~0.55 в старом атласе). */
 const PLAYER_SPRITE_SCALE = 0.54;
 
+/** Герои со своим атласом регистрируются в hero-*.js после этого файла. */
+const HERO_ANIM_PACKS = {};
+const HERO_ANIM_FALLBACK = {
+  sprint: 'run',
+  diag_ul: 'walk_up',
+  diag_ur: 'walk_right',
+  walk_left: 'walk_right',
+  atk_radio: 'atk_punch',
+};
+
+function playerAnimData(heroId) {
+  const pack = heroId && HERO_ANIM_PACKS[heroId];
+  if (pack) return pack;
+  return {
+    id: 'default',
+    frames: PLAYER_ANIM.frames,
+    anims: PLAYER_ANIM.anims,
+    img: playerAnimImg,
+    ready() { return playerAnimReady; },
+  };
+}
+
+function resolvePlayerAnimName(anims, name) {
+  if (anims[name] && anims[name].length) return name;
+  const fb = HERO_ANIM_FALLBACK[name];
+  if (fb && anims[fb] && anims[fb].length) return fb;
+  if (anims.walk_down && anims.walk_down.length) return 'walk_down';
+  return name;
+}
+
+function playerAnimKeys(heroId, name) {
+  const pack = playerAnimData(heroId);
+  const resolved = resolvePlayerAnimName(pack.anims, name);
+  return pack.anims[resolved] || [];
+}
+
 function drawPlayerAnimFrame(ctx, frameKey, x, y, opts = {}) {
-  if (!playerAnimReady) return false;
-  const f = PLAYER_ANIM.frames[frameKey];
+  const pack = playerAnimData(opts.heroId);
+  if (!pack.ready()) return false;
+  const f = pack.frames[frameKey];
   if (!f) return false;
   const scale = opts.scale ?? PLAYER_SPRITE_SCALE;
   const dw = f.w * scale;
@@ -25,7 +62,7 @@ function drawPlayerAnimFrame(ctx, frameKey, x, y, opts = {}) {
   if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
   if (opts.flip) ctx.scale(-1, 1);
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(playerAnimImg, f.x, f.y, f.w, f.h, -dw * ax, -dh * ay, dw, dh);
+  ctx.drawImage(pack.img, f.x, f.y, f.w, f.h, -dw * ax, -dh * ay, dw, dh);
   ctx.restore();
   return true;
 }

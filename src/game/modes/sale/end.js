@@ -25,14 +25,19 @@ Game.prototype.endSaleGame = function (won, killer) {
   const matGain = this._gearRunMatGain || 0;
   const kpiGain = this._gearRunKpiGain || 0;
   let heroUnlockName = '';
+  const freshHeroes = [];
   if (won && typeof this.unlockSaleHeroesForSaleWin === 'function') {
-    const fresh = this.unlockSaleHeroesForSaleWin(this.selectedArena || 'sport');
-    if (fresh.length) {
-      heroUnlockName = fresh.map((id) => {
-        const h = SALE_HEROES[id];
-        return h ? ((h.ico || '') + ' ' + h.name) : id;
-      }).join(', ');
-    }
+    freshHeroes.push(...this.unlockSaleHeroesForSaleWin(this.selectedArena || 'sport'));
+  }
+  if (typeof this.tryUnlockSaleCashier === 'function') {
+    const cash = this.tryUnlockSaleCashier({ silent: true });
+    if (cash) freshHeroes.push(cash);
+  }
+  if (freshHeroes.length) {
+    heroUnlockName = freshHeroes.map((id) => {
+      const h = SALE_HEROES[id];
+      return h ? ((h.ico || '') + ' ' + h.name) : id;
+    }).join(', ');
   }
   let arenaUnlockName = '';
   if (won && typeof this.unlockNextSaleArena === 'function') {

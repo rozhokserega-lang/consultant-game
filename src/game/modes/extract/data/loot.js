@@ -32,6 +32,16 @@ const EXTRACT_LOOT_DEFS = {
     key: 'floor3',
   },
 
+  /** Спрятан на 1 этаже: вынос открывает пакет в Распродаже. */
+  sale_giftbag: {
+    id: 'sale_giftbag',
+    name: 'Пакет «спасибо»',
+    ico: '🛍️',
+    value: 40,
+    rarity: 'rare',
+    unlockWeapon: 'giftbag',
+  },
+
   // 3 этаж — VIP
   vip_watch: { id: 'vip_watch', name: 'VIP-хронограф', ico: '⌚', value: 160, rarity: 'epic' },
   server_blade: { id: 'server_blade', name: 'Серверный диск', ico: '💾', value: 220, rarity: 'epic', slots: 2 },

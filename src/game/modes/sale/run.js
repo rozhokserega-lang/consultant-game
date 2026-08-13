@@ -84,6 +84,7 @@ Game.prototype.resetSaleGame = function () {
   this.saleTempWalls = [];
   this.saleVipRef = null;
   this.saleBossSpawned = {};
+  this._saleBossKilled = {};
   this.saleBossIdx = 0;
   this._gearRunMatGain = 0;
   this._gearRunKpiGain = 0;

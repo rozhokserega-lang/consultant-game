@@ -111,14 +111,17 @@ Object.assign(Game.prototype, {
       ? SALE_HERO_UNLOCK_ORDER
       : Object.keys(SALE_HEROES);
     for (const id of order) {
-      if (typeof this.isSaleHeroUnlocked === 'function' && !this.isSaleHeroUnlocked(id)) continue;
       const hero = SALE_HEROES[id];
       if (!hero) continue;
+      const unlocked = typeof this.isSaleHeroUnlocked !== 'function' || this.isSaleHeroUnlocked(id);
       grid.appendChild(this.createSaleStartCard({
         title: `${hero.ico} ${hero.name}`,
         desc: hero.desc,
-        meta: this.selectedHeroId === hero.id ? 'Выбран' : 'Выбрать',
-        selected: this.selectedHeroId === hero.id,
+        meta: !unlocked
+          ? (hero.unlockHint || 'Закрыт')
+          : (this.selectedHeroId === hero.id ? 'Выбран' : 'Выбрать'),
+        selected: unlocked && this.selectedHeroId === hero.id,
+        locked: !unlocked,
         onClick: () => this.pickSaleStartHero(hero.id),
       }));
     }
@@ -165,14 +168,15 @@ Object.assign(Game.prototype, {
     this.startGame();
   },
 
-  createSaleStartCard({ title, desc, meta, selected, onClick }) {
+  createSaleStartCard({ title, desc, meta, selected, locked, onClick }) {
     const el = document.createElement('button');
     el.type = 'button';
-    el.className = 'hub-card' + (selected ? ' sel' : '');
+    el.className = 'hub-card' + (selected ? ' sel' : '') + (locked ? ' locked' : '');
     el.innerHTML = `<div class="ttl">${title}</div>`
       + (desc ? `<div class="desc">${desc}</div>` : '')
       + (meta ? `<div class="meta">${meta}</div>` : '');
-    el.onclick = onClick;
+    if (locked) el.disabled = true;
+    else el.onclick = onClick;
     return el;
   },
 });
