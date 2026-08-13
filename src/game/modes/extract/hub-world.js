@@ -223,6 +223,7 @@ Object.assign(Game.prototype, {
     const weapon = this.getWeapon ? this.getWeapon() : null;
     this.player = new Player(sx, sy, weapon);
     if (typeof this.refreshPlayerLoadoutWeapon === 'function') this.refreshPlayerLoadoutWeapon();
+    if (typeof this.applySaleHeroToPlayer === 'function') this.applySaleHeroToPlayer();
     this.player.angle = -Math.PI / 2;
 
     this.camera.x = this.player.x - this.viewW() / 2;

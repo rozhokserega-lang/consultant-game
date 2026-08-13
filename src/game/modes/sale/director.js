@@ -123,6 +123,11 @@ Game.prototype.applySaleBossDrop = function (bossId, x, y) {
 Game.prototype.onSaleBossKilled = function (enemy) {
   if (this.recordSaleBalanceBossKill) this.recordSaleBalanceBossKill(enemy);
   if (this.grantBossKpi) this.grantBossKpi();
+  if (enemy && enemy.saleBossId) {
+    this._saleBossKilled = this._saleBossKilled || {};
+    this._saleBossKilled[enemy.saleBossId] = true;
+  }
+  if (typeof this.tryUnlockSaleCashier === 'function') this.tryUnlockSaleCashier();
   // LN kill-kit: хил + магнит + хлопушка (+ посылка уже в dropSalePowerup)
   if (this.player && this.player.hp < this.player.maxHp) {
     this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);

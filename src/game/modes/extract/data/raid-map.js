@@ -153,5 +153,6 @@ const EXTRACT_RAID_MAP = {
     { id: 'loot_perfume', x: 0.68, y: 0.62, defId: 'perfume', lockedBy: null },
     { id: 'loot_ring', x: 0.50, y: 0.48, defId: 'ring', lockedBy: null },
     { id: 'loot_safe', x: 0.82, y: 0.60, defId: 'safe_box', lockedBy: 'v_elite' },
+    { id: 'loot_giftbag', x: 0.07, y: 0.83, defId: 'sale_giftbag', hidden: true },
   ],
 };

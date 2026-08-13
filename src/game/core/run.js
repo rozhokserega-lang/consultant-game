@@ -12,6 +12,7 @@ Object.assign(Game.prototype, {
     const weapon = this.getWeapon();
     this.player = new Player(this.worldW / 2, this.worldH / 2, weapon);
     this.refreshPlayerLoadoutWeapon();
+    if (typeof this.applySaleHeroToPlayer === 'function') this.applySaleHeroToPlayer();
     this.enemies = []; this.particles = []; this.projectiles = []; this.pickups = [];
     this.playerProjectiles = [];
     this.boomFx = []; this.fuseBombs = [];

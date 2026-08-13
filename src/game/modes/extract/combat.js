@@ -8,6 +8,7 @@ Object.assign(Game.prototype, {
     const weapon = this.getWeapon ? this.getWeapon() : null;
     this.player = new Player(spawnX, spawnY, weapon);
     if (typeof this.refreshPlayerLoadoutWeapon === 'function') this.refreshPlayerLoadoutWeapon();
+    if (typeof this.applySaleHeroToPlayer === 'function') this.applySaleHeroToPlayer();
     this.player.angle = -Math.PI / 2;
 
     // Минимальный боевой стейт Распродажи — без level-up / директора
@@ -386,6 +387,20 @@ Object.assign(Game.prototype, {
           return h ? ((h.ico || '') + ' ' + h.name) : id;
         }).join(', ');
       }
+    }
+    const wepFresh = [];
+    for (const it of pack) {
+      if (!it || it.kind === 'bulkPad' || !it.unlockWeapon) continue;
+      if (typeof this.grantSaleWeaponUnlock === 'function' && this.grantSaleWeaponUnlock(it.unlockWeapon)) {
+        wepFresh.push(it.unlockWeapon);
+      }
+    }
+    if (wepFresh.length) {
+      const names = wepFresh.map((id) => {
+        const w = SALE_WEAPONS[id];
+        return w ? ((w.ico || '') + ' ' + w.name) : id;
+      }).join(', ');
+      heroUnlockLine += ' · оружие ' + names;
     }
     this.persistExtract();
     if (heroUnlockLine) this.persist();

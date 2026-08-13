@@ -194,7 +194,12 @@ class Player {
     this._justFiredRanged = !!(this.weapon && this.weapon.ranged);
     this._justAoe = !!(this.weapon && this.weapon.aoe);
     const wid = (this.weapon && this.weapon.id) || '';
-    if (wid === 'glove') this._atkAnim = 'atk_punch';
+    const pack = typeof playerAnimData === 'function' ? playerAnimData(this._saleHeroId) : null;
+    const ownPunch = pack && pack.id && pack.id !== 'default'
+      && typeof playerAnimKeys === 'function'
+      && playerAnimKeys(this._saleHeroId, 'atk_punch').length;
+    if (ownPunch && !(this.weapon && this.weapon.ranged)) this._atkAnim = 'atk_punch';
+    else if (wid === 'glove') this._atkAnim = 'atk_punch';
     else if (wid === 'hammer') this._atkAnim = 'atk_radio';
     else this._atkAnim = null;
     this._animFrame = 0;
@@ -208,7 +213,9 @@ class Player {
   }
 
   useSpriteAttackDraw() {
-    return this.attacking && this._atkAnim && this.facingFrontForSpriteAttack();
+    if (!this.attacking || !this._atkAnim) return false;
+    if (this.facingFrontForSpriteAttack()) return true;
+    return this._atkAnim === 'atk_punch' && Math.abs(Math.cos(this.angle)) > 0.35;
   }
 
   tryDash(dirX, dirY) {
@@ -399,12 +406,13 @@ class Player {
     let anim = this._animName || 'walk_down';
     let frameIdx = this._animFrame || 0;
 
+    const heroId = this._saleHeroId;
     if (this.useSpriteAttackDraw()) {
       anim = this._atkAnim;
-      const keys = PLAYER_ANIM.anims[anim] || [];
+      const keys = playerAnimKeys(heroId, anim);
       const t = Math.min(0.999, this.attackTimer / Math.max(0.01, this.attackDuration));
       frameIdx = Math.min(keys.length - 1, Math.floor(t * keys.length));
-      flip = false;
+      flip = Math.cos(ang) < 0;
     } else if (this.attacking) {
       const loco = pickPlayerLocomotionAnim(ang, false, false);
       anim = loco.anim;
@@ -425,8 +433,10 @@ class Player {
       frameIdx = 0;
     }
 
-    const keys = PLAYER_ANIM.anims[anim] || PLAYER_ANIM.anims.walk_down;
-    const frameKey = keys[Math.max(0, frameIdx % keys.length)];
+    const keys = playerAnimKeys(heroId, anim);
+    const walkKeys = playerAnimKeys(heroId, 'walk_down');
+    const useKeys = keys.length ? keys : walkKeys;
+    const frameKey = useKeys[Math.max(0, frameIdx % Math.max(1, useKeys.length))];
     if (this.lunchTimer > 0) {
       c.strokeStyle = 'rgba(241,196,15,0.75)';
       c.lineWidth = 3;
@@ -434,10 +444,12 @@ class Player {
     }
     if (this.slowTimer > 0) c.globalAlpha = 0.85;
 
-    if (this._saleHeroHue && (typeof LOW_GFX === 'undefined' || !LOW_GFX)) {
+    const pack = typeof playerAnimData === 'function' ? playerAnimData(heroId) : null;
+    const ownSprite = pack && pack.id && pack.id !== 'default';
+    if (!ownSprite && this._saleHeroHue && (typeof LOW_GFX === 'undefined' || !LOW_GFX)) {
       c.filter = `hue-rotate(${this._saleHeroHue}deg)`;
     }
-    const drawn = drawPlayerAnimFrame(c, frameKey, this.x, this.y + 4, { flip, anchorY: 1 });
+    const drawn = drawPlayerAnimFrame(c, frameKey, this.x, this.y + 4, { flip, anchorY: 1, heroId });
     if (this._saleHeroHue) c.filter = 'none';
     if (!drawn) {
       // fallback на старый атлас
@@ -540,7 +552,7 @@ class Player {
       this._animFrame = 0;
       this._animPhase = 0;
     }
-    const keys = PLAYER_ANIM.anims[anim] || [];
+    const keys = playerAnimKeys(this._saleHeroId, anim);
     const fps = this.dashTime > 0 ? 14 : (moving ? 10 : 0);
     if (fps > 0 && keys.length) {
       this._animPhase = (this._animPhase || 0) + dt * fps;

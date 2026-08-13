@@ -117,6 +117,7 @@ Object.assign(Game.prototype, {
       slots: need,
     };
     if (loot.def.key) item.key = loot.def.key;
+    if (loot.def.unlockWeapon) item.unlockWeapon = loot.def.unlockWeapon;
     if (!this.placeExtractPackItem(at, item)) {
       this.showExtractBanner('Рюкзак полон');
       sfx.hurt();
@@ -127,6 +128,12 @@ Object.assign(Game.prototype, {
       this.refreshExtractHud();
       this.showExtractBanner('🪪 VIP-карта в рюкзаке — открыт 3 этаж', 3.2);
       sfx.win();
+      return true;
+    }
+    if (loot.def.unlockWeapon) {
+      this.refreshExtractHud();
+      this.showExtractBanner(`${loot.def.ico} ${loot.def.name} — вынеси с этажа, чтобы открыть в распродаже`, 3.2);
+      sfx.coin();
       return true;
     }
     this.applyExtractLootRarityBuff(item.rarity);

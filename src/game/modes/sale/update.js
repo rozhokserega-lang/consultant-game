@@ -20,6 +20,7 @@ Game.prototype.updateSale = function (dt) {
 
   // минутные события ТЦ
   this.tickSaleEvents(realDt);
+  if (typeof this.tryUnlockSaleCashier === 'function') this.tryUnlockSaleCashier();
 
   // timers inherited from shift events
   if (this.lightsOut > 0) this.lightsOut -= realDt;
