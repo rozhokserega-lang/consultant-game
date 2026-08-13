@@ -9,6 +9,7 @@ Object.assign(Game.prototype, {
       music: music.enabled,
       vibro: this.vibro,
       dmgNumbers: this.showDmgNumbers,
+      liteGfx: !!this.liteGfx,
       weaponId: this.weaponId,
       hammerId: this.weaponId,
       ownedWeapons: this.ownedWeapons,
@@ -39,5 +40,55 @@ Object.assign(Game.prototype, {
           ? this.save.extractBackpack
           : null),
     });
+  },
+
+  /** Обнуляет прогрессию, настройки звука/вибро не трогает. */
+  resetAllProgression() {
+    this.highScore = 0;
+    this.highWaveLevel = 0;
+    this.bankCoins = 0;
+    this.metaPerks = {
+      tank: 0, speed: 0, crit: 0, life: 0, wallet: 0, magnet: 0, reach: 0, dash: 0, thick: 0,
+    };
+    this.weaponLevels = {};
+    this.abilityLevels = { dash: 0, tea: 0, charge: 0 };
+    this.killLog = {};
+    this.selectedChallenge = 'none';
+    this.selectedArena = 'sport';
+    this.saleUnlockedArenas = ['sport'];
+    this.saleUnlockedWeapons = ['receipt'];
+    this.saleStartPassives = {};
+    this.selectedHeroId = 'igor';
+    this.saleUnlockedHeroes = ['igor'];
+    this.saleHeroId = 'igor';
+    this.selectedFloorId = 'grocery';
+    this.selectedContractId = 'none';
+    this.kpiBalance = 0;
+    this.gearBossKillsTotal = 0;
+    this.gearByHero = {};
+    this.gearMaterials = (typeof emptyGearMaterials === 'function')
+      ? emptyGearMaterials()
+      : { badge_shard: 0, card_film: 0, radio_cell: 0, kpi_token: 0 };
+    this.equipOwned = [];
+    this.equipLoadouts = {};
+    if (typeof this.ensureGearState === 'function') this.ensureGearState();
+    this.ownedWeapons = ['hammer'];
+    this.weaponId = 'hammer';
+    this.hammerId = 'hammer';
+    this.extractRunInsurance = null;
+    const startSlots = (typeof EXTRACT_BACKPACK_START_SLOTS !== 'undefined')
+      ? EXTRACT_BACKPACK_START_SLOTS
+      : 5;
+    this.extractMeta = {
+      backpackSlots: startSlots,
+      coins: 80,
+      starterWeapon: (typeof EXTRACT_DEFAULT_STARTER !== 'undefined') ? EXTRACT_DEFAULT_STARTER : 'receipt',
+      totalExtractedValue: 0,
+    };
+    this.extractBackpack = new Array(startSlots).fill(null);
+    if (typeof this.persist === 'function') this.persist();
+    if (typeof loadSave === 'function') this.save = loadSave();
+    if (typeof this.applySaleHeroToPlayer === 'function') this.applySaleHeroToPlayer();
+    if (typeof this.prepareIdleWorld === 'function') this.prepareIdleWorld();
   },
 });

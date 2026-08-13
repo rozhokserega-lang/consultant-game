@@ -12,11 +12,14 @@ Object.assign(Game.prototype, {
     const timeMul = min <= 12 ? 1.0 : min >= 17 ? 0.35 : 1.0 - (min - 12) / 5 * 0.65;
     // дополнительный штраф если буфер animFx больше половины
     const fxLoad = (this.animFx && this.animFx.length > 20) ? 0.6 : 1.0;
-    return timeMul * fxLoad;
+    let b = timeMul * fxLoad;
+    if (typeof LITE_GFX !== 'undefined' && LITE_GFX) b *= 0.22;
+    return b;
   },
 
   /** Короткий спрайт-эффект из vfx_atlas (кровь, слэш, level up…). */
   spawnSpriteFx(name, x, y, opts = {}) {
+    if (typeof LITE_GFX !== 'undefined' && LITE_GFX) return;
     if (!this.spriteFx) this.spriteFx = [];
     if (this.spriteFx.length > 48) this.spriteFx.shift();
     this.spriteFx.push({
@@ -51,6 +54,7 @@ Object.assign(Game.prototype, {
 
   /** Анимированный эффект из anim_fx_atlas (one-shot или loop на время жизни). */
   spawnAnimFx(id, x, y, opts = {}) {
+    if (typeof LITE_GFX !== 'undefined' && LITE_GFX && id !== 'afx_levelup') return;
     if (!this.animFx) this.animFx = [];
     if (this.animFx.length > 40) this.animFx.shift();
     this.animFx.push({

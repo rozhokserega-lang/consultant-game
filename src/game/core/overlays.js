@@ -10,6 +10,7 @@ Object.assign(Game.prototype, {
     if (gameMenuRoot && typeof GameMenu !== 'undefined') GameMenu.showView(gameMenuRoot, 'main');
     this.choosingUpgrade = false;
     this.shopping = false;
+    if (typeof this.closeSettingsResetConfirm === 'function') this.closeSettingsResetConfirm();
     if (typeof this.updateUpgradeRerollBtn === 'function') this.updateUpgradeRerollBtn();
   },
 });

@@ -14,12 +14,13 @@ Object.assign(Game.prototype, {
     const box = document.getElementById('main-menu-actions');
     if (!box || typeof UiButton === 'undefined') return;
     box.innerHTML = '';
-    ['Распродажа', 'Вылазка', 'Подготовка', 'Гардероб', 'Выход'].forEach((label, i) => {
+    ['Распродажа', 'Вылазка', 'Подготовка', 'Гардероб', 'Настройки', 'Выход'].forEach((label, i) => {
       const actions = [
         () => this.openSaleStartFlow(),
         () => this.startExtractHub(),
         () => this.openBoosters(),
         () => this.openWardrobe(),
+        () => this.openSettings(),
         () => this.exitGame(),
       ];
       box.appendChild(UiButton.create({

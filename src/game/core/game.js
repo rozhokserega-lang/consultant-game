@@ -70,6 +70,8 @@ class Game {
     music.enabled = this.save.music !== false;
     this.vibro = this.save.vibro !== false;
     this.showDmgNumbers = this.save.dmgNumbers !== false;
+    this.liteGfx = !!this.save.liteGfx;
+    if (typeof applyGfxFlags === 'function') applyGfxFlags(this.liteGfx);
     this.coins = 0;
     this.coinMult = 1;
     this.shopping = false;
