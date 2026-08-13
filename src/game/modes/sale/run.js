@@ -180,8 +180,8 @@ Game.prototype.resetSaleGame = function () {
   this.applyMetaToPlayer();
   this.applySalePassivesToPlayer();
   this.applySaleHeroToPlayer();
-  // стартовая vitality из хаба
-  const vit = this.salePassives.vitality || 0;
+  // стартовое HP из хаба (mug; vitality — старый id)
+  const vit = (this.salePassives.mug || 0) + (this.salePassives.vitality || 0);
   if (vit > 0) {
     this.player.maxHp += vit;
     this.player.hp = this.player.maxHp;

@@ -3,9 +3,44 @@
  */
 'use strict';
 
+/** Лужа на полу — до depth-sort, чтобы враги перекрывали её. */
+Game.prototype.renderSaleFloorDecals = function () {
+  this.salePuddles = this.salePuddles || [];
+  const nowSec = performance.now() / 1000;
+  for (const u of this.salePuddles) {
+    const fade = u.life < 0.45 ? Math.max(0.15, u.life / 0.45) : 1;
+    if ((u.skin === 'coffee' || u.skin === 'latte') && typeof drawCoffeePuddle === 'function') {
+      const ok = drawCoffeePuddle(ctx, u.x, u.y, u.r, {
+        time: nowSec + (u.x + u.y) * 0.01,
+        alpha: 0.92 * fade,
+        filter: u.skin === 'latte' ? 'hue-rotate(160deg) saturate(0.85)' : '',
+      });
+      if (ok) continue;
+    }
+    const a = Math.min(0.55, 0.2 + u.life * 0.15);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = u.color || '#d35400';
+    ctx.beginPath();
+    ctx.ellipse(u.x, u.y + 4, u.r * 0.95, u.r * 0.55, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    if (u.hurtPlayer) {
+      drawAnimFxFrame(ctx, 'afx_fireloop', u.x, u.y - u.r * 0.35, {
+        time: nowSec + u.x * 0.01, scale: (u.r * 2.2) / 100, alpha: Math.min(1, a * 2.2),
+      });
+    } else if (u.poison) {
+      if (!drawAnimFxFrame(ctx, 'afx_bubbles', u.x, u.y - 4, {
+        time: nowSec + u.y * 0.01, scale: (u.r * 2.4) / 100, alpha: 0.85,
+      }) && typeof drawSpell === 'function') {
+        drawSpell(ctx, 'sp_poison1', u.x, u.y, { scale: 0.45, anchorY: 0.5, alpha: 0.5 });
+      }
+    }
+  }
+};
+
 Game.prototype.renderSaleOverlays = function () {
   // вызывается внутри уже трансформированной камеры render()
-  this.salePuddles = this.salePuddles || [];
+  // лужи рисует renderSaleFloorDecals — до depth-sort, чтобы враги были сверху
 
   // босс-хазарды (ценники)
   for (const h of this.saleBossHazards || []) {
@@ -141,30 +176,6 @@ Game.prototype.renderSaleOverlays = function () {
       ctx.lineWidth = 2;
       ctx.strokeRect(w.x, w.y, w.w, w.h);
       ctx.restore();
-    }
-  }
-
-  // лужи (кофе / яд / кровь / пожар)
-  const nowSec = performance.now() / 1000;
-  for (const u of this.salePuddles) {
-    const a = Math.min(0.55, 0.2 + u.life * 0.15);
-    ctx.globalAlpha = a;
-    ctx.fillStyle = u.color || '#d35400';
-    ctx.beginPath();
-    ctx.ellipse(u.x, u.y + 4, u.r * 0.95, u.r * 0.55, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    if (u.hurtPlayer) {
-      // живой огонь поверх горящей зоны
-      drawAnimFxFrame(ctx, 'afx_fireloop', u.x, u.y - u.r * 0.35, {
-        time: nowSec + u.x * 0.01, scale: (u.r * 2.2) / 100, alpha: Math.min(1, a * 2.2),
-      });
-    } else if (u.poison) {
-      if (!drawAnimFxFrame(ctx, 'afx_bubbles', u.x, u.y - 4, {
-        time: nowSec + u.y * 0.01, scale: (u.r * 2.4) / 100, alpha: 0.85,
-      }) && typeof drawSpell === 'function') {
-        drawSpell(ctx, 'sp_poison1', u.x, u.y, { scale: 0.45, anchorY: 0.5, alpha: 0.5 });
-      }
     }
   }
 

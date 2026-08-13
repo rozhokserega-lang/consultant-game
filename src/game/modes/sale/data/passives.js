@@ -4,7 +4,7 @@
 'use strict';
 
 const SALE_PASSIVES = {
-  mug: { id: 'mug', name: 'Кофейная кружка', ico: '☕', max: 5, desc: '+1 макс HP / ур.' },
+  mug: { id: 'mug', name: 'Банка энергетика', ico: '🥫', max: 5, desc: '+1 макс HP / ур.' },
   badge: { id: 'badge', name: 'Бейдж', ico: '🪪', max: 5, desc: '+12% XP / ур.' },
   radio: { id: 'radio', name: 'Рация', ico: '📻', max: 5, desc: '+30% магнит XP / ур.' },
   key: { id: 'key', name: 'Ключ подсобки', ico: '🔑', max: 5, desc: '+8% скорости / ур.' },
@@ -14,7 +14,7 @@ const SALE_PASSIVES = {
   shoes: { id: 'shoes', name: 'Кроссовки', ico: '👟', max: 5, desc: '+9% скорости / ур.' },
   headphones: { id: 'headphones', name: 'Наушники', ico: '🎧', max: 5, desc: '+15% урон аур / ур.' },
   gloves: { id: 'gloves', name: 'Перчатки грузчика', ico: '🧤', max: 5, desc: '+12% размер / ур.' },
-  energy: { id: 'energy', name: 'Энергетик', ico: '🥤', max: 5, desc: '+10% скорость атаки / ур.' },
+  energy: { id: 'energy', name: 'Кофеиновый шот', ico: '⚡', max: 5, desc: '+10% скорость атаки / ур.' },
   map: { id: 'map', name: 'План ТЦ', ico: '🗺️', max: 5, desc: '+10% дальность / ур.' },
   money: { id: 'money', name: 'Деньги', ico: '💰', max: 5, desc: '+18% монет / ур.' },
   medkit: {

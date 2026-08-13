@@ -445,11 +445,17 @@ Game.prototype.updateSaleProjectiles = function (dt) {
         });
         if (pr.impact) this.spawnSpriteFx(pr.impact, pr.x, pr.y, { scale: 0.45, life: 0.2, vy: 0 });
         if (pr.puddle) {
+          const wid = pr.weaponId || '';
+          const coffeeSkin = (wid === 'coffee' || wid === 'caffeine')
+            ? 'coffee'
+            : (wid === 'cold_latte' ? 'latte' : null);
           this.salePuddles.push({
             x: e.x, y: e.y, r: 40, life: 2.8, dmg: this.saleFlatDmg(1), tick: 0,
             color: pr.puddleColor || '#d35400',
             slow: pr.puddleSlow != null ? pr.puddleSlow : 0.55,
             poison: !!pr.poison || !!this.saleSynergyOn('poisonPuddle'),
+            skin: coffeeSkin,
+            weaponId: wid,
           });
           pr.life = 0;
         } else if (pr.bounces > 0) {

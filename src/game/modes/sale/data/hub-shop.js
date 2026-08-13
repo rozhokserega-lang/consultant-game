@@ -10,7 +10,7 @@ const SALE_HUB_WEAPON_COST = {
 };
 
 const SALE_HUB_PASSIVES = [
-  { id: 'mug', ico: '☕', name: 'Кружка', max: 3, cost: [40, 80, 130], desc: 'Старт +HP / эво кофе → латте' },
+  { id: 'mug', ico: '🥫', name: 'Банка энергетика', max: 3, cost: [40, 80, 130], desc: 'Старт +HP / эво кофе → латте' },
   { id: 'charger', ico: '🔌', name: 'Зарядка', max: 3, cost: [45, 85, 140], desc: 'Старт с меньшей КД / эво телефона' },
   { id: 'shoes', ico: '👟', name: 'Кроссовки', max: 3, cost: [40, 75, 120], desc: 'Старт быстрее' },
   { id: 'radio', ico: '📻', name: 'Рация', max: 3, cost: [35, 65, 110], desc: 'Старт с магнитом XP' },
@@ -25,7 +25,7 @@ const SALE_HUB_PASSIVES = [
   { id: 'sticker', ico: '🔻', name: 'Стикер', max: 1, cost: [120], desc: '+урон / эво пистолета' },
   { id: 'broadcast', ico: '🎙️', name: 'Микрофон', max: 1, cost: [120], desc: '+размер атак / эво радио' },
   { id: 'ribbon', ico: '🎀', name: 'Лента', max: 1, cost: [120], desc: '+монеты / эво пакета' },
-  { id: 'energy', ico: '🥤', name: 'Энергетик', max: 1, cost: [130], desc: 'Эво кофе → КОФЕИН' },
+  { id: 'energy', ico: '⚡', name: 'Кофеиновый шот', max: 1, cost: [130], desc: 'Эво кофе → КОФЕИН' },
   { id: 'headphones', ico: '🎧', name: 'Наушники', max: 1, cost: [130], desc: 'Эво громкоговорителя' },
   { id: 'map', ico: '🗺️', name: 'План ТЦ', max: 1, cost: [130], desc: 'Эво сирены → пожар' },
   { id: 'headlamp', ico: '💡', name: 'Налобник', max: 1, cost: [130], desc: 'Эво фонарика' },

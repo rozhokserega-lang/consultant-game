@@ -30,8 +30,8 @@ const EXTRACT_GEAR_STOCK = [
   },
   {
     id: 'gear_energy',
-    name: 'Энергетик',
-    ico: '🥤',
+    name: 'Кофеиновый шот',
+    ico: '⚡',
     desc: '+10% скорость атаки.',
     price: 40,
     value: 20,
@@ -96,8 +96,8 @@ const EXTRACT_GEAR_STOCK = [
   },
   {
     id: 'gear_mug',
-    name: 'Кофейная кружка',
-    ico: '☕',
+    name: 'Банка энергетика',
+    ico: '🥫',
     desc: '+1 макс. HP в рейде.',
     price: 55,
     value: 28,

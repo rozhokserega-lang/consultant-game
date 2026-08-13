@@ -17,6 +17,10 @@ Object.assign(Game.prototype, {
     // setTransform: после зума камера и shake попадают в целые пиксели экрана
     ctx.setTransform(cam.z, 0, 0, cam.z, -Math.round(cam.x * cam.z) + sx, -Math.round(cam.y * cam.z) + sy);
     this.drawBackground();
+    if ((this.gameMode === 'sale' || (this.gameMode === 'extract' && this.extractPhase === 'raid'))
+      && typeof this.renderSaleFloorDecals === 'function') {
+      this.renderSaleFloorDecals();
+    }
     const viewPad = 80;
     const vx0 = cam.x - viewPad, vy0 = cam.y - viewPad;
     const vx1 = cam.x + this.viewW() + viewPad, vy1 = cam.y + this.viewH() + viewPad;
