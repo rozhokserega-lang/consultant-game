@@ -11,8 +11,21 @@ const FATTY_FUSE_TIME = 1.35 / DIFFICULTY_EASE; // чуть больше вре�
 const MAX_SPEECH_BUBBLES = 3;
 /** Потолок частиц — на мобилках сотни fill-дуг в кадр. */
 const MAX_PARTICLES = 90;
-/** Android/мобилки: меньше дорогих оверлеев (свет, blur). Число мобов не трогаем. */
-const LOW_GFX = /Android|Mobile|iPhone|iPad/i.test(navigator.userAgent || '');
+/** Авто: Android/iPhone — меньше дорогих оверлеев. Число мобов не трогаем. */
+const GFX_MOBILE = /Android|Mobile|iPhone|iPad/i.test(navigator.userAgent || '');
+/** Совместимость: true на мобилках или в облегчённом режиме из настроек. */
+let LOW_GFX = GFX_MOBILE;
+/** Ручной режим «меньше эффектов» — ещё жёстче, чем авто-мобилка. */
+let LITE_GFX = false;
+
+function applyGfxFlags(lite) {
+  LITE_GFX = !!lite;
+  LOW_GFX = GFX_MOBILE || LITE_GFX;
+}
+
+function isLiteGfx() {
+  return LITE_GFX;
+}
 
 /** Ограждение арены (витрины сверху + стены по периметру). */
 const ARENA_FENCE = {

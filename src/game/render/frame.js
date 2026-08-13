@@ -5,7 +5,7 @@ Object.assign(Game.prototype, {
     ctx.globalAlpha = 1;
     ctx.clearRect(0, 0, this.W, this.H);
     let sx = 0, sy = 0;
-    if (this.screenShake > 0) {
+    if (this.screenShake > 0 && !(typeof LITE_GFX !== 'undefined' && LITE_GFX)) {
       // shake тоже к целым пикселям — иначе пол мерцает
       sx = Math.round((Math.random() - 0.5) * this.screenShake * 30);
       sy = Math.round((Math.random() - 0.5) * this.screenShake * 30);

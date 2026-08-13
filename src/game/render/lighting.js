@@ -3,6 +3,15 @@
 Object.assign(Game.prototype, {
   /** Затемнение карты со световым пятном вокруг игрока */
   drawPlayerLight(shakeX = 0, shakeY = 0) {
+    if (typeof LITE_GFX !== 'undefined' && LITE_GFX) {
+      if (this.lightsOut > 0) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(8, 10, 20, 0.42)';
+        ctx.fillRect(0, 0, this.W, this.H);
+        ctx.restore();
+      }
+      return;
+    }
     if (!this.player) return;
     // На толпе мобов полный экранный градиент жрёт GPU Android — упрощаем / пропускаем
     const crowded = this.enemies.length >= 10;
