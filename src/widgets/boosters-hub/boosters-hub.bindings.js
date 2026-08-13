@@ -1,8 +1,36 @@
-/** Хаб подготовки: вкладки, мета-перки, способности, лоадаут. */
+/** Хаб подготовки: усилители, мета-перки, лоадаут. */
 
 Object.assign(Game.prototype, {
   isBoostersOpen() {
     return document.getElementById('boosters-overlay')?.classList.contains('show');
+  },
+
+  formatHubGold(amount) {
+    return (amount | 0).toLocaleString('ru-RU');
+  },
+
+  formatHubPrice(amount) {
+    return 'ЦЕНА: ' + this.formatHubGold(amount) + ' ЗОЛОТА';
+  },
+
+  createHubShopCard({ ico, name, desc, priceText, extraClass, disabled, onClick }) {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'hub-shop-item' + (extraClass ? ' ' + extraClass : '');
+    el.innerHTML = `<div class="hub-shop-item__top">`
+      + `<div class="hub-shop-item__icon">${ico || '◆'}</div>`
+      + `<div class="hub-shop-item__info">`
+      + `<div class="hub-shop-item__name">${name || ''}</div>`
+      + `<div class="hub-shop-item__desc">${desc || ''}</div>`
+      + `</div></div>`
+      + `<div class="hub-shop-item__price">${priceText || ''}</div>`;
+    if (disabled) {
+      el.disabled = true;
+      el.classList.add('is-locked');
+    } else if (onClick) {
+      el.onclick = onClick;
+    }
+    return el;
   },
 
   openBoosters(opts = {}) {
@@ -13,6 +41,7 @@ Object.assign(Game.prototype, {
     const tab = opts.tab === 'gear' || opts.tab === 'book' ? opts.tab : 'prep';
     this.hubScreen = tab;
     this.hubTab = tab;
+    if (tab === 'prep' && !this.hubPrepTab) this.hubPrepTab = 'passives';
     document.body.classList.remove('hub-mode', 'sale-mode');
     document.body.classList.add('main-menu-mode');
     document.getElementById('boosters-overlay').classList.add('show');
@@ -32,44 +61,57 @@ Object.assign(Game.prototype, {
   renderBoosters() {
     const bankEl = document.getElementById('boosters-bank');
     const recordEl = document.getElementById('boosters-record');
-    if (bankEl) bankEl.textContent = this.bankCoins;
-    if (recordEl) recordEl.textContent = this.highScore;
+    if (bankEl) bankEl.textContent = this.formatHubGold(this.bankCoins);
+    if (recordEl) recordEl.textContent = this.formatHubGold(this.highScore);
 
-    const metaBox = document.getElementById('boosters-meta');
-    if (metaBox) {
-      metaBox.innerHTML = '';
-      for (const def of META_PERKS) {
-        const lv = this.metaPerks[def.id] || 0;
-        const nextCost = lv >= def.max ? null : def.cost[lv];
-        const el = document.createElement('button');
-        el.type = 'button';
-        el.className = 'hub-card' + (lv > 0 ? ' sel' : '') + (nextCost == null ? ' locked' : '');
-        el.innerHTML = `<div class="ttl">${def.ico} ${def.name} · ${lv}/${def.max}</div>
-          <div class="desc">${def.desc}</div>
-          <div class="meta">${nextCost == null ? 'Макс' : 'Купить 🪙 ' + nextCost}</div>`;
-        if (nextCost != null) el.onclick = () => this.buyMetaPerk(def.id);
-        metaBox.appendChild(el);
-      }
-    }
-
-    const abBox = document.getElementById('boosters-abilities');
-    if (abBox) {
-      abBox.innerHTML = '';
-      for (const def of ABILITY_DEFS) {
-        const lv = this.abilityLevels[def.id] || 0;
-        const nextCost = abilityUpgradeCost(lv);
-        const el = document.createElement('button');
-        el.type = 'button';
-        el.className = 'hub-card' + (lv > 0 ? ' sel' : '') + (nextCost == null ? ' locked' : '');
-        el.innerHTML = `<div class="ttl">${def.ico} ${def.name} · ${lv}/${ABILITY_MAX_LEVEL}</div>
-          <div class="desc">${def.desc}</div>
-          <div class="meta">${nextCost == null ? 'Макс' : 'Купить 🪙 ' + nextCost}</div>`;
-        if (nextCost != null) el.onclick = () => this.buyAbilityUpgrade(def.id);
-        abBox.appendChild(el);
-      }
-    }
-
+    this.renderPrepPassives();
     this.renderHub();
+  },
+
+  renderPrepPassives() {
+    const box = document.getElementById('hub-prep-passives');
+    if (!box) return;
+    box.innerHTML = '';
+
+    for (const def of META_PERKS) {
+      const lv = this.metaPerks[def.id] || 0;
+      const nextCost = lv >= def.max ? null : def.cost[lv];
+      const maxed = nextCost == null;
+      const extraClass = (lv > 0 ? 'is-owned' : '') + (maxed ? ' is-locked' : '');
+      const priceText = maxed
+        ? `КУПЛЕНО · ${lv}/${def.max}`
+        : this.formatHubPrice(nextCost);
+      const desc = def.desc + (lv > 0 ? ` · уровень ${lv}/${def.max}` : '');
+      box.appendChild(this.createHubShopCard({
+        ico: def.ico,
+        name: def.name,
+        desc,
+        priceText,
+        extraClass,
+        disabled: maxed,
+        onClick: maxed ? null : () => this.buyMetaPerk(def.id),
+      }));
+    }
+
+    for (const pk of SALE_HUB_PASSIVES) {
+      const lv = (this.saleStartPassives && this.saleStartPassives[pk.id]) || 0;
+      const nextCost = lv >= pk.max ? null : pk.cost[lv];
+      const maxed = nextCost == null;
+      const extraClass = (lv > 0 ? 'is-owned' : '') + (maxed ? ' is-locked' : '');
+      const priceText = maxed
+        ? `КУПЛЕНО · ${lv}/${pk.max}`
+        : this.formatHubPrice(nextCost);
+      const desc = pk.desc + (lv > 0 ? ` · уровень ${lv}/${pk.max}` : '');
+      box.appendChild(this.createHubShopCard({
+        ico: pk.ico,
+        name: pk.name,
+        desc,
+        priceText,
+        extraClass,
+        disabled: maxed,
+        onClick: maxed ? null : () => this.buySaleStartPassive(pk.id),
+      }));
+    }
   },
 
   buyMetaPerk(id) {
@@ -98,6 +140,22 @@ Object.assign(Game.prototype, {
     sfx.shop();
   },
 
+  setHubPrepTab(tab) {
+    if (tab !== 'passives' && tab !== 'weapons') return;
+    this.hubPrepTab = tab;
+    this.applyHubPrepTab();
+    sfx.click();
+  },
+
+  applyHubPrepTab() {
+    const tab = this.hubPrepTab || 'passives';
+    const onPass = tab === 'passives';
+    document.getElementById('hub-tab-passives')?.classList.toggle('on', onPass);
+    document.getElementById('hub-tab-weapons')?.classList.toggle('on', !onPass);
+    document.getElementById('hub-prep-passives')?.classList.toggle('on', onPass);
+    document.getElementById('hub-sale-weapons')?.classList.toggle('on', !onPass);
+  },
+
   setHubTab(tab) {
     if (tab === 'book') {
       this.hubTab = 'book';
@@ -116,34 +174,33 @@ Object.assign(Game.prototype, {
   renderHub() {
     const bankEl = document.getElementById('boosters-bank');
     const recordEl = document.getElementById('boosters-record');
-    if (bankEl) bankEl.textContent = this.bankCoins;
-    if (recordEl) recordEl.textContent = this.highScore;
+    if (bankEl) bankEl.textContent = this.formatHubGold(this.bankCoins);
+    if (recordEl) recordEl.textContent = this.formatHubGold(this.highScore);
     const verEl = document.getElementById('hub-version');
     if (verEl) verEl.textContent = typeof SALE_VERSION !== 'undefined' ? 'v' + SALE_VERSION : '';
     this.gameMode = 'sale';
     if (!this.hubScreen || this.hubScreen === 'modes') this.hubScreen = 'prep';
     if (!this.hubTab) this.hubTab = 'prep';
+    if (!this.hubPrepTab) this.hubPrepTab = 'passives';
 
     const onPrep = this.hubScreen === 'prep';
     const onGear = this.hubScreen === 'gear';
     const onBook = this.hubScreen === 'book';
+
+    const titleEl = document.getElementById('hub-header-title');
+    if (titleEl) {
+      titleEl.textContent = onGear ? 'ГАРДЕРОБ' : (onBook ? 'ЖАЛОБЫ' : 'УСИЛИТЕЛИ');
+    }
 
     document.getElementById('hub-pane-prep').classList.toggle('on', onPrep);
     const paneGear = document.getElementById('hub-pane-gear');
     if (paneGear) paneGear.classList.toggle('on', onGear);
     document.getElementById('hub-pane-book').classList.toggle('on', onBook);
 
-    const tabPrep = document.getElementById('hub-tab-prep');
-    const tabGear = document.getElementById('hub-tab-gear');
-    const tabBook = document.getElementById('hub-tab-book');
-    if (tabPrep) {
-      tabPrep.classList.toggle('on', onPrep);
-    }
-    if (tabGear) tabGear.classList.toggle('on', onGear);
-    if (tabBook) tabBook.classList.toggle('on', onBook);
+    const shopTabs = document.querySelector('.hub-shop-tabs');
+    if (shopTabs) shopTabs.style.display = onPrep ? '' : 'none';
 
-    const saleBox = document.getElementById('hub-sale-loadout');
-    if (saleBox) saleBox.style.display = '';
+    if (onPrep) this.applyHubPrepTab();
 
     if (onBook) this.renderComplaintBook();
     if (onGear && this.renderEquipHub) this.renderEquipHub();

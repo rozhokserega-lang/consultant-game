@@ -1,72 +1,68 @@
 /**
- * Распродажа: Хаб: оружие и стартовые пассивки.
+ * Распродажа: Хаб: оружие в витрине «Усилители».
  */
 'use strict';
 
 Game.prototype.renderSaleHubLoadout = function () {
   const wepBox = document.getElementById('hub-sale-weapons');
-  if (wepBox) {
-    wepBox.innerHTML = '';
-    const startP = this.saleStartPassives || {};
-    const evoHint = (wid) => {
-      const tips = [];
-      for (const ev of SALE_EVOLUTIONS) {
-        if (ev.from !== wid) continue;
-        if (startP[ev.needPassive] > 0) tips.push('откроет «' + ev.name + '»');
-      }
-      return tips.length ? ' · ' + tips.join(' / ') : '';
-    };
-    for (const def of Object.values(SALE_WEAPONS)) {
-      if (def.evolved) continue;
-      const owned = (this.saleUnlockedWeapons || []).includes(def.id);
-      const cost = SALE_HUB_WEAPON_COST[def.id];
-      const role = SALE_ROLE_LABEL[def.type] || def.type;
-      const hint = evoHint(def.id);
-      const el = document.createElement('button');
-      el.type = 'button';
-      const heroLocked = typeof this.isSaleWeaponHeroUnlocked === 'function'
-        && !this.isSaleWeaponHeroUnlocked(def.id);
-      el.className = 'hub-card' + (owned && !heroLocked ? ' sel' : '') + (hint && !heroLocked ? ' hot' : '') + (heroLocked ? ' locked' : '');
-      if (heroLocked) {
-        const needId = (typeof SALE_WEAPON_NEED_HERO !== 'undefined') ? SALE_WEAPON_NEED_HERO[def.id] : null;
-        const needHero = needId && SALE_HEROES[needId];
-        const needName = needHero ? ((needHero.ico || '') + ' ' + needHero.name) : 'героем';
-        el.innerHTML = `<div class="ttl">${def.ico} ${def.name}</div>
-            <div class="desc">${def.desc} · ${role}</div>
-            <div class="meta">Откроется с ${needName}</div>`;
-        el.disabled = true;
-      } else if (def.id === 'receipt') {
-        el.innerHTML = `<div class="ttl">${def.ico} ${def.name}</div>
-            <div class="desc">${def.desc} · ${role}${hint}</div>
-            <div class="meta">Всегда в ассортименте</div>`;
-        el.disabled = true;
-      } else {
-        el.innerHTML = `<div class="ttl">${def.ico} ${def.name}</div>
-            <div class="desc">${def.desc} · ${role}${hint}</div>
-            <div class="meta">${owned ? 'В ассортименте забега' : ('Купить в ассортимент 🪙 ' + cost)}</div>`;
-        if (!owned) {
-          el.onclick = () => this.buySaleWeaponUnlock(def.id);
-        }
-      }
-      wepBox.appendChild(el);
-    }
-  }
+  if (!wepBox) return;
+  wepBox.innerHTML = '';
 
-  const pasBox = document.getElementById('hub-sale-passives');
-  if (pasBox) {
-    pasBox.innerHTML = '';
-    for (const pk of SALE_HUB_PASSIVES) {
-      const lv = (this.saleStartPassives && this.saleStartPassives[pk.id]) || 0;
-      const nextCost = lv >= pk.max ? null : pk.cost[lv];
-      const el = document.createElement('button');
-      el.type = 'button';
-      el.className = 'hub-card' + (lv > 0 ? ' sel' : '');
-      el.innerHTML = `<div class="ttl">${pk.ico} ${pk.name} · ${lv}/${pk.max}</div>
-          <div class="desc">${pk.desc}</div>
-          <div class="meta">${nextCost == null ? 'Макс' : 'Купить 🪙 ' + nextCost}</div>`;
-      el.onclick = () => this.buySaleStartPassive(pk.id);
-      pasBox.appendChild(el);
+  const startP = this.saleStartPassives || {};
+  const evoHint = (wid) => {
+    const tips = [];
+    for (const ev of SALE_EVOLUTIONS) {
+      if (ev.from !== wid) continue;
+      if (startP[ev.needPassive] > 0) tips.push('откроет «' + ev.name + '»');
     }
+    return tips.length ? ' ' + tips.join(' / ') : '';
+  };
+
+  for (const def of Object.values(SALE_WEAPONS)) {
+    if (def.evolved) continue;
+    const owned = (this.saleUnlockedWeapons || []).includes(def.id);
+    const cost = SALE_HUB_WEAPON_COST[def.id];
+    const role = SALE_ROLE_LABEL[def.type] || def.type;
+    const hint = evoHint(def.id);
+    const heroLocked = typeof this.isSaleWeaponHeroUnlocked === 'function'
+      && !this.isSaleWeaponHeroUnlocked(def.id);
+
+    let priceText;
+    let extraClass = '';
+    let disabled = false;
+    let onClick = null;
+
+    if (heroLocked) {
+      const needId = (typeof SALE_WEAPON_NEED_HERO !== 'undefined') ? SALE_WEAPON_NEED_HERO[def.id] : null;
+      const needHero = needId && SALE_HEROES[needId];
+      const needName = needHero ? ((needHero.ico || '') + ' ' + needHero.name) : 'героем';
+      priceText = 'ОТКРОЕТСЯ С ' + needName.toUpperCase();
+      extraClass = 'is-locked';
+      disabled = true;
+    } else if (def.id === 'receipt') {
+      priceText = 'ВСЕГДА В АССОРТИМЕНТЕ';
+      extraClass = 'is-owned';
+      disabled = true;
+    } else if (owned) {
+      priceText = 'В АССОРТИМЕНТЕ ЗАБЕГА';
+      extraClass = 'is-owned';
+      disabled = true;
+    } else {
+      priceText = this.formatHubPrice(cost);
+      if (hint) extraClass = 'is-hot';
+      onClick = () => this.buySaleWeaponUnlock(def.id);
+    }
+
+    const desc = def.desc + ' · ' + role + hint;
+    wepBox.appendChild(this.createHubShopCard({
+      ico: def.ico,
+      name: def.name,
+      desc,
+      priceText,
+      extraClass,
+      disabled,
+      onClick,
+    }));
   }
 };
 
@@ -163,7 +159,7 @@ Game.prototype.buySaleWeaponUnlock = function (id) {
   this.bankCoins -= cost;
   this.saleUnlockedWeapons.push(id);
   this.persist();
-  this.renderHub();
+  this.renderBoosters();
   sfx.shop();
 };
 
@@ -178,6 +174,6 @@ Game.prototype.buySaleStartPassive = function (id) {
   this.bankCoins -= cost;
   this.saleStartPassives[id] = lv + 1;
   this.persist();
-  this.renderHub();
+  this.renderBoosters();
   sfx.shop();
 };

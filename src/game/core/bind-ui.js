@@ -24,12 +24,9 @@ Object.assign(Game.prototype, {
         }
       };
     }
-    document.getElementById('hub-tab-prep').onclick = () => this.setHubTab('prep');
-    const tabGear = document.getElementById('hub-tab-gear');
-    if (tabGear) tabGear.onclick = () => this.setHubTab('gear');
-    document.getElementById('hub-tab-book').onclick = () => this.setHubTab('book');
-    const backBook = document.getElementById('hub-back-modes-book');
-    if (backBook) backBook.onclick = () => this.setHubTab('prep');
+    document.getElementById('hub-tab-passives')?.addEventListener('click', () => this.setHubPrepTab('passives'));
+    document.getElementById('hub-tab-weapons')?.addEventListener('click', () => this.setHubPrepTab('weapons'));
+    document.getElementById('hub-back-main')?.addEventListener('click', () => this.openMainMenu());
     document.getElementById('btn-settings').onclick = () => this.openSettings();
     document.getElementById('btn-settings-close').onclick = () => this.closeSettings();
     document.getElementById('tog-sound').onclick = () => {

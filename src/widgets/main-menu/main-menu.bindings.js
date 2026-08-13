@@ -30,18 +30,6 @@ Object.assign(Game.prototype, {
         onClick: actions[i],
       }));
     });
-
-    const backWrap = document.getElementById('boosters-back-wrap');
-    if (backWrap) {
-      backWrap.innerHTML = '';
-      backWrap.appendChild(UiButton.create({
-        text: '← Назад',
-        variant: 'menu',
-        size: 'md',
-        full: true,
-        onClick: () => this.openMainMenu(),
-      }));
-    }
   },
 
   openMainMenu() {
