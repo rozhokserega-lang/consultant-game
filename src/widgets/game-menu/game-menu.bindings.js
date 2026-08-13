@@ -54,6 +54,7 @@ Object.assign(Game.prototype, {
     document.getElementById('game-menu-overlay').classList.add('show');
     document.getElementById('settings-overlay')?.classList.remove('show');
     this.paused = true;
+    this.refreshPauseUI();
     this.refreshMusicState();
     sfx.click();
   },
@@ -63,6 +64,7 @@ Object.assign(Game.prototype, {
     const root = document.getElementById('game-menu-root');
     if (root && typeof GameMenu !== 'undefined') GameMenu.showView(root, 'main');
     if (!this.gameOver && !this.won) this.paused = false;
+    this.refreshPauseUI();
     this.refreshMusicState();
     sfx.click();
   },

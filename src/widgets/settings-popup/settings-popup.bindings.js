@@ -6,6 +6,7 @@ Object.assign(Game.prototype, {
     document.getElementById('settings-overlay').classList.add('show');
     if (!this.gameOver && !this.won) this.paused = true;
     document.getElementById('game-menu-overlay')?.classList.remove('show');
+    this.refreshPauseUI();
     this.refreshMusicState();
   },
 
@@ -14,21 +15,20 @@ Object.assign(Game.prototype, {
     if (this.inMainMenu) {
       this.paused = true;
       document.getElementById('main-menu-overlay').classList.add('show');
+      this.refreshPauseUI();
       this.refreshMusicState();
       return;
     }
     if (this.isBoostersOpen()) {
       this.paused = true;
+      this.refreshPauseUI();
       this.refreshMusicState();
-      return;
-    }
-    if (!this.gameOver && !this.won && this.paused) {
-      this.openGameMenu();
       return;
     }
     if (!this.gameOver && !this.won) {
       this.paused = false;
     }
+    this.refreshPauseUI();
     this.refreshMusicState();
   },
 

@@ -53,6 +53,7 @@ Object.assign(Game.prototype, {
     this.resetSaleGame();
     requestAnimationFrame(() => this.resize());
     this.refreshMusicState();
+    this.refreshPauseUI();
     sfx.click();
   },
 
@@ -147,21 +148,50 @@ Object.assign(Game.prototype, {
     this.wave = 1;
     this.wavePhase = 'sale';
     this.refreshMusicState();
+    this.refreshPauseUI();
     sfx.click();
+  },
+
+  refreshPauseUI() {
+    const inRun = !this.inMainMenu && !this.isBoostersOpen() && !this.gameOver && !this.won
+      && !this.choosingUpgrade && !this.shopping;
+    const showPlay = inRun && this.paused;
+
+    const battlePause = document.getElementById('btn-battle-pause');
+    if (battlePause) {
+      battlePause.classList.toggle('is-paused', showPlay);
+      battlePause.title = showPlay ? 'Продолжить' : 'Пауза';
+      battlePause.setAttribute('aria-label', showPlay ? 'Продолжить' : 'Пауза');
+    }
+
+    const legacyPause = document.getElementById('btn-pause');
+    if (legacyPause) {
+      legacyPause.textContent = showPlay ? '▶' : '⏸';
+      legacyPause.title = showPlay ? 'Продолжить' : 'Пауза';
+    }
   },
 
   togglePause(force) {
     if (this.isBoostersOpen() || this.inMainMenu || this.gameOver || this.won || this.choosingUpgrade || this.shopping) return;
+
     const gameMenuOpen = document.getElementById('game-menu-overlay')?.classList.contains('show');
-    if (force === true) {
-      if (!gameMenuOpen) this.openGameMenu();
+    const settingsOpen = document.getElementById('settings-overlay')?.classList.contains('show');
+
+    if (gameMenuOpen) {
+      if (force !== true) this.closeGameMenu();
       return;
     }
-    if (force === false) {
-      if (gameMenuOpen) this.closeGameMenu();
+    if (settingsOpen) {
+      if (force !== true) this.closeSettings();
       return;
     }
-    if (gameMenuOpen) this.closeGameMenu();
-    else this.openGameMenu();
+
+    if (force === true) this.paused = true;
+    else if (force === false) this.paused = false;
+    else this.paused = !this.paused;
+
+    this.refreshPauseUI();
+    this.refreshMusicState();
+    sfx.click();
   },
 });

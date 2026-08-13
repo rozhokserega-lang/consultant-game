@@ -270,6 +270,28 @@ body.sale-mode:not(.hub-mode):not(.main-menu-mode) .battle-bar__xp-row {
     1px 1px 0 #000;
 }
 
+/* Play icon — triangle when paused */
+.battle-bar__btn.is-paused .battle-bar__pause-icon {
+  gap: 0;
+}
+
+.battle-bar__btn.is-paused .battle-bar__pause-icon::before {
+  width: 0;
+  height: 0;
+  margin-left: 3px;
+  background: transparent;
+  border-style: solid;
+  border-width: 9px 0 9px 14px;
+  border-color: transparent transparent transparent #fff;
+  box-shadow: none;
+  filter: drop-shadow(-1px -1px 0 #000) drop-shadow(1px -1px 0 #000)
+    drop-shadow(-1px 1px 0 #000) drop-shadow(1px 1px 0 #000);
+}
+
+.battle-bar__btn.is-paused .battle-bar__pause-icon::after {
+  display: none;
+}
+
 /* Gear icon */
 .battle-bar__gear-icon {
   width: 18px;
