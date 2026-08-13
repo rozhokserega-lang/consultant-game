@@ -38,7 +38,7 @@ const EXTRACT_MAX_FLOOR = 3;
  * Карта выбирается в buildExtractRaidWorld.
  */
 const EXTRACT_FLOOR_DEFS = {
-  1: { label: '1 этаж', hpMul: 1, spdMul: 1, lootMul: 1 },
-  2: { label: '2 этаж', hpMul: 1.35, spdMul: 1.08, lootMul: 1.55 },
-  3: { label: '3 этаж VIP', hpMul: 1.85, spdMul: 1.16, lootMul: 2.15 },
+  1: { label: '1 этаж · Спорттовары', name: 'Спорттовары', ico: '⚽', hpMul: 1, spdMul: 1, lootMul: 1 },
+  2: { label: '2 этаж · Галерея', name: 'Галерея', ico: '🏬', hpMul: 1.35, spdMul: 1.08, lootMul: 1.55 },
+  3: { label: '3 этаж · VIP', name: 'VIP', ico: '🪪', hpMul: 1.85, spdMul: 1.16, lootMul: 2.15 },
 };

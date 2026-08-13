@@ -2,6 +2,10 @@
 
 Object.assign(Game.prototype, {
   generateZones() {
+    if (this.getPaintedArenaWalk && this.getPaintedArenaWalk()) {
+      this.zones = [];
+      return;
+    }
     const th = this.getArenaTheme();
     const b = this.getArenaBounds();
     this.zones = (th.zones || []).map(z => {

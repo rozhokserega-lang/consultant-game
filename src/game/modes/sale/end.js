@@ -24,6 +24,23 @@ Game.prototype.endSaleGame = function (won, killer) {
   this.bankCoins += bankGain;
   const matGain = this._gearRunMatGain || 0;
   const kpiGain = this._gearRunKpiGain || 0;
+  let heroUnlockName = '';
+  if (won && typeof this.unlockSaleHeroesForSaleWin === 'function') {
+    const fresh = this.unlockSaleHeroesForSaleWin(this.selectedArena || 'sport');
+    if (fresh.length) {
+      heroUnlockName = fresh.map((id) => {
+        const h = SALE_HEROES[id];
+        return h ? ((h.ico || '') + ' ' + h.name) : id;
+      }).join(', ');
+    }
+  }
+  let arenaUnlockName = '';
+  if (won && typeof this.unlockNextSaleArena === 'function') {
+    const nextId = this.unlockNextSaleArena();
+    if (nextId && typeof ARENA_THEMES !== 'undefined' && ARENA_THEMES[nextId]) {
+      arenaUnlockName = (ARENA_THEMES[nextId].ico || '') + ' ' + ARENA_THEMES[nextId].name;
+    }
+  }
   this.persist();
 
   let subExtra = '';
@@ -45,7 +62,7 @@ Game.prototype.endSaleGame = function (won, killer) {
   this.setEndOverlayState(won);
   document.getElementById('end-title').textContent = won ? 'РАСПРОДАЖА ЗАКРЫТА!' : 'ВАС РАСТОПТАЛИ';
   document.getElementById('end-sub').textContent = won
-    ? `Продержался 20:00. В банк: +${bankGain}🪙${subExtra}`
+    ? `Продержался 20:00. В банк: +${bankGain}🪙${subExtra}${arenaUnlockName ? ' · открыта арена ' + arenaUnlockName : ''}${heroUnlockName ? ' · открыт ' + heroUnlockName : ''}`
     : `${killer ? 'Причина: ' + killer + '. ' : ''}Время ${mins}:${String(secs).padStart(2, '0')}. В банк: +${bankGain}🪙${subExtra}`;
   document.getElementById('end-time').textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   document.getElementById('end-wave').textContent = String(waveLevel);

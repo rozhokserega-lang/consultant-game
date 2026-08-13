@@ -60,18 +60,19 @@ Game.prototype.migrateSaleWeaponId = function (id) {
   return SALE_WEAPON_MIGRATE[id] || id;
 };
 
-/** Оружие в пуле: хаб = ранний ассортимент; этаж ТЦ; после 6 мин / 12 ур. — весь зал. */
+/** Оружие в пуле: хаб-ассортимент, стартер героя; после 6 мин / 12 ур. — весь зал. */
 Game.prototype.saleWeaponInCatalog = function (id) {
   id = this.migrateSaleWeaponId(id);
   const def = SALE_WEAPONS[id];
   if (!def || def.evolved) return false;
+  if (typeof this.isSaleWeaponHeroUnlocked === 'function' && !this.isSaleWeaponHeroUnlocked(id)) {
+    return false;
+  }
   const banTypes = (this.saleContract && this.saleContract.banTypes) || [];
   if (banTypes.includes(def.type)) return false;
   if (id === 'receipt') return true;
   const hero = getSaleHero(this.saleHeroId || this.selectedHeroId);
   if (hero.starterWeapon === id) return true;
-  const floor = this.getSaleFloor();
-  if (floor && floor.weapons && floor.weapons.includes(id)) return true;
   if ((this.saleRunUnlocks || []).includes(id)) return true;
   const unlocked = (this.saleUnlockedWeapons || ['receipt']).map((x) => this.migrateSaleWeaponId(x));
   if (unlocked.includes(id)) return true;

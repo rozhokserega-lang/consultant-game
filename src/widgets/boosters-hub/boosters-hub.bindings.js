@@ -138,7 +138,6 @@ Object.assign(Game.prototype, {
     const tabBook = document.getElementById('hub-tab-book');
     if (tabPrep) {
       tabPrep.classList.toggle('on', onPrep);
-      tabPrep.textContent = 'Подготовка · Распродажа';
     }
     if (tabGear) tabGear.classList.toggle('on', onGear);
     if (tabBook) tabBook.classList.toggle('on', onBook);

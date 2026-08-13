@@ -98,7 +98,11 @@ Game.prototype.renderEquipHub = function () {
   }
   if (heroPick) {
     heroPick.innerHTML = '';
-    for (const h of Object.values(SALE_HEROES)) {
+    const order = (typeof SALE_HERO_UNLOCK_ORDER !== 'undefined') ? SALE_HERO_UNLOCK_ORDER : Object.keys(SALE_HEROES);
+    for (const id of order) {
+      if (typeof this.isSaleHeroUnlocked === 'function' && !this.isSaleHeroUnlocked(id)) continue;
+      const h = SALE_HEROES[id];
+      if (!h) continue;
       const el = document.createElement('button');
       el.type = 'button';
       el.className = 'hub-card' + (this.selectedHeroId === h.id ? ' sel' : '');

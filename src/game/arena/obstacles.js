@@ -3,6 +3,7 @@
 Object.assign(Game.prototype, {
   generateObstacles() {
     this.obstacles = [];
+    if (this.getPaintedArenaWalk && this.getPaintedArenaWalk()) return;
     const th = this.getArenaTheme();
     const defs = [...(th.obstacles || [
       { x: 0.18, y: 0.22, sprite: 'bench', cw: 70, ch: 28 },

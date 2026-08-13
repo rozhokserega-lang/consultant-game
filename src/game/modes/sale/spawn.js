@@ -21,6 +21,10 @@ Game.prototype.spawnSaleEnemy = function (forcedType) {
   else { x = cam.x - margin; y = rand(cam.y - 40, cam.y + vh + 40); }
   x = Math.max(40, Math.min(this.worldW - 40, x));
   y = Math.max(40, Math.min(this.worldH - 40, y));
+  if (typeof this.clampPointToPaintedWalk === 'function') {
+    const p = this.clampPointToPaintedWalk(x, y, 24);
+    if (p) { x = p.x; y = p.y; }
+  }
 
   let type = forcedType || saleEnemyType(this.saleTime);
   if (!forcedType && this.saleForceTypes && this.saleForceTypes.length) {

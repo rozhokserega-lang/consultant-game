@@ -49,3 +49,51 @@
   color: rgba(255, 255, 255, 0.85);
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
 }
+
+.main-menu-dialog {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: none;
+  align-items: stretch;
+  justify-content: center;
+  background: var(--c-scrim-solid);
+  padding: max(8px, env(safe-area-inset-top, 0px)) 10px max(10px, env(safe-area-inset-bottom, 0px));
+}
+
+.main-menu-dialog.show {
+  display: flex;
+}
+
+.main-menu-dialog-panel {
+  max-width: 640px;
+  width: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  overflow: hidden;
+  padding: 12px;
+  margin: 0 auto;
+}
+
+.main-menu-dialog-panel h2 {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.main-menu-dialog-panel > p {
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.main-menu-dialog-panel .hub-scroll {
+  text-align: left;
+}
+
+.main-menu-dialog-footer {
+  flex-shrink: 0;
+  padding-top: 8px;
+  margin-top: 4px;
+  border-top: 1px solid var(--c-border-dim);
+}

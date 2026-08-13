@@ -2,6 +2,14 @@
 
 function clampEntityToArena(ent, worldW, worldH, game) {
   const m = ent.r + 5;
+  if (game && typeof game.clampPointToPaintedWalk === 'function') {
+    const p = game.clampPointToPaintedWalk(ent.x, ent.y, m);
+    if (p) {
+      ent.x = p.x;
+      ent.y = p.y;
+      return;
+    }
+  }
   if (game && typeof game.getArenaBounds === 'function') {
     const b = game.getArenaBounds();
     ent.x = Math.max(b.x0 + m, Math.min(b.x1 - m, ent.x));

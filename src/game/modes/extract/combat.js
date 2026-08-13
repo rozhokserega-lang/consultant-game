@@ -357,6 +357,7 @@ Object.assign(Game.prototype, {
   },
 
   succeedExtractRaid() {
+    const floorReached = this.extractFloor || 1;
     const pack = this.extractBackpack || [];
     let n = 0;
     let value = 0;
@@ -376,16 +377,27 @@ Object.assign(Game.prototype, {
     this.extractPhase = 'hub';
     this.extractFocus = null;
     this.closeExtractShop();
+    let heroUnlockLine = '';
+    if (typeof this.unlockSaleHeroesForExtractFloor === 'function') {
+      const fresh = this.unlockSaleHeroesForExtractFloor(floorReached);
+      if (fresh.length) {
+        heroUnlockLine = ' · открыт ' + fresh.map((id) => {
+          const h = SALE_HEROES[id];
+          return h ? ((h.ico || '') + ' ' + h.name) : id;
+        }).join(', ');
+      }
+    }
     this.persistExtract();
+    if (heroUnlockLine) this.persist();
     this.buildExtractHubWorld();
     this.refreshExtractHud();
     if (n > 0) {
       this.showExtractBanner(
-        `Эвакуация! ${n} шт. (~${value}🪙) · вынос всего ${meta.totalExtractedValue|0}`,
+        `Эвакуация! ${n} шт. (~${value}🪙) · вынос всего ${meta.totalExtractedValue|0}${heroUnlockLine}`,
         3.4,
       );
     } else {
-      this.showExtractBanner('Эвакуация без лута. Можно вернуться.', 2.6);
+      this.showExtractBanner('Эвакуация без лута. Можно вернуться.' + heroUnlockLine, 2.6);
     }
     sfx.win();
     this.refreshMusicState();

@@ -169,6 +169,32 @@ Game.prototype.buildSaleUpgradeChoices = function () {
   return picked;
 };
 
+/** Карточка закроет рецепт эво (недостающая пассивка / докачка базы до max) или сама является эво. */
+Game.prototype.saleChoiceUnlocksEvo = function (up) {
+  if (!up || typeof SALE_EVOLUTIONS === 'undefined') return null;
+  if (up.kind === 'evolve') {
+    const ev = SALE_EVOLUTIONS.find((e) => e.into === up.id);
+    return { name: (ev && ev.name) || up.ttl, into: up.id };
+  }
+  for (const ev of SALE_EVOLUTIONS) {
+    if (this.saleWeapons && this.saleWeapons[ev.into]) continue;
+    const fromMax = (SALE_WEAPONS[ev.from] && SALE_WEAPONS[ev.from].max) || 5;
+    const fromLv = (this.saleWeapons && this.saleWeapons[ev.from]) || 0;
+    const havePass = ev.needPassive
+      ? ((this.salePassives && this.salePassives[ev.needPassive]) || 0) > 0
+      : true;
+    if (fromLv >= fromMax && havePass) continue;
+    let nextFrom = fromLv;
+    let nextPass = havePass;
+    if (up.kind === 'weapon_up' && up.id === ev.from) nextFrom = fromLv + 1;
+    if (up.kind === 'passive' && up.id === ev.needPassive) nextPass = true;
+    if (nextFrom >= fromMax && nextPass) {
+      return { name: ev.name, into: ev.into };
+    }
+  }
+  return null;
+};
+
 Game.prototype.openSaleUpgradeUI = function () {
   this.choosingUpgrade = true;
   this.paused = true;
@@ -199,7 +225,16 @@ Game.prototype.openSaleUpgradeUI = function () {
   if (typeof LevelUpPopup !== 'undefined') {
     LevelUpPopup.open({
       title: headerTitle,
-      cards: this.upgradeChoices.map((up) => saleChoiceToCard(up)),
+      cards: this.upgradeChoices.map((up) => {
+        const card = saleChoiceToCard(up);
+        const evo = this.saleChoiceUnlocksEvo(up);
+        if (evo) {
+          card.evoReady = true;
+          card.evoName = evo.name;
+          card.isUpgrade = true;
+        }
+        return card;
+      }),
       banishMode: !!this._saleBanishMode,
       onPick: (i) => (this._saleBanishMode ? this.banSaleUpgrade(i) : this.pickSaleUpgrade(i)),
     });

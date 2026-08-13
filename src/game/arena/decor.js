@@ -3,6 +3,7 @@
 Object.assign(Game.prototype, {
   generateStorefronts() {
     this.storefronts = [];
+    if (this.getPaintedArenaWalk && this.getPaintedArenaWalk()) return;
     const th = this.getArenaTheme();
     const primary = th.store || 'store_food';
     const y = 6;
@@ -18,6 +19,7 @@ Object.assign(Game.prototype, {
 
   generateWallDecor() {
     this.wallDecor = [];
+    if (this.getPaintedArenaWalk && this.getPaintedArenaWalk()) return;
     const th = this.getArenaTheme();
     const signs = th.wallSigns || ['wall_sale', 'wall_dir', 'wall_exit', 'wall_nosmoke'];
     const f = ARENA_FENCE;

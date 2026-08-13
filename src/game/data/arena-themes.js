@@ -75,23 +75,18 @@ const ARENA_THEMES = {
     id: 'sport', name: 'Sport', ico: '⚽', tile: 'tile_speckle', store: 'store_sport',
     fenceStripe: '#2471a3',
     wallSigns: ['wall_sale', 'wall_exit', 'wall_dir', 'wall_nosmoke'],
-    obstacles: [
-      { x: 0.18, y: 0.22, sprite: 'sport_shelf', cw: 78, ch: 30, dw: 100, dh: 90 },
-      { x: 0.48, y: 0.18, sprite: 'shoe_shelf', cw: 84, ch: 30, dw: 105, dh: 88 },
-      { x: 0.75, y: 0.24, sprite: 'vending_hd', cw: 40, ch: 28, dw: 52, dh: 90 },
-      { x: 0.12, y: 0.50, sprite: 'sport_shelf', cw: 78, ch: 30, dw: 100, dh: 90 },
-      { x: 0.40, y: 0.52, sprite: 'checkout_hd', cw: 64, ch: 30, dw: 78, dh: 90 },
-      { x: 0.65, y: 0.50, sprite: 'sport_shelf', cw: 78, ch: 30, dw: 100, dh: 90 },
-      { x: 0.88, y: 0.48, sprite: 'shoe_shelf', cw: 84, ch: 30, dw: 105, dh: 88 },
-      { x: 0.25, y: 0.80, sprite: 'bench', cw: 64, ch: 26, dw: 78, dh: 48 },
-      { x: 0.55, y: 0.78, sprite: 'sport_shelf_n', cw: 36, ch: 28, dw: 48, dh: 88 },
-      { x: 0.80, y: 0.80, sprite: 'barrel_red', cw: 30, ch: 28, dw: 40, dh: 55 },
-      { x: 0.08, y: 0.72, sprite: 'plant_cone', cw: 22, ch: 22, dw: 30, dh: 70 },
-      { x: 0.92, y: 0.30, sprite: 'fire_box', cw: 22, ch: 24, dw: 28, dh: 62 },
-    ],
-    zones: [
-      { type: 'checkout', x: 0.65, y: 0.18, w: 160, h: 90 },
-      { type: 'slippery', x: 0.30, y: 0.55, w: 140, h: 90 },
-    ],
+    /** Нарисованный фон: пропсы и забор уже на текстуре. */
+    paintedSrc: 'assets/sale/sport-bg.jpg',
+    /** Зелёная маска: трапеция проходимого поля (доли 0..1). */
+    walk: {
+      y0: 0.095, y1: 0.905,
+      topX0: 0.050, topX1: 0.952,
+      botX0: 0.021, botX1: 0.975,
+    },
+    obstacles: [],
+    zones: [],
   },
 };
+
+/** Порядок открытия арен: следующая после прохождения текущей. */
+const SALE_ARENA_UNLOCK_ORDER = ['sport', 'food', 'clothes', 'tech'];

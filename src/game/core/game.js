@@ -21,8 +21,11 @@ class Game {
     this.hubTab = 'prep';
     this.hubScreen = 'prep'; // prep | book (режим «Смена» убран)
     this.gameMode = 'sale';
-    this.selectedArena = this.save.selectedArena || 'food';
+    this.selectedArena = this.save.selectedArena || 'sport';
     this.selectedChallenge = 'none';
+    const saleArenas = Array.isArray(this.save.saleUnlockedArenas) ? this.save.saleUnlockedArenas : [];
+    this.saleUnlockedArenas = Array.from(new Set(['sport', ...saleArenas.filter((id) => ARENA_THEMES && ARENA_THEMES[id])]));
+    if (!this.saleUnlockedArenas.includes(this.selectedArena)) this.selectedArena = 'sport';
     const saleWeps = Array.isArray(this.save.saleUnlockedWeapons) ? this.save.saleUnlockedWeapons : [];
     const migratedSale = saleWeps.map((id) => {
       if (id === 'hammer' || id === 'tags' || id === 'scanner') return 'receipt';
@@ -31,7 +34,10 @@ class Game {
     }).filter((id) => typeof SALE_WEAPONS === 'undefined' || SALE_WEAPONS[id]);
     this.saleUnlockedWeapons = Array.from(new Set(['receipt', ...migratedSale]));
     this.saleStartPassives = Object.assign({}, this.save.saleStartPassives || {});
-    this.selectedHeroId = this.save.selectedHeroId || 'lena';
+    this.selectedHeroId = this.save.selectedHeroId || 'igor';
+    const saleHeroes = Array.isArray(this.save.saleUnlockedHeroes) ? this.save.saleUnlockedHeroes : [];
+    this.saleUnlockedHeroes = Array.from(new Set(['igor', ...saleHeroes.filter((id) => SALE_HEROES && SALE_HEROES[id])]));
+    if (!this.saleUnlockedHeroes.includes(this.selectedHeroId)) this.selectedHeroId = 'igor';
     this.selectedFloorId = this.save.selectedFloorId || 'grocery';
     this.selectedContractId = this.save.selectedContractId || 'none';
     this.gearVersion = this.save.gearVersion || 0;

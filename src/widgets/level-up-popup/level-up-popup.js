@@ -135,7 +135,7 @@
 
     if (!title) title = '?';
 
-    return { title, level, description, icon, isUpgrade };
+    return { title, level, description, icon, isUpgrade, evoReady: Boolean(choice.evoReady) };
   }
 
   /**
@@ -146,9 +146,12 @@
    */
   function createCard(card, index, onClick) {
     const btn = document.createElement('button');
-    btn.className = 'level-up-card';
+    btn.className = 'level-up-card' + (card.evoReady ? ' level-up-card--evo' : '');
     btn.type = 'button';
     btn.dataset.index = String(index);
+    if (card.evoReady) {
+      btn.title = card.evoName ? `Эволюция: ${card.evoName}` : 'Эволюция';
+    }
 
     const iconWrap = document.createElement('span');
     iconWrap.className = 'level-up-card__icon';
@@ -181,7 +184,7 @@
     }
 
     const badge = document.createElement('span');
-    badge.className = 'level-up-card__badge' + (card.isUpgrade ? '' : ' level-up-card__badge--hidden');
+    badge.className = 'level-up-card__badge' + (card.isUpgrade || card.evoReady ? '' : ' level-up-card__badge--hidden');
 
     const arrow = document.createElement('span');
     arrow.className = 'level-up-card__badge-arrow';
@@ -189,7 +192,7 @@
 
     const badgeText = document.createElement('span');
     badgeText.className = 'level-up-card__badge-text';
-    badgeText.textContent = 'UPGRADE';
+    badgeText.textContent = card.evoReady ? 'ЭВО' : 'UPGRADE';
 
     badge.appendChild(arrow);
     badge.appendChild(badgeText);

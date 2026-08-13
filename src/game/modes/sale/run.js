@@ -107,7 +107,8 @@ Game.prototype.resetSaleGame = function () {
   this.saleRunUnlocks = [];
   this._saleSynSeen = {};
   this.saleFloorId = this.selectedFloorId || 'grocery';
-  this.saleContract = SALE_CONTRACTS.find((c) => c.id === (this.selectedContractId || 'none')) || SALE_CONTRACTS[0];
+  this.saleContract = (typeof SALE_CONTRACTS !== 'undefined' && SALE_CONTRACTS.find((c) => c.id === 'none'))
+    || { id: 'none', banTypes: [], coinMul: 1 };
   this._saleShieldT = 0;
   this._saleOrbitVolleyCd = {};
   // баннер контракта/этажа — после старта кадра (см. ниже)
@@ -127,23 +128,27 @@ Game.prototype.resetSaleGame = function () {
   }
   // LN-style: в руки только стартер героя. Купленное в хабе — ассортимент пула, не инвентарь.
   const heroStart = getSaleHero(this.selectedHeroId);
-  let starter = heroStart.starterWeapon || 'receipt';
-  if (!SALE_WEAPONS[starter] || SALE_WEAPONS[starter].evolved) starter = 'receipt';
-  // Контракт может банить тип стартера (Лена + «Без орбит» = чек глушится) — фолбэк.
+  let starter = heroStart.starterWeapon || 'coffee';
+  if (!SALE_WEAPONS[starter] || SALE_WEAPONS[starter].evolved) starter = 'coffee';
+  // Контракт может банить тип стартера (Игорь + «Без луж» = кофе глушится) — фолбэк.
   this._saleStarterFallback = null;
   const contractBan = (this.saleContract && this.saleContract.banTypes) || [];
   const starterDef0 = SALE_WEAPONS[starter];
   if (starterDef0 && contractBan.includes(starterDef0.type)) {
     const pickSafe = () => {
-      for (const id of ['mop', 'phone', 'coffee', 'card', 'speaker']) {
+      for (const id of ['coffee', 'receipt', 'card', 'speaker', 'phone', 'mop']) {
         const d = SALE_WEAPONS[id];
-        if (d && !d.evolved && !contractBan.includes(d.type)) return id;
+        if (!d || d.evolved || contractBan.includes(d.type)) continue;
+        if (typeof this.isSaleWeaponHeroUnlocked === 'function' && !this.isSaleWeaponHeroUnlocked(id)) continue;
+        return id;
       }
       for (const id of Object.keys(SALE_WEAPONS)) {
         const d = SALE_WEAPONS[id];
-        if (d && !d.evolved && !contractBan.includes(d.type)) return id;
+        if (!d || d.evolved || contractBan.includes(d.type)) continue;
+        if (typeof this.isSaleWeaponHeroUnlocked === 'function' && !this.isSaleWeaponHeroUnlocked(id)) continue;
+        return id;
       }
-      return 'mop';
+      return 'receipt';
     };
     const safe = pickSafe();
     this._saleStarterFallback = { from: starter, to: safe };
@@ -198,10 +203,8 @@ Game.prototype.resetSaleGame = function () {
   for (let i = 0; i < 8; i++) this.spawnSaleEnemy();
   this._saleLsCd = 0;
 
-  const fl = this.getSaleFloor();
   const c = this.saleContract;
   const bits = [];
-  if (fl) bits.push(fl.ico + ' ' + fl.name);
   if (c && c.id !== 'none') bits.push(c.ico + ' ' + c.name);
   if (this._saleStarterFallback) {
     const to = SALE_WEAPONS[this._saleStarterFallback.to];
@@ -234,7 +237,7 @@ Game.prototype.applySaleHeroToPlayer = function () {
 };
 
 Game.prototype.getSaleFloor = function () {
-  return SALE_FLOORS.find((f) => f.id === (this.saleFloorId || this.selectedFloorId)) || SALE_FLOORS[0];
+  return null;
 };
 
 Game.prototype.saleSynergyOn = function (key) {

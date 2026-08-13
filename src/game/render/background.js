@@ -3,6 +3,13 @@
 Object.assign(Game.prototype, {
   drawBackground() {
     const WW = this.worldW, WH = this.worldH;
+    const paintedId = this.selectedArena;
+    if (this.getPaintedArenaWalk && this.getPaintedArenaWalk()) {
+      if (typeof drawSaleArenaBg === 'function' && drawSaleArenaBg(ctx, paintedId, WW, WH)) return;
+      ctx.fillStyle = '#c4b496';
+      ctx.fillRect(0, 0, WW, WH);
+      return;
+    }
     ctx.fillStyle = '#d9d2c5';
     ctx.fillRect(0, 0, WW, WH);
 
