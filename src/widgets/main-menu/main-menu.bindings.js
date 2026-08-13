@@ -77,17 +77,16 @@ Object.assign(Game.prototype, {
     const grid = document.getElementById('main-menu-setup-grid');
     const back = document.getElementById('main-menu-setup-back');
     if (!dialog || !grid || !back) return null;
-    if (titleEl) titleEl.textContent = title;
+    if (titleEl) titleEl.textContent = title.toUpperCase();
     if (hintEl) hintEl.textContent = hint;
     grid.innerHTML = '';
     back.innerHTML = '';
-    back.appendChild(UiButton.create({
-      text: '← Назад',
-      variant: 'menu',
-      size: 'md',
-      full: true,
-      onClick: onBack,
-    }));
+    const backBtn = document.createElement('button');
+    backBtn.type = 'button';
+    backBtn.className = 'sale-pick-back';
+    backBtn.textContent = '← Назад';
+    backBtn.onclick = onBack;
+    back.appendChild(backBtn);
     dialog.classList.add('show');
     dialog.setAttribute('aria-hidden', 'false');
     return grid;
@@ -115,9 +114,10 @@ Object.assign(Game.prototype, {
       if (!hero) continue;
       const unlocked = typeof this.isSaleHeroUnlocked !== 'function' || this.isSaleHeroUnlocked(id);
       grid.appendChild(this.createSaleStartCard({
-        title: `${hero.ico} ${hero.name}`,
+        ico: hero.ico,
+        title: hero.name,
         desc: hero.desc,
-        meta: !unlocked
+        action: !unlocked
           ? (hero.unlockHint || 'Закрыт')
           : (this.selectedHeroId === hero.id ? 'Выбран' : 'Выбрать'),
         selected: unlocked && this.selectedHeroId === hero.id,
@@ -152,9 +152,10 @@ Object.assign(Game.prototype, {
       if (!th) continue;
       const name = SALE_ARENA_MENU_NAMES[th.id] || th.name;
       grid.appendChild(this.createSaleStartCard({
-        title: `${th.ico} ${name}`,
-        desc: 'Арена распродажи',
-        meta: this.selectedArena === th.id ? 'Выбрана' : 'Выбрать',
+        ico: th.ico,
+        title: name,
+        desc: 'Арена распродажи · зал торгового центра',
+        action: this.selectedArena === th.id ? 'Выбрана' : 'Выбрать',
         selected: this.selectedArena === th.id,
         onClick: () => this.pickSaleStartArena(th.id),
       }));
@@ -168,13 +169,18 @@ Object.assign(Game.prototype, {
     this.startGame();
   },
 
-  createSaleStartCard({ title, desc, meta, selected, locked, onClick }) {
+  createSaleStartCard({ ico, title, desc, action, selected, locked, onClick }) {
     const el = document.createElement('button');
     el.type = 'button';
-    el.className = 'hub-card' + (selected ? ' sel' : '') + (locked ? ' locked' : '');
-    el.innerHTML = `<div class="ttl">${title}</div>`
-      + (desc ? `<div class="desc">${desc}</div>` : '')
-      + (meta ? `<div class="meta">${meta}</div>` : '');
+    el.className = 'sale-pick-card' + (selected ? ' sel' : '') + (locked ? ' locked' : '');
+    el.innerHTML = `<div class="sale-pick-card__body">`
+      + `<div class="sale-pick-card__icon"><span class="sale-pick-card__icon-inner">${ico || '◆'}</span></div>`
+      + `<div class="sale-pick-card__content">`
+      + `<div class="sale-pick-card__name">${title || ''}</div>`
+      + (desc ? `<div class="sale-pick-card__desc">${desc}</div>` : '')
+      + `<div class="sale-pick-card__footer">`
+      + `<span class="sale-pick-card__action">${action || ''}</span>`
+      + `</div></div></div>`;
     if (locked) el.disabled = true;
     else el.onclick = onClick;
     return el;

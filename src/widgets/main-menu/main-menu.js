@@ -15,14 +15,16 @@
       <div class="actions-stack" id="main-menu-actions"></div>
     </div>
     <div class="main-menu-dialog" id="main-menu-setup" aria-hidden="true">
-      <div class="panel main-menu-dialog-panel">
-        <h2 id="main-menu-setup-title">Распродажа</h2>
-        <p id="main-menu-setup-hint">За кого играть?</p>
-        <div class="hub-scroll">
-          <div class="hub-grid" id="main-menu-setup-grid"></div>
+      <div class="sale-pick-shell">
+        <header class="sale-pick-header">
+          <h2 class="sale-pick-title" id="main-menu-setup-title">Распродажа</h2>
+        </header>
+        <div class="sale-pick-toolbar">
+          <div id="main-menu-setup-back"></div>
+          <p class="sale-pick-hint" id="main-menu-setup-hint">За кого играть?</p>
         </div>
-        <div class="main-menu-dialog-footer">
-          <div class="actions-stack" id="main-menu-setup-back"></div>
+        <div class="sale-pick-scroll">
+          <div class="sale-pick-list" id="main-menu-setup-grid"></div>
         </div>
       </div>
     </div>`;

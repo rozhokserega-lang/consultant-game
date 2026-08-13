@@ -50,50 +50,261 @@
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
 }
 
+/* ── Диалог выбора героя / арены (pixel-shop) ──────────────────────────── */
+
 .main-menu-dialog {
+  --sale-pick-frame: #4a5568;
+  --sale-pick-frame-dark: #2d3748;
+  --sale-pick-panel: #c8d4dc;
+  --sale-pick-panel-light: #dce4ea;
+  --sale-pick-card: #b8c6d0;
+  --sale-pick-inset: #9aabb8;
+  --sale-pick-text: #1a2332;
+  --sale-pick-muted: #3d4f5f;
+
   position: absolute;
   inset: 0;
   z-index: 3;
   display: none;
   align-items: stretch;
   justify-content: center;
-  background: var(--c-scrim-solid);
-  padding: max(8px, env(safe-area-inset-top, 0px)) 10px max(10px, env(safe-area-inset-bottom, 0px));
+  background: rgba(8, 10, 16, 0.72);
+  padding: max(8px, env(safe-area-inset-top, 0px)) 8px max(8px, env(safe-area-inset-bottom, 0px));
 }
 
 .main-menu-dialog.show {
   display: flex;
 }
 
-.main-menu-dialog-panel {
-  max-width: 640px;
+.sale-pick-shell {
+  max-width: 480px;
   width: 100%;
   max-height: 100%;
   display: flex;
   flex-direction: column;
-  text-align: center;
-  overflow: hidden;
-  padding: 12px;
   margin: 0 auto;
+  border: 4px solid var(--sale-pick-frame);
+  border-radius: 6px;
+  box-shadow:
+    inset 0 0 0 2px var(--sale-pick-frame-dark),
+    0 0 0 2px #111,
+    0 8px 24px rgba(0, 0, 0, 0.55);
+  background: linear-gradient(180deg, var(--sale-pick-panel-light) 0%, var(--sale-pick-panel) 100%);
+  overflow: hidden;
 }
 
-.main-menu-dialog-panel h2 {
-  font-size: 18px;
-  margin-bottom: 4px;
-}
-
-.main-menu-dialog-panel > p {
-  font-size: 12px;
-  margin-bottom: 6px;
-}
-
-.main-menu-dialog-panel .hub-scroll {
-  text-align: left;
-}
-
-.main-menu-dialog-footer {
+.sale-pick-header {
   flex-shrink: 0;
-  padding-top: 8px;
+  padding: 10px 12px;
+  border-bottom: 3px solid var(--sale-pick-frame);
+  background: linear-gradient(180deg, #5a6678 0%, #3d4654 100%);
+}
+
+.sale-pick-title {
+  margin: 0;
+  font-size: clamp(13px, 3.8vw, 16px);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 2px 2px 0 #000;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.sale-pick-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px 6px;
+  border-bottom: 2px solid var(--sale-pick-frame);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.sale-pick-hint {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sale-pick-muted);
+  line-height: 1.35;
+}
+
+.sale-pick-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 2px solid var(--sale-pick-frame);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #e8eef2 0%, #c8d2da 100%);
+  color: var(--sale-pick-text);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 2px 0 var(--sale-pick-frame-dark);
+}
+
+.sale-pick-back:hover {
+  border-color: #2d3748;
+  color: #000;
+}
+
+.sale-pick-back:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.18);
+}
+
+.sale-pick-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  padding: 10px;
+  background: linear-gradient(180deg, rgba(200, 212, 220, 0.55) 0%, rgba(184, 198, 208, 0.75) 100%);
+}
+
+.sale-pick-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Карточка героя / арены ────────────────────────────────────────────── */
+
+.sale-pick-card {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 3px solid var(--sale-pick-frame);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #d4dde4 0%, var(--sale-pick-card) 100%);
+  color: var(--sale-pick-text);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    0 2px 0 rgba(45, 55, 72, 0.35);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.sale-pick-card:hover:not(:disabled) {
+  border-color: #2d3748;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    0 0 0 1px rgba(45, 55, 72, 0.25),
+    0 3px 0 rgba(45, 55, 72, 0.4);
+}
+
+.sale-pick-card.sel {
+  border-color: #2a7a4b;
+  box-shadow:
+    inset 0 0 0 1px rgba(42, 122, 75, 0.35),
+    0 2px 0 rgba(30, 80, 50, 0.45);
+}
+
+.sale-pick-card.locked {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.sale-pick-card__body {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  min-height: 78px;
+  padding: 8px 10px 8px 8px;
+}
+
+.sale-pick-card__icon {
+  flex-shrink: 0;
+  width: 64px;
+}
+
+.sale-pick-card__icon-inner {
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  line-height: 1;
+  background: var(--sale-pick-inset);
+  border: 2px solid var(--sale-pick-frame-dark);
+  border-radius: 6px;
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.22),
+    0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+.sale-pick-card__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+
+.sale-pick-card__name {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sale-pick-text);
+  line-height: 1.25;
+}
+
+.sale-pick-card__desc {
+  font-size: 10px;
+  color: var(--sale-pick-muted);
+  line-height: 1.4;
   margin-top: 4px;
-  border-top: 1px solid var(--c-border-dim);
+}
+
+.sale-pick-card__footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.sale-pick-card__action {
+  display: inline-block;
+  padding: 5px 12px;
+  border: 2px solid var(--sale-pick-frame);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #eef2f5 0%, #cfd8df 100%);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sale-pick-text);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 2px 0 var(--sale-pick-frame-dark);
+}
+
+.sale-pick-card.sel .sale-pick-card__action {
+  border-color: #2a7a4b;
+  background: linear-gradient(180deg, #d8f0e0 0%, #a8d4b8 100%);
+  color: #1a4a30;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    0 2px 0 #1e5032;
+}
+
+.sale-pick-card.locked .sale-pick-card__action {
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  font-weight: 700;
+  color: #5a6678;
+  background: linear-gradient(180deg, #d8dfe4 0%, #b8c4cc 100%);
 }
