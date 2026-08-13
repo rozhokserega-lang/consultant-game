@@ -382,24 +382,33 @@ Game.prototype.renderSaleOverlays = function () {
     const x1 = this.player.x, y1 = this.player.y;
     const x2 = b.x2 != null ? b.x2 : x1 + Math.cos(b.angle) * b.length;
     const y2 = b.y2 != null ? b.y2 : y1 + Math.sin(b.angle) * b.length;
-    const grd = ctx.createLinearGradient(x1, y1, x2, y2);
-    grd.addColorStop(0, 'rgba(255,230,120,0.12)');
-    grd.addColorStop(0.4, 'rgba(255,210,60,0.4)');
-    grd.addColorStop(1, 'rgba(255,250,200,0.04)');
-    ctx.strokeStyle = grd;
-    ctx.lineWidth = Math.max(5, b.width * 0.35);
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,255,220,0.75)';
-    ctx.lineWidth = Math.max(2, b.width * 0.12);
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
-    drawSaleIcon(ctx, '🔦', x1 + Math.cos(b.angle) * 14, y1 + Math.sin(b.angle) * 14, 0.65, b.angle, 'flashlight', 2);
+    const hunter = b.weaponId === 'hunter';
+    const drew = typeof drawFlashlightBeam === 'function' && drawFlashlightBeam(
+      ctx, x1, y1, b.angle, b.length, b.width, {
+        hunter,
+        alpha: hunter ? 0.95 : 0.88,
+        filter: hunter ? 'hue-rotate(-18deg) saturate(1.15) brightness(1.12)' : '',
+      },
+    );
+    if (!drew) {
+      const grd = ctx.createLinearGradient(x1, y1, x2, y2);
+      grd.addColorStop(0, 'rgba(255,230,120,0.12)');
+      grd.addColorStop(0.4, 'rgba(255,210,60,0.4)');
+      grd.addColorStop(1, 'rgba(255,250,200,0.04)');
+      ctx.strokeStyle = grd;
+      ctx.lineWidth = Math.max(5, b.width * 0.35);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,220,0.75)';
+      ctx.lineWidth = Math.max(2, b.width * 0.12);
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
   }
 
   // бумеранги (карта)
