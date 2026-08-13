@@ -18,38 +18,28 @@
   let handlers = {};
   /** @type {HTMLButtonElement|null} */
   let rerollBtn = null;
-  /** @type {HTMLButtonElement|null} */
-  let banBtn = null;
-  /** @type {HTMLButtonElement|null} */
-  let skipBtn = null;
   /** @type {HTMLElement|null} */
   let rerollCountEl = null;
-  /** @type {HTMLElement|null} */
-  let banCountEl = null;
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
 
   /** @type {Record<string, string>} */
-  const ACTION_ICONS = {
-    reroll: '<path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>',
-    pin: '<path d="m16 4-6.5 6.5a4.5 4.5 0 1 0 6.5 6.5L22 10a7 7 0 1 0-10 10L4 22"/>',
-  };
+  const REROLL_ICON = '<path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>';
 
   /**
-   * @param {'reroll'|'pin'} name
    * @returns {SVGSVGElement}
    */
-  function createActionSvg(name) {
+  function createRerollSvg() {
     const svg = document.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('viewBox', '0 0 24 24');
     svg.setAttribute('class', 'level-up-popup__svg');
     svg.setAttribute('aria-hidden', 'true');
-    svg.innerHTML = ACTION_ICONS[name] || '';
+    svg.innerHTML = REROLL_ICON;
     return svg;
   }
 
   /**
-   * @param {{ id: string, ariaLabel: string, icon: 'reroll'|'pin', onClick: () => void }} options
+   * @param {{ id: string, ariaLabel: string, onClick: () => void }} options
    * @returns {{ btn: HTMLButtonElement, countEl: HTMLSpanElement }}
    */
   function createActionButton(options) {
@@ -64,7 +54,7 @@
 
     const iconWrap = document.createElement('span');
     iconWrap.className = 'level-up-popup__action-icon';
-    iconWrap.appendChild(createActionSvg(options.icon));
+    iconWrap.appendChild(createRerollSvg());
 
     const countEl = document.createElement('span');
     countEl.className = 'level-up-popup__action-count';
@@ -244,34 +234,13 @@
 
     const reroll = createActionButton({
       id: 'btn-upgrade-reroll',
-      icon: 'reroll',
       ariaLabel: 'Другие варианты',
       onClick: () => handlers.onReroll?.(),
     });
     rerollBtn = reroll.btn;
     rerollCountEl = reroll.countEl;
 
-    const ban = createActionButton({
-      id: 'btn-upgrade-banish',
-      icon: 'pin',
-      ariaLabel: 'Забанить карту',
-      onClick: () => handlers.onBanish?.(),
-    });
-    banBtn = ban.btn;
-    banCountEl = ban.countEl;
-
-    skipBtn = UiButton.create({
-      id: 'btn-upgrade-skip',
-      text: 'Skip',
-      variant: 'ghost',
-      size: 'sm',
-      className: 'button--skip level-up-popup__skip-btn',
-      onClick: () => handlers.onSkip?.(),
-    });
-
     footer.appendChild(rerollBtn);
-    footer.appendChild(banBtn);
-    footer.appendChild(skipBtn);
 
     root.appendChild(titleEl);
     root.appendChild(cardsEl);
@@ -322,16 +291,12 @@
   }
 
   /**
-   * @param {{ rerollsLeft?: number, banishesLeft?: number, banishMode?: boolean, choosingUpgrade?: boolean, showBan?: boolean, showSkip?: boolean }} state
+   * @param {{ rerollsLeft?: number, choosingUpgrade?: boolean }} state
    */
   function updateFooter(state = {}) {
     const {
       rerollsLeft = 0,
-      banishesLeft = 0,
-      banishMode = false,
       choosingUpgrade = false,
-      showBan = true,
-      showSkip = true,
     } = state;
 
     if (rerollBtn) {
@@ -341,20 +306,6 @@
       rerollBtn.title = rerollsLeft > 0
         ? `Другие варианты (${rerollsLeft})`
         : 'Рероллы закончились';
-    }
-
-    if (banBtn) {
-      banBtn.disabled = (banishesLeft <= 0 && !banishMode) || !choosingUpgrade;
-      banBtn.style.display = choosingUpgrade && showBan ? '' : 'none';
-      banBtn.classList.toggle('button--banish-active', !!banishMode);
-      setActionCount(banCountEl, banishesLeft, banishMode);
-      banBtn.title = banishMode
-        ? 'Выбери карту для бана'
-        : `Забанить (${banishesLeft})`;
-    }
-
-    if (skipBtn) {
-      skipBtn.style.display = choosingUpgrade && showSkip ? '' : 'none';
     }
   }
 

@@ -7,16 +7,6 @@ Object.assign(Game.prototype, {
 
     LevelUpPopup.init(overlay, {
       onReroll: () => this.rerollUpgradeChoices(),
-      onBanish: () => {
-        if (this.gameMode === 'sale' && typeof this.toggleSaleBanish === 'function') {
-          this.toggleSaleBanish();
-        }
-      },
-      onSkip: () => {
-        if (this.gameMode === 'sale' && typeof this.skipSaleUpgrade === 'function') {
-          this.skipSaleUpgrade();
-        }
-      },
     });
   },
 
@@ -24,11 +14,7 @@ Object.assign(Game.prototype, {
     if (typeof LevelUpPopup === 'undefined') return;
     LevelUpPopup.updateFooter({
       rerollsLeft: this.upgradeRerollsLeft | 0,
-      banishesLeft: this.saleBanishesLeft | 0,
-      banishMode: !!this._saleBanishMode,
       choosingUpgrade: !!this.choosingUpgrade,
-      showBan: this.gameMode === 'sale',
-      showSkip: this.gameMode === 'sale',
     });
   },
 

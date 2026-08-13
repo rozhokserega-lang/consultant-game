@@ -17,13 +17,13 @@ Object.assign(Game.prototype, {
     const el = document.createElement('button');
     el.type = 'button';
     el.className = 'hub-shop-item' + (extraClass ? ' ' + extraClass : '');
-    el.innerHTML = `<div class="hub-shop-item__top">`
-      + `<div class="hub-shop-item__icon">${ico || '◆'}</div>`
+    el.innerHTML = `<div class="hub-shop-item__body">`
+      + `<div class="hub-shop-item__icon"><span class="hub-shop-item__icon-inner">${ico || '◆'}</span></div>`
       + `<div class="hub-shop-item__info">`
       + `<div class="hub-shop-item__name">${name || ''}</div>`
       + `<div class="hub-shop-item__desc">${desc || ''}</div>`
       + `</div></div>`
-      + `<div class="hub-shop-item__price">${priceText || ''}</div>`;
+      + `<div class="hub-shop-item__price"><span class="hub-shop-item__price-text">${priceText || ''}</span></div>`;
     if (disabled) {
       el.disabled = true;
       el.classList.add('is-locked');
@@ -189,7 +189,7 @@ Object.assign(Game.prototype, {
 
     const titleEl = document.getElementById('hub-header-title');
     if (titleEl) {
-      titleEl.textContent = onGear ? 'ГАРДЕРОБ' : (onBook ? 'ЖАЛОБЫ' : 'УСИЛИТЕЛИ');
+      titleEl.textContent = onGear ? 'ГАРДЕРОБ' : (onBook ? 'ЖАЛОБЫ' : 'ПОДГОТОВКА');
     }
 
     document.getElementById('hub-pane-prep').classList.toggle('on', onPrep);

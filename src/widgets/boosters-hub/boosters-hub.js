@@ -12,17 +12,19 @@
   const TEMPLATE = `
     <div class="boosters-shell">
       <header class="hub-header">
-        <div class="hub-header__row">
-          <div class="hub-bank">
-            <span class="hub-bank__coin" aria-hidden="true"></span>
-            <b id="boosters-bank">0</b>
+        <div class="hub-header__top">
+          <div class="hub-header__left">
+            <div class="hub-bank">
+              <span class="hub-bank__coin" aria-hidden="true"></span>
+              <b id="boosters-bank">0</b>
+            </div>
+            <button type="button" class="hub-back-btn" id="hub-back-main">← НАЗАД</button>
           </div>
-          <h2 class="hub-header__title" id="hub-header-title">УСИЛИТЕЛИ</h2>
+          <h2 class="hub-header__title" id="hub-header-title">ПОДГОТОВКА</h2>
           <span class="hub-header__meta">
             <span id="hub-version" class="hub-version" title="Дев-панель">v?</span>
           </span>
         </div>
-        <button type="button" class="hub-back-btn" id="hub-back-main">← НАЗАД</button>
       </header>
 
       <div class="hub-body hub-scroll">
@@ -31,9 +33,12 @@
             <button type="button" class="hub-shop-tab on" id="hub-tab-passives">ПАССИВКИ</button>
             <button type="button" class="hub-shop-tab" id="hub-tab-weapons">ОРУЖИЕ</button>
           </div>
-          <div class="hub-shop-scroll">
-            <div class="hub-shop-list on" id="hub-prep-passives"></div>
-            <div class="hub-shop-list" id="hub-sale-weapons"></div>
+          <div class="hub-shop-stage">
+            <div class="hub-shop-scene" aria-hidden="true"></div>
+            <div class="hub-shop-scroll">
+              <div class="hub-shop-list on" id="hub-prep-passives"></div>
+              <div class="hub-shop-list" id="hub-sale-weapons"></div>
+            </div>
           </div>
         </div>
 

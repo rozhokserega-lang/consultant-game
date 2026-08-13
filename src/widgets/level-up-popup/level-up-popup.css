@@ -95,25 +95,6 @@
   margin-bottom: 12px;
 }
 
-.level-up-popup__cards--banish .level-up-card {
-  border-color: #c0392b;
-  background: linear-gradient(
-    180deg,
-    #f0c8c8 0%,
-    #e8b0b0 100%
-  );
-}
-
-.level-up-popup__cards--banish .level-up-card:hover,
-.level-up-popup__cards--banish .level-up-card:active {
-  border-color: #e74c3c;
-  background: linear-gradient(
-    180deg,
-    #ffd0d0 0%,
-    #f0a8a8 100%
-  );
-}
-
 .level-up-card {
   display: flex;
   align-items: stretch;
@@ -303,20 +284,6 @@
   position: relative;
   width: 52px;
   flex: none;
-}
-
-.level-up-popup__skip-btn {
-  flex: 1;
-  --button-font-size: 9px;
-  border-radius: 10px;
-}
-
-.level-up-popup__footer .button--banish-active {
-  --button-face-light: #f0b0b0;
-  --button-face-dark: #d08080;
-  --button-highlight: #ffd0d0;
-  --button-shadow-inner: #904040;
-  --button-text: #601818;
 }
 
 .level-up-popup__action-icon {
