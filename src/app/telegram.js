@@ -1,4 +1,4 @@
-/** Инициализация Telegram Mini App: разворот на весь экран, цвета обрамления. */
+/** Инициализация Telegram Mini App: Fullsize как в BotFather, цвета обрамления. */
 
 (function () {
   var tries = 0;
@@ -22,8 +22,9 @@
       if (tg.lockOrientation) {
         try { tg.lockOrientation(); } catch (e) {}
       }
-      if (typeof tg.requestFullscreen === 'function') {
-        try { tg.requestFullscreen(); } catch (e) {}
+      // Fullsize задаёт BotFather; fullscreen из кода его перебивал
+      if (typeof tg.exitFullscreen === 'function' && tg.isFullscreen) {
+        try { tg.exitFullscreen(); } catch (e) {}
       }
     } catch (e) {}
     return true;

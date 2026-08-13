@@ -7,3 +7,4 @@ data/game-assets.json
 # исходники ассетов: скачанные паки не коммитим, только скрипты сборки
 tools/assets/*
 !tools/assets/*.py
+export/
