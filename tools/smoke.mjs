@@ -150,7 +150,7 @@ const REQUIRED_IDS = [
   'joystick-zone', 'attack-btn', 'desktop-hint',
   'tog-sound', 'btn-settings-close', 'set-bank',
   'end-title', 'end-bank', 'btn-retry', 'btn-upload-balance',
-  'boosters-bank', 'hub-tab-gear', 'hub-sale-heroes', 'hub-equip-doll', 'hub-book',
+  'boosters-bank', 'hub-tab-gear', 'hub-sale-weapons', 'hub-equip-doll', 'hub-book',
   'main-menu-actions', 'crash-reload-btn',
 ];
 

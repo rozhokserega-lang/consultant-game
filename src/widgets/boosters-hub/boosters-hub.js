@@ -22,14 +22,6 @@
           </div>
 
           <div id="hub-sale-loadout">
-            <div class="hub-sec">Консультант</div>
-            <p class="hub-hint">Герой задаёт старт и статы смены.</p>
-            <div class="hub-grid" id="hub-sale-heroes"></div>
-
-            <div class="hub-sec">Арена</div>
-            <p class="hub-hint">Карта зала распродажи.</p>
-            <div class="hub-grid" id="hub-sale-arenas"></div>
-
             <div class="hub-sec">Ассортимент оружия</div>
             <p class="hub-hint">Покупка открывает оружие в пуле левел-апа (не кладёт в руки). Макс. 4 в забеге. Подсветка — ветка эво при ключе.</p>
             <div class="hub-grid" id="hub-sale-weapons"></div>

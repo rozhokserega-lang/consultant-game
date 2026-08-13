@@ -1,34 +1,9 @@
 /**
- * Распродажа: Хаб: витрина героев, оружия и стартовых пассивок.
+ * Распродажа: Хаб: оружие и стартовые пассивки.
  */
 'use strict';
 
 Game.prototype.renderSaleHubLoadout = function () {
-  const heroBox = document.getElementById('hub-sale-heroes');
-  if (heroBox) {
-    heroBox.innerHTML = '';
-    if (!this.selectedHeroId || !SALE_HEROES[this.selectedHeroId]) this.selectedHeroId = 'igor';
-    this.ensureSaleHeroUnlocks();
-    for (const id of (typeof SALE_HERO_UNLOCK_ORDER !== 'undefined' ? SALE_HERO_UNLOCK_ORDER : Object.keys(SALE_HEROES))) {
-      if (!this.isSaleHeroUnlocked(id)) continue;
-      const hero = SALE_HEROES[id];
-      if (!hero) continue;
-      const el = document.createElement('button');
-      el.type = 'button';
-      el.className = 'hub-card' + (this.selectedHeroId === hero.id ? ' sel' : '');
-      el.innerHTML = `<div class="ttl">${hero.ico} ${hero.name}</div>
-          <div class="desc">${hero.desc}</div>
-          <div class="meta">${this.selectedHeroId === hero.id ? 'Выбран' : 'Выбрать'}</div>`;
-      el.onclick = () => {
-        this.selectedHeroId = hero.id;
-        this.persist();
-        this.renderHub();
-        sfx.click();
-      };
-      heroBox.appendChild(el);
-    }
-  }
-
   const wepBox = document.getElementById('hub-sale-weapons');
   if (wepBox) {
     wepBox.innerHTML = '';
@@ -91,30 +66,6 @@ Game.prototype.renderSaleHubLoadout = function () {
           <div class="meta">${nextCost == null ? 'Макс' : 'Купить 🪙 ' + nextCost}</div>`;
       el.onclick = () => this.buySaleStartPassive(pk.id);
       pasBox.appendChild(el);
-    }
-  }
-
-  const ar = document.getElementById('hub-sale-arenas');
-  if (ar && typeof ARENA_THEMES !== 'undefined') {
-    this.ensureSaleArenaUnlocks();
-    ar.innerHTML = '';
-    for (const id of (typeof SALE_ARENA_UNLOCK_ORDER !== 'undefined' ? SALE_ARENA_UNLOCK_ORDER : Object.keys(ARENA_THEMES))) {
-      if (!this.isSaleArenaUnlocked(id)) continue;
-      const th = ARENA_THEMES[id];
-      if (!th) continue;
-      const el = document.createElement('button');
-      el.type = 'button';
-      el.className = 'hub-card' + (this.selectedArena === th.id ? ' sel' : '');
-      el.innerHTML = `<div class="ttl">${th.ico} ${th.name}</div><div class="desc">Арена распродажи</div>
-          <div class="meta">${this.selectedArena === th.id ? 'Выбрана' : 'Выбрать'}</div>`;
-      el.onclick = () => {
-        this.selectedArena = th.id;
-        this.persist();
-        this.prepareIdleWorld();
-        this.renderHub();
-        sfx.click();
-      };
-      ar.appendChild(el);
     }
   }
 };
