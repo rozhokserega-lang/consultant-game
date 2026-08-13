@@ -49,3 +49,36 @@ function pickSaleEventId(minute, lastId) {
   }
   return pool[randi(0, pool.length - 1)];
 }
+
+/** Короткие имена для верхней плашки боя */
+const SALE_EVENT_LABELS = {
+  queue_rush: 'НАПЛЫВ ОЧЕРЕДИ',
+  triple_boss: 'ТРОЙКА АДМИНОВ',
+  black_friday: 'ЧЁРНАЯ ПЯТНИЦА',
+  lights_out: 'СВЕТ ВЫКЛЮЧИЛИ',
+  fire_dept: 'ПОЖАР В ОТДЕЛЕ',
+  inventory: 'ИНВЕНТАРИЗАЦИЯ',
+  vip_day: 'VIP-ДЕНЬ',
+  xp_discount: 'СКИДКА НА XP',
+  xp_double: 'ДВОЙНОЙ XP',
+  evacuation: 'ЭВАКУАЦИЯ',
+  complaint_book: 'КНИГА ЖАЛОБ',
+  security_walls: 'ОХРАНА',
+  happy_hour: 'СЧАСТЛИВЫЙ ЧАС',
+  checkout_hall: 'КАССОВЫЙ ЗАЛ',
+  director_call: 'ДИРЕКТОР',
+  weapon_sale: 'ОРУЖИЕ ×2',
+  mall_closing: 'ЗАКРЫТИЕ ТЦ',
+};
+
+function saleEventHudLabel(id) {
+  return SALE_EVENT_LABELS[id] || 'СОБЫТИЕ';
+}
+
+/** Секунд до следующего минутного события или null, если расписание кончилось. */
+function saleNextEventEta(saleTime) {
+  const t = Math.max(0, saleTime || 0);
+  const minute = Math.floor(t / 60);
+  if (minute >= 19) return null;
+  return (minute + 1) * 60 - t;
+}

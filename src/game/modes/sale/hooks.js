@@ -20,13 +20,11 @@ Game.prototype.update = function (dt) {
 
 const saleBaseUpdateHUD = Game.prototype.updateHUD;
 Game.prototype.updateHUD = function () {
-  if (this.gameMode === 'sale' && this.saleWeapons && !this.isBoostersOpen() && !this.inMainMenu) {
+  if (this.gameMode === 'sale' && !this.isBoostersOpen() && !this.inMainMenu) {
     return this.updateSaleHUD();
   }
-  if (this.isBoostersOpen() || this.inMainMenu || !this.saleWeapons) {
-    return saleBaseUpdateHUD.call(this);
-  }
-  return this.updateSaleHUD();
+  if (typeof this._legacyUpdateHUD === 'function') return this._legacyUpdateHUD();
+  if (typeof saleBaseUpdateHUD === 'function') return saleBaseUpdateHUD.call(this);
 };
 
 Game.prototype.endGame = function (won, killer) {

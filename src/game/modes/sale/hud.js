@@ -5,7 +5,11 @@
 
 Game.prototype.updateSaleHUD = function () {
   const p = this.player;
-  if (!p || !this.saleWeapons) return;
+  this.updateBattleBar();
+  if (!p || !this.saleWeapons) {
+    if (this.$buffBar) this.$buffBar.innerHTML = '';
+    return;
+  }
   this.$hpFill.style.width = (100 * p.hp / p.maxHp) + '%';
   this.$hpText.textContent = `${p.hp}/${p.maxHp}`;
   this.$xpFill.style.width = (100 * this.saleXp / this.saleXpNext) + '%';
@@ -13,7 +17,6 @@ Game.prototype.updateSaleHUD = function () {
   this.$level.textContent = this.saleLevel;
   this.$score.textContent = '🛒 ' + this.score;
   if (this.$coins) this.$coins.textContent = '🪙 ' + this.coins;
-  this.updateBattleBar();
 
   const left = Math.max(0, SALE_DURATION - this.saleTime);
   const m = Math.floor(left / 60);
@@ -51,11 +54,15 @@ Game.prototype.updateSaleHUD = function () {
   this.tickSaleSynergyAnnounce();
 
   const tags = [];
-  if (this.saleActiveEvent) {
-    const ev = this.saleActiveEvent;
-    const label = (typeof SALE_EVENT_BANNERS !== 'undefined' && SALE_EVENT_BANNERS[ev.id]) || ev.id;
-    const leftEv = Math.max(0, ev.t);
-    tags.push(`<span class="buff-tag bad">${label} · ${leftEv.toFixed(0)}с</span>`);
+  const ev = this.saleActiveEvent;
+  if (ev && ev.t > 0) {
+    const label = (SALE_EVENT_BANNERS && SALE_EVENT_BANNERS[ev.id]) || saleEventHudLabel(ev.id);
+    tags.push(`<span class="buff-tag event">${label} ${this.formatBattleElapsed(ev.t)}</span>`);
+  } else {
+    const eta = saleNextEventEta(this.saleTime || 0);
+    if (eta != null) {
+      tags.push(`<span class="buff-tag event-wait">До события ${this.formatBattleElapsed(eta)}</span>`);
+    }
   }
   if (this.saleRoleBan && this.saleRoleBan.t > 0) {
     const role = SALE_ROLE_LABEL[this.saleRoleBan.type] || this.saleRoleBan.type;

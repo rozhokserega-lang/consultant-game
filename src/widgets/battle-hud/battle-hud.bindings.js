@@ -56,7 +56,7 @@ Object.assign(Game.prototype, {
     this._eventBanner = { text, t: dur };
   },
 
-  updateHUD() {
+  _legacyUpdateHUD() {
     const p = this.player;
     this.$hpFill.style.width = (100 * p.hp / p.maxHp) + '%';
     this.$hpText.textContent = `${p.hp}/${p.maxHp}`;
