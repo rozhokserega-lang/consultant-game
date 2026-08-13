@@ -20,6 +20,9 @@ Game.prototype.update = function (dt) {
 
 const saleBaseUpdateHUD = Game.prototype.updateHUD;
 Game.prototype.updateHUD = function () {
+  if (this.gameMode === 'sale' && this.saleWeapons && !this.isBoostersOpen() && !this.inMainMenu) {
+    return this.updateSaleHUD();
+  }
   if (this.isBoostersOpen() || this.inMainMenu || !this.saleWeapons) {
     return saleBaseUpdateHUD.call(this);
   }

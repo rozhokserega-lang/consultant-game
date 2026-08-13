@@ -32,25 +32,6 @@ Game.prototype.endSaleEvent = function () {
 Game.prototype.startSaleEvent = function (id) {
   this.endSaleEvent();
   const p = this.player;
-  const banners = {
-    queue_rush: '👥 НАПЛЫВ ОЧЕРЕДИ!',
-    triple_boss: '👔 ТРОЙКА АДМИНОВ!',
-    black_friday: '🏷 ЧЁРНАЯ ПЯТНИЦА! Все ускорились',
-    lights_out: '💡 СВЕТ ВЫКЛЮЧИЛИ!',
-    fire_dept: '🔥 ПОЖАР В ОТДЕЛЕ!',
-    inventory: '📋 ИНВЕНТАРИЗАЦИЯ! Бей только отмеченных',
-    vip_day: '👑 VIP-ДЕНЬ! Пока жив VIP — толпа быстрее',
-    xp_discount: '💸 СКИДКА −50% НА XP',
-    xp_double: '✨ ДВОЙНОЙ XP!',
-    evacuation: '🚨 ЭВАКУАЦИЯ! Сначала бегут, потом навалятся',
-    complaint_book: '📕 КНИГА ЖАЛОБ С ПОТОЛКА!',
-    security_walls: '🚧 ОХРАНА ЗАКРЫЛА ПРОХОДЫ!',
-    happy_hour: '💎 СЧАСТЛИВЫЙ ЧАС! Гемы в центре',
-    checkout_hall: '🧾 КАССОВЫЙ ЗАЛ! Только очереди',
-    director_call: '📞 ДИРЕКТОР НА СВЯЗИ! Линии с краёв',
-    weapon_sale: '⚔ РАСПРОДАЖА ОРУЖИЯ! ×2 урон, ×2 входящий',
-    mall_closing: '🔒 ЗАКРЫТИЕ ТЦ! Всё сразу',
-  };
   const durations = {
     queue_rush: 10, triple_boss: 12, black_friday: 30, lights_out: 22,
     fire_dept: 28, inventory: 16, vip_day: 40, xp_discount: 25, xp_double: 25,
@@ -62,7 +43,7 @@ Game.prototype.startSaleEvent = function (id) {
   this.saleLastEventId = id;
   this.modeFlash = Math.max(this.modeFlash || 0, 0.7);
   if (typeof this.showEventBanner === 'function') {
-    this.showEventBanner(banners[id] || ('Событие: ' + id), Math.min(3.2, dur * 0.2));
+    this.showEventBanner(SALE_EVENT_BANNERS[id] || ('Событие: ' + id), Math.min(3.2, dur * 0.2));
   }
   sfx.mode();
 

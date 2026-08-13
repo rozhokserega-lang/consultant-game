@@ -51,33 +51,25 @@ Game.prototype.updateSaleHUD = function () {
   this.tickSaleSynergyAnnounce();
 
   const tags = [];
-  // слоты: базовое + эволюции считаются занятыми слотами билда
-  const wepSlots = Object.keys(this.saleWeapons || {}).filter((id) => (this.saleWeapons[id] || 0) > 0).length;
-  const maxSlots = this.saleMaxWeaponSlots();
-  tags.push(`<span class="buff-tag good">⚔ ${wepSlots}/${maxSlots}</span>`);
-  for (const syn of this.getActiveSaleSynergies()) {
-    tags.push(`<span class="buff-tag syn" title="${syn.label}">🔗 ${syn.short || syn.label}</span>`);
+  if (this.saleActiveEvent) {
+    const ev = this.saleActiveEvent;
+    const label = (typeof SALE_EVENT_BANNERS !== 'undefined' && SALE_EVENT_BANNERS[ev.id]) || ev.id;
+    const leftEv = Math.max(0, ev.t);
+    tags.push(`<span class="buff-tag bad">${label} · ${leftEv.toFixed(0)}с</span>`);
   }
   if (this.saleRoleBan && this.saleRoleBan.t > 0) {
     const role = SALE_ROLE_LABEL[this.saleRoleBan.type] || this.saleRoleBan.type;
     tags.push(`<span class="buff-tag bad">🚫 ${role} ${this.saleRoleBan.t.toFixed(0)}с</span>`);
   }
   if ((this._saleShieldT || 0) > 0) {
-    tags.push(`<span class="buff-tag good">🚧 блок</span>`);
-  }
-  const ovPower = (this.saleOverflow && this.saleOverflow.power) || 0;
-  if (ovPower > 0) tags.push(`<span class="buff-tag good">💪 +${ovPower}</span>`);
-  if (p.lunchTimer > 0) tags.push(`<span class="buff-tag good">☕ ${p.lunchTimer.toFixed(0)}с</span>`);
-  if (this.saleActiveEvent) {
-    const leftEv = Math.max(0, this.saleActiveEvent.t);
-    tags.push(`<span class="buff-tag bad">📣 ${leftEv.toFixed(0)}с</span>`);
+    tags.push(`<span class="buff-tag bad">🚧 блок ${this._saleShieldT.toFixed(0)}с</span>`);
   }
   if (this.saleXpEventMul > 1.01) tags.push(`<span class="buff-tag good">✨ XP×${this.saleXpEventMul}</span>`);
   if (this.saleXpEventMul < 0.99) tags.push(`<span class="buff-tag bad">💸 XP×${this.saleXpEventMul}</span>`);
   if (this.saleWeaponDmgMul > 1.01) tags.push(`<span class="buff-tag good">⚔ урон×${this.saleWeaponDmgMul}</span>`);
   if (this.saleFragile) tags.push(`<span class="buff-tag bad">💔 хрупкий</span>`);
-  if (this.lightsOut > 0) tags.push(`<span class="buff-tag bad">💡 темнота</span>`);
-  if (this.fireAlarm > 0) tags.push(`<span class="buff-tag bad">🚨 тревога</span>`);
+  if (this.lightsOut > 0) tags.push(`<span class="buff-tag bad">💡 темнота ${this.lightsOut.toFixed(0)}с</span>`);
+  if (this.fireAlarm > 0) tags.push(`<span class="buff-tag bad">🚨 тревога ${this.fireAlarm.toFixed(0)}с</span>`);
   if (this.saleInvulnExcept) tags.push(`<span class="buff-tag bad">📋 только ${this.saleInvulnExcept}</span>`);
   this.$buffBar.innerHTML = tags.join('');
 

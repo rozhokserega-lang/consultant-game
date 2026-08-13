@@ -3,6 +3,27 @@
  */
 'use strict';
 
+/** Подписи минутных событий для баннера и строки баффов. */
+const SALE_EVENT_BANNERS = {
+  queue_rush: '👥 НАПЛЫВ ОЧЕРЕДИ!',
+  triple_boss: '👔 ТРОЙКА АДМИНОВ!',
+  black_friday: '🏷 ЧЁРНАЯ ПЯТНИЦА!',
+  lights_out: '💡 СВЕТ ВЫКЛЮЧИЛИ!',
+  fire_dept: '🔥 ПОЖАР В ОТДЕЛЕ!',
+  inventory: '📋 ИНВЕНТАРИЗАЦИЯ!',
+  vip_day: '👑 VIP-ДЕНЬ!',
+  xp_discount: '💸 СКИДКА −50% НА XP',
+  xp_double: '✨ ДВОЙНОЙ XP!',
+  evacuation: '🚨 ЭВАКУАЦИЯ!',
+  complaint_book: '📕 КНИГА ЖАЛОБ!',
+  security_walls: '🚧 ОХРАНА ЗАКРЫЛА ПРОХОДЫ!',
+  happy_hour: '💎 СЧАСТЛИВЫЙ ЧАС!',
+  checkout_hall: '🧾 КАССОВЫЙ ЗАЛ!',
+  director_call: '📞 ДИРЕКТОР НА СВЯЗИ!',
+  weapon_sale: '⚔ РАСПРОДАЖА ОРУЖИЯ!',
+  mall_closing: '🔒 ЗАКРЫТИЕ ТЦ!',
+};
+
 /** Минутные события ТЦ — пулы по фазам забега */
 const SALE_EVENT_POOLS = {
   early: ['queue_rush', 'happy_hour', 'xp_double', 'xp_discount', 'checkout_hall'],

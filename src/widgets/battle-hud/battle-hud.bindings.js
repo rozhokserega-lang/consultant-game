@@ -116,18 +116,11 @@ Object.assign(Game.prototype, {
     if (p.shameTimer > 0) tags.push(`<span class="buff-tag bad">📸 Стыд ${p.shameTimer.toFixed(1)}с</span>`);
     if (this.blackFriday) tags.push(`<span class="buff-tag good">🖤 Чёрная пятница ×2</span>`);
     if (this.comboShield > 0) tags.push(`<span class="buff-tag good">🔥 Комбо-щит ${this.comboShield.toFixed(0)}с</span>`);
-    if (p.shieldCharges > 0) tags.push(`<span class="buff-tag good">🛡️ Блок ×${p.shieldCharges}</span>`);
-    if ((p.extraLives || 0) > 0) tags.push(`<span class="buff-tag good">💖 Жизнь ×${p.extraLives}</span>`);
-    if ((p.dashChargesMax || 1) > 1) tags.push(`<span class="buff-tag good">💨 Дэш ${p.dashCharges}/${p.dashChargesMax}</span>`);
-    if ((this.coinMult || 1) > 1.01) tags.push(`<span class="buff-tag good">🎫 Монеты ×${this.coinMult.toFixed(2)}</span>`);
-    const w = p.weapon; if (w) tags.push(`<span class="buff-tag good">${w.ico || '⚔'} ${w.name}${w.level ? ' ·' + w.level : ''}</span>`);
     if (p.tempWeapon && p.tempWeaponTimer > 0) {
       tags.push(`<span class="buff-tag good">${p.tempWeapon.ico} ${p.tempWeapon.name} ${p.tempWeaponTimer.toFixed(0)}с</span>`);
     }
     if (this.fireAlarm > 0) tags.push(`<span class="buff-tag bad">🚨 Тревога ${this.fireAlarm.toFixed(0)}с</span>`);
     if (this.lightsOut > 0) tags.push(`<span class="buff-tag bad">💡 Темнота ${this.lightsOut.toFixed(0)}с</span>`);
-    const th = this.getArenaTheme();
-    if (th) tags.push(`<span class="buff-tag good">${th.ico} ${th.name}</span>`);
     this.$buffBar.innerHTML = tags.join('');
   },
 });
