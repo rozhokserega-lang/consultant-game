@@ -100,14 +100,22 @@ Object.assign(Game.prototype, {
       .filter(([, lv]) => lv > 0)
       .map(([id, lv]) => {
         const def = (typeof SALE_PASSIVES !== 'undefined' && SALE_PASSIVES[id]) || { ico: '◆', name: id, max: 5 };
-        return `<span class="pause-chip"><span>${def.ico || '◆'}</span><span class="nm">${def.name || id}</span><span class="lv">Lv${lv}</span></span>`;
+        return `<span class="pause-chip"><span>${def.ico || '◆'}</span><span class="nm">${def.name || id}</span><span class="lv">Lv${lv}${def.max ? '/' + def.max : ''}</span></span>`;
       });
+    // Мета-перки из Подготовки не занимают слот забега, но должны быть видны в паузе.
+    const meta = (typeof META_PERKS !== 'undefined' ? META_PERKS : [])
+      .filter((def) => ((this.metaPerks && this.metaPerks[def.id]) || 0) > 0)
+      .map((def) => {
+        const lv = this.metaPerks[def.id] || 0;
+        return `<span class="pause-chip"><span>${def.ico || '◆'}</span><span class="nm">${def.name}</span><span class="lv">Lv${lv}/${def.max}</span></span>`;
+      });
+    const passChips = meta.concat(pass);
     box.innerHTML = `
       <div class="sec">Оружие · ${weps.length}/${wepMax}</div>
       <div class="pause-chips">${weps.length ? weps.join('') : '<span class="pause-empty">Пока только кулаки…</span>'}</div>
       <div class="pause-wep-detail" id="pause-wep-detail" hidden></div>
       <div class="sec">Пассивки · ${pass.length}/${passMax}</div>
-      <div class="pause-chips">${pass.length ? pass.join('') : '<span class="pause-empty">Пассивок ещё нет</span>'}</div>
+      <div class="pause-chips">${passChips.length ? passChips.join('') : '<span class="pause-empty">Пассивок ещё нет</span>'}</div>
     `;
     if (!box._saleWepClickBound) {
       box._saleWepClickBound = true;
