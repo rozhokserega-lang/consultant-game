@@ -171,6 +171,7 @@ Game.prototype.resetSaleGame = function () {
   this.saleSeekers = [];
   this.saleSwords = [];
   this.saleRings = [];
+  this._saleSiren = null;
   this._salePromoAuraR = 0;
   this._saleUltraAuraR = 0;
   Object.keys(SALE_WEAPONS).forEach((id) => { this.saleWeaponCd[id] = 0.25; });

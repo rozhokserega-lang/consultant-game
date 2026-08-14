@@ -36,6 +36,74 @@ Game.prototype.renderSaleFloorDecals = function () {
       }
     }
   }
+  this.drawSaleSiren();
+};
+
+/** Пожарная сирена: «лампа» вокруг героя и два вращающихся клина. */
+Game.prototype.drawSaleSiren = function () {
+  const s = this._saleSiren;
+  const p = this.player;
+  if (!s || !p) return;
+  const x = p.x;
+  const y = p.y;
+  const r = s.r || 120;
+  const inner = s.inner || 28;
+  const half = s.halfArc || 0.5;
+  const lite = typeof LITE_GFX !== 'undefined' && LITE_GFX;
+  const pulse = 0.55 + 0.25 * Math.abs(Math.sin(performance.now() / 95));
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.arc(x, y, inner, 0, Math.PI * 2, true);
+  ctx.fillStyle = 'rgba(244, 114, 182, 0.22)';
+  ctx.fill('evenodd');
+
+  const drawWedge = (ang) => {
+    const a0 = ang - half;
+    const a1 = ang + half;
+    ctx.beginPath();
+    ctx.arc(x, y, r, a0, a1, false);
+    ctx.arc(x, y, inner, a1, a0, true);
+    ctx.closePath();
+    const g = ctx.createRadialGradient(x, y, inner, x, y, r);
+    g.addColorStop(0, `rgba(239,68,68,${0.12 * pulse})`);
+    g.addColorStop(0.4, `rgba(220,38,38,${0.42 * pulse})`);
+    g.addColorStop(1, 'rgba(127,29,29,0.1)');
+    ctx.fillStyle = g;
+    ctx.fill();
+    if (lite) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, r, a0, a1, false);
+    ctx.arc(x, y, inner, a1, a0, true);
+    ctx.closePath();
+    ctx.clip();
+    ctx.globalAlpha = 0.35 + 0.25 * pulse;
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 2.5;
+    for (let i = -2; i <= 2; i++) {
+      const a = ang + i * (half * 0.28);
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(a) * inner, y + Math.sin(a) * inner);
+      ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.setLineDash([8, 7]);
+    ctx.strokeStyle = 'rgba(255,255,255,0.72)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(x + Math.cos(a0) * inner, y + Math.sin(a0) * inner);
+    ctx.lineTo(x + Math.cos(a0) * r, y + Math.sin(a0) * r);
+    ctx.moveTo(x + Math.cos(a1) * inner, y + Math.sin(a1) * inner);
+    ctx.lineTo(x + Math.cos(a1) * r, y + Math.sin(a1) * r);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  };
+  drawWedge(s.ang);
+  drawWedge(s.ang + Math.PI);
+  ctx.restore();
 };
 
 Game.prototype.renderSaleOverlays = function () {
@@ -116,6 +184,8 @@ Game.prototype.renderSaleOverlays = function () {
   // телеграф «могил» / взрывов — цвет босса, тонкий контур (без красной заливки)
   for (const h of this.saleBossHazards || []) {
     if (h.kind !== 'grave' || h.boom) continue;
+    // утечка газа: почти без визуала до последней секунды
+    if (h.stealth && h.life > 0.8) continue;
     const t = 1 - h.life / Math.max(0.01, h.warnMax || 1.15);
     const pulse = 0.55 + Math.abs(Math.sin(performance.now() / 140)) * 0.25;
     const col = h.color || '#f59e0b';
@@ -147,6 +217,27 @@ Game.prototype.renderSaleOverlays = function () {
     ctx.restore();
   }
 
+  // блендер-вихрь: тянет к центру, затем выброс
+  for (const h of this.saleBossHazards || []) {
+    if (h.kind !== 'vortex' || h.boom) continue;
+    const t = 1 - h.life / Math.max(0.01, h.warnMax || 1.4);
+    const col = h.color || '#c026d3';
+    const pulse = 0.7 + Math.abs(Math.sin(performance.now() / 90)) * 0.3;
+    ctx.save();
+    drawAnimFxFrame(ctx, 'afx_vortex', h.x, h.y, {
+      time: performance.now() / 1000, scale: 0.85 + t * 0.55, alpha: 0.5 + 0.35 * t, tint: col,
+    });
+    ctx.globalAlpha = 0.4 + 0.35 * pulse * t;
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([5, 7]);
+    ctx.beginPath();
+    ctx.arc(h.x, h.y, (h.r || 40) * (0.8 + 0.35 * t), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
   // сжатие арены (Закрытие ТЦ)
   if (this.saleArenaShrink > 0.01) {
     const shrink = this.saleArenaShrink;
@@ -165,14 +256,14 @@ Game.prototype.renderSaleOverlays = function () {
     ctx.restore();
   }
 
-  // временные стены охраны
+  // временные стены охраны (на фудкорте — дверцы морозильника)
   if (this.saleTempWalls && this.saleTempWalls.length) {
     for (const w of this.saleTempWalls) {
       ctx.save();
       ctx.globalAlpha = 0.85;
-      ctx.fillStyle = '#5d4037';
+      ctx.fillStyle = w._foodFreezer ? '#7dd3fc' : '#5d4037';
       ctx.fillRect(w.x, w.y, w.w, w.h);
-      ctx.strokeStyle = '#ffcc80';
+      ctx.strokeStyle = w._foodFreezer ? '#e0f2fe' : '#ffcc80';
       ctx.lineWidth = 2;
       ctx.strokeRect(w.x, w.y, w.w, w.h);
       ctx.restore();

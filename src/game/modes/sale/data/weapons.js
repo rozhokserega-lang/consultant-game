@@ -59,10 +59,10 @@ const SALE_WEAPONS = {
   // bell → сирена
   siren: {
     id: 'siren', name: 'Пожарная сирена', ico: '🚨', max: 5,
-    desc: 'Кольцо тревоги: волна урона от тебя наружу',
+    desc: 'Два луча крутятся вокруг тебя — ты в центре «лампы»',
     type: 'nova', evolve: 'mall_fire',
     baseCd: 1.9, dmg: [2, 2, 3, 3, 4], radius: [110, 130, 155, 180, 210],
-    visual: 'siren', knock: 220, impact: 'sp_fwave2',
+    visual: 'siren', knock: 220, impact: 'sp_fwave2', spinWedges: true,
   },
   // lantern → фонарик (луч в ближайшего)
   flashlight: {

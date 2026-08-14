@@ -109,6 +109,8 @@ Game.prototype.saleBossGraveRing = function (cx, cy, count, opts) {
       boom: false,
       killName: opts.killName || 'Взрыв',
       color: col,
+      stealth: !!opts.stealth,
+      _greaseSpill: !!opts.grease,
     });
   }
 };
@@ -306,7 +308,10 @@ Game.prototype.tickSaleBossAI = function (enemy, dt) {
       this.obstacles = this.obstacles || [];
       this.saleTempWalls = this.saleTempWalls || [];
       const mk = (x, y, w, h) => {
-        const o = { x, y, w, h, _saleTemp: true, _saleBossWall: true, life: 6 };
+        const o = {
+          x, y, w, h, _saleTemp: true, _saleBossWall: true, life: 6,
+          _foodFreezer: this.selectedArena === 'food',
+        };
         this.obstacles.push(o); this.saleTempWalls.push(o);
       };
       mk(mx - wallW / 2, my - wallH / 2, wallW, wallH);
@@ -315,8 +320,10 @@ Game.prototype.tickSaleBossAI = function (enemy, dt) {
     if (enemy._saleBossCd3 <= 0) {
       enemy._saleBossCd3 = Math.max(4.0, 6.5 - ph * 0.5);
       if (typeof this.spawnBossLineAttack === 'function') {
+        const food = this.selectedArena === 'food';
         this.spawnBossLineAttack(enemy, p, this.saleBossLineOpts(enemy, {
-          lines: ph >= 3 ? 2 : 2, warn: 1.0, length: 500, halfW: 34,
+          lines: 2, warn: 1.0, length: food ? 280 : 500, halfW: food ? 38 : 34,
+          slowEdge: food, killName: food ? 'Морозилка' : undefined,
         }));
       }
     }
@@ -436,6 +443,95 @@ Game.prototype.tickSaleBossAI = function (enemy, dt) {
       this.lightsOut = Math.max(this.lightsOut || 0, 3.2);
     }
   }
+
+  this.tickSaleFoodBossExtra(enemy, dt, ph);
+};
+
+/** Фудкорт: дополнительные атаки поверх обычного ритма босса. */
+Game.prototype.tickSaleFoodBossExtra = function (enemy, dt, ph) {
+  if (this.selectedArena !== 'food' || !enemy || !this.player) return;
+  const p = this.player;
+  const id = enemy.saleBossId;
+  if (enemy._saleBossCd4 == null) enemy._saleBossCd4 = 2.2 + rand(0, 1.2);
+  enemy._saleBossCd4 -= dt;
+  if (enemy._saleBossCd4 > 0) return;
+
+  if (id === 'floor_manager') {
+    enemy._saleBossCd4 = Math.max(4.5, 7 - ph * 0.6);
+    this.saleBossGraveRing(p.x, p.y, 1, {
+      underPlayer: true, radius: 0, warn: 1.0, r: 60, killName: 'Фритюр',
+      color: '#eab308', grease: true,
+    });
+  } else if (id === 'cart_horde') {
+    enemy._saleBossCd4 = Math.max(4.8, 7.5 - ph * 0.6);
+    if (typeof this.spawnBossLineAttack === 'function') {
+      const dir = this.getInputDir ? this.getInputDir() : { x: 0, y: 0 };
+      const moveAng = (dir.x || dir.y)
+        ? Math.atan2(dir.y, dir.x)
+        : (p._moveAng != null ? p._moveAng : (p.angle || 0));
+      // линия вдоль вектора бега: прямолинейный отход остаётся в «обвале», нужен уход вбок
+      const fakeOrigin = {
+        x: p.x - Math.cos(moveAng) * 260,
+        y: p.y - Math.sin(moveAng) * 260,
+        bossPhase: enemy.bossPhase,
+        type: enemy.type,
+        saleBossId: enemy.saleBossId,
+        nameTag: enemy.nameTag,
+      };
+      this.spawnBossLineAttack(
+        fakeOrigin, p,
+        this.saleBossLineOpts(enemy, {
+          lines: 1, warn: 1.0, length: 460, halfW: 30, ang: moveAng, killName: 'Полка',
+        }),
+      );
+    }
+  } else if (id === 'discount_king') {
+    enemy._saleBossCd4 = Math.max(3.5, 5.5 - ph * 0.4);
+    this.salePuddles = this.salePuddles || [];
+    const a = rand(0, Math.PI * 2);
+    const d = rand(40, 130);
+    this.salePuddles.push({
+      x: enemy.x + Math.cos(a) * d, y: enemy.y + Math.sin(a) * d,
+      r: 26, life: 5, dmg: this.saleFlatDmg(0.4), tick: 0,
+      color: '#84cc16', slow: 0.35, poison: true,
+      slowPlayer: true, poisonPlayer: true, killName: 'Просрочка',
+    });
+    if (typeof SpeechBubble === 'function') {
+      enemy.bubble = new SpeechBubble(enemy, pick(['Бесплатная дегустация!', 'Не смотри на срок годности!']));
+    }
+  } else if (id === 'security_chief') {
+    enemy._saleBossCd4 = Math.max(4.2, 6.8 - ph * 0.5);
+    const a = angleTo(enemy.x, enemy.y, p.x, p.y);
+    const d = dist(enemy.x, enemy.y, p.x, p.y) * 0.6;
+    const cx = enemy.x + Math.cos(a) * d;
+    const cy = enemy.y + Math.sin(a) * d;
+    this.salePuddles = this.salePuddles || [];
+    this.salePuddles.push({
+      x: cx, y: cy, r: 46, life: 3.2, dmg: this.saleFlatDmg(0.3), tick: 0,
+      color: '#7dd3fc', slow: 0.7, slowPlayer: true,
+    });
+    this._spawnBossAnimFx('afx_ring', cx, cy, { life: 0.4, scale: 0.7, scaleEnd: 1.3, tint: '#7dd3fc' });
+  } else if (id === 'promo_witch') {
+    enemy._saleBossCd4 = Math.max(6, 9.5 - ph * 0.9);
+    this.saleBossHazards = this.saleBossHazards || [];
+    this.saleBossHazards.push({
+      kind: 'vortex', x: p.x, y: p.y, r: 40, life: 1.4, warnMax: 1.4,
+      pull: 70 + ph * 20, burstKb: 340, killName: 'Блендер',
+      color: '#c026d3', boom: false,
+    });
+    if (typeof SpeechBubble === 'function') {
+      enemy.bubble = new SpeechBubble(enemy, pick(['В блендер всё пойдёт!', 'Смешаем скидки!']));
+    }
+  } else if (id === 'mall_closing') {
+    enemy._saleBossCd4 = Math.max(5, 8 - ph * 0.7);
+    if (typeof this._saleSeedFirePuddles === 'function') this._saleSeedFirePuddles(1);
+    this.saleBossGraveRing(p.x, p.y, 1, {
+      underPlayer: true, radius: 0, warn: 2.6, r: 70, killName: 'Утечка газа',
+      color: '#f97316', stealth: true,
+    });
+  } else {
+    enemy._saleBossCd4 = 8;
+  }
 };
 
 Game.prototype.tickSaleBossHazards = function (dt) {
@@ -465,9 +561,53 @@ Game.prototype.tickSaleBossHazards = function (dt) {
         });
         this.spawnParticles(h.x, h.y, 12, col, 140, 0.35);
         this.screenShake = Math.max(this.screenShake || 0, 0.18);
-        if (p && dist(p.x, p.y, h.x, h.y) < p.r + h.r) {
+        if (h._greaseSpill) {
+          this.salePuddles = this.salePuddles || [];
+          this.salePuddles.push({
+            x: h.x, y: h.y, r: h.r * 0.85, life: 4.5, dmg: 0, tick: 0,
+            color: '#eab308', slow: 0.6, slowPlayer: true,
+          });
+        } else if (p && dist(p.x, p.y, h.x, h.y) < p.r + h.r) {
           if (this.saleBossHurtPlayer(h.x, h.y, h.killName || 'Взрыв')) return true;
         }
+      }
+      continue;
+    }
+    if (h.kind === 'vortex') {
+      if (!h.boom) {
+        h.life -= dt;
+        if (p && !(p.dashTime > 0)) {
+          const dx = h.x - p.x;
+          const dy = h.y - p.y;
+          const d = Math.sqrt(dx * dx + dy * dy) || 1;
+          const pull = (h.pull || 90) * dt;
+          if (d > 6) {
+            p.x += (dx / d) * Math.min(d - 6, pull);
+            p.y += (dy / d) * Math.min(d - 6, pull);
+          }
+          if (typeof clampEntityToArena === 'function') {
+            clampEntityToArena(p, this.worldW, this.worldH, this);
+          }
+          if (typeof this.pushOutOfObstacles === 'function') this.pushOutOfObstacles(p, p.r);
+        }
+        if (h.life <= 0) {
+          h.boom = true;
+          h.life = 0.3;
+          const col = h.color || '#e879f9';
+          this._spawnBossAnimFx('afx_ring', h.x, h.y, {
+            life: 0.4, scale: 0.6, scaleEnd: 1.8, tint: col, alpha: 0.8,
+          });
+          this.spawnParticles(h.x, h.y, 16, col, 180, 0.4);
+          this.screenShake = Math.max(this.screenShake || 0, 0.25);
+          if (p && dist(p.x, p.y, h.x, h.y) < p.r + (h.r || 34)) {
+            const a = angleTo(h.x, h.y, p.x, p.y);
+            p.knockback.x = Math.cos(a) * (h.burstKb || 320);
+            p.knockback.y = Math.sin(a) * (h.burstKb || 320);
+            if (this.saleBossHurtPlayer(h.x, h.y, h.killName || 'Вихрь')) return true;
+          }
+        }
+      } else {
+        h.life -= dt;
       }
       continue;
     }

@@ -54,7 +54,10 @@ Game.prototype.updateSale = function (dt) {
     this.player.x += dir.x * this.player.speed * slip * speedMul * realDt;
     this.player.y += dir.y * this.player.speed * slip * speedMul * realDt;
   }
-  if (dir.x || dir.y) this.player.angle = Math.atan2(dir.y, dir.x);
+  if (dir.x || dir.y) {
+    this.player.angle = Math.atan2(dir.y, dir.x);
+    this.player._moveAng = this.player.angle;
+  }
 
   // look at nearest for facing even when idle
   let nearest = null; let best = 280;
@@ -173,6 +176,7 @@ Game.prototype.updateSale = function (dt) {
   this.updateSaleOrbits(realDt);
   this.updateSaleSwords(realDt);
   this.updateSaleRings(realDt);
+  if (this.updateSaleSiren) this.updateSaleSiren(realDt);
   this.updateSaleBoomerangs(realDt);
   this.updateSaleProjectiles(realDt);
   this.updateSaleCharges(realDt);

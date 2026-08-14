@@ -69,6 +69,7 @@ Object.assign(Game.prototype, {
     this.saleSeekers = [];
     this.saleSwords = [];
     this.saleRings = [];
+    this._saleSiren = null;
     this.saleBoomerangs = [];
     if (typeof SALE_WEAPONS !== 'undefined') {
       Object.keys(SALE_WEAPONS).forEach((id) => { this.saleWeaponCd[id] = 0.35; });
@@ -424,6 +425,7 @@ Object.assign(Game.prototype, {
     if (typeof this.updateSaleOrbits === 'function') this.updateSaleOrbits(realDt);
     if (typeof this.updateSaleSwords === 'function') this.updateSaleSwords(realDt);
     if (typeof this.updateSaleRings === 'function') this.updateSaleRings(realDt);
+    if (typeof this.updateSaleSiren === 'function') this.updateSaleSiren(realDt);
     if (typeof this.updateSaleBoomerangs === 'function') this.updateSaleBoomerangs(realDt);
     if (typeof this.updateSaleProjectiles === 'function') this.updateSaleProjectiles(realDt);
     if (typeof this.updateSaleCharges === 'function') this.updateSaleCharges(realDt);

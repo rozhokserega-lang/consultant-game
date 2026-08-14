@@ -132,6 +132,24 @@ Game.prototype.updateSaleWeapons = function (dt) {
     }
 
     if (def.type === 'nova') {
+      if (def.spinWedges) {
+        this.saleWeaponCd[id] = 0;
+        const maxR = (def.radius[level] || def.radius[0] || 120) * area;
+        const prev = this._saleSiren;
+        this._saleSiren = {
+          weaponId: id,
+          r: maxR,
+          inner: 28,
+          halfArc: 0.48 + level * 0.05,
+          spin: 2.15 + level * 0.22,
+          dmg,
+          knock: def.knock || 200,
+          impact: def.impact,
+          ang: prev && prev.weaponId === id ? prev.ang : 0,
+          hitAt: prev && prev.hitAt ? prev.hitAt : new Set(),
+        };
+        continue;
+      }
       const maxR = (def.radius[level] || def.radius[0] || 120) * area;
       this.saleRings = this.saleRings || [];
       this.saleRings.push({
@@ -653,6 +671,56 @@ Game.prototype.updateSaleSwords = function (dt) {
   this.saleSwords = this.saleSwords.filter((s) => !s.dead && this.saleWeapons[s.weaponId]);
 };
 
+/** Пожарная сирена: два противоположных клина крутятся вокруг игрока. */
+Game.prototype.updateSaleSiren = function (dt) {
+  const s = this._saleSiren;
+  if (!s) return;
+  const p = this.player;
+  const def = SALE_WEAPONS[s.weaponId];
+  if (!p || !this.saleWeapons || !(this.saleWeapons[s.weaponId] > 0)) {
+    this._saleSiren = null;
+    return;
+  }
+  if (this.saleRoleBan && def && def.type === this.saleRoleBan.type) {
+    this._saleSiren = null;
+    return;
+  }
+  s.ang += (s.spin || 2.2) * dt;
+  const hitAt = s.hitAt instanceof Set ? s.hitAt : new Set();
+  s.hitAt = hitAt;
+  const r = s.r || 120;
+  const half = s.halfArc || 0.5;
+  const a0 = s.ang;
+  const a1 = s.ang + Math.PI;
+  for (const e of this.enemies || []) {
+    if (e.hp <= 0) {
+      hitAt.delete(e);
+      continue;
+    }
+    const d = dist(p.x, p.y, e.x, e.y);
+    let inWedge = d <= r + e.r;
+    if (inWedge) {
+      const diff = angleTo(p.x, p.y, e.x, e.y);
+      let d0 = diff - a0;
+      while (d0 > Math.PI) d0 -= Math.PI * 2;
+      while (d0 < -Math.PI) d0 += Math.PI * 2;
+      let d1 = diff - a1;
+      while (d1 > Math.PI) d1 -= Math.PI * 2;
+      while (d1 < -Math.PI) d1 += Math.PI * 2;
+      inWedge = Math.abs(d0) <= half || Math.abs(d1) <= half;
+    }
+    if (!inWedge) {
+      hitAt.delete(e);
+      continue;
+    }
+    if (hitAt.has(e)) continue;
+    hitAt.add(e);
+    this.saleHitEnemy(e, s.dmg, p.x, p.y, s.knock || 200, {
+      color: '#ef4444', impact: s.impact || 'sp_fwave1', weapon: s.weaponId || 'siren',
+    });
+  }
+};
+
 /** LN bell: расширяющееся кольцо урона. */
 Game.prototype.updateSaleRings = function (dt) {
   this.saleRings = this.saleRings || [];
@@ -673,21 +741,36 @@ Game.prototype.updateSaleRings = function (dt) {
 };
 
 Game.prototype.updateSalePuddles = function (dt) {
+  const p = this.player;
   for (const u of this.salePuddles) {
     u.life -= dt;
     u.tick += dt;
+    const onPlayer = p && dist(u.x, u.y, p.x, p.y) < u.r + p.r;
+    if (onPlayer && u.slowPlayer) p.slowTimer = Math.max(p.slowTimer || 0, 0.5);
     if (u.tick >= 0.35) {
       u.tick = 0;
       for (const e of this.enemies) {
         if (e.hp <= 0) continue;
         if (dist(u.x, u.y, e.x, e.y) < u.r + e.r) {
-          this.saleHitEnemy(e, u.dmg, u.x, u.y, 40, { color: u.color, raw: true, source: u.weaponId || 'puddle' });
+          if (u.dmg) this.saleHitEnemy(e, u.dmg, u.x, u.y, 40, { color: u.color, raw: true, source: u.weaponId || 'puddle' });
           if (u.slow) e.slowTimer = Math.max(e.slowTimer || 0, 0.6);
         }
       }
-      if (u.hurtPlayer && this.player && this.player.invincible <= 0 && this.player.lunchTimer <= 0 && this.player.dashTime <= 0) {
-        if (dist(u.x, u.y, this.player.x, this.player.y) < u.r + this.player.r) {
-          if (this.player.takeDamage(u.x, u.y)) {
+      if (onPlayer && p.invincible <= 0 && p.lunchTimer <= 0 && p.dashTime <= 0) {
+        if (u.poisonPlayer) {
+          u._ppAcc = (u._ppAcc || 0) + 1;
+          if (u._ppAcc >= 3) {
+            u._ppAcc = 0;
+            if (p.takeDamage(u.x, u.y)) {
+              this.endSaleGame(false, u.killName || 'Просрочка');
+              return true;
+            }
+            this.tookDamage = true;
+            sfx.hurt();
+            if (this.applySaleFragileExtra()) return true;
+          }
+        } else if (u.hurtPlayer) {
+          if (p.takeDamage(u.x, u.y)) {
             this.endSaleGame(false, u.killName || 'Пожар в отделе');
             return true;
           }

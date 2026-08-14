@@ -16,11 +16,11 @@ Object.assign(Game.prototype, {
     }
     if (!color) color = (opts.soft || this.gameMode === 'sale' || this.gameMode === 'extract') ? '#f59e0b' : '#e74c3c';
     const soft = opts.soft != null ? !!opts.soft : (this.gameMode === 'sale' || this.gameMode === 'extract');
-    // чуть вперёд от текущей позиции игрока (lead)
+    // чуть вперёд от текущей позиции игрока (lead); opts.ang — фиксированный угол (полка вдоль бега)
     const lead = 40 + (boss.bossPhase || 1) * 12;
     const aimX = player.x + Math.cos(player.angle || 0) * lead * 0.25;
     const aimY = player.y + Math.sin(player.angle || 0) * lead * 0.25;
-    const aim = angleTo(boss.x, boss.y, aimX, aimY);
+    const aim = opts.ang != null ? opts.ang : angleTo(boss.x, boss.y, aimX, aimY);
     for (let i = 0; i < n; i++) {
       let ang = aim;
       if (n === 2) ang = aim + (i === 0 ? -0.55 : 0.55);
@@ -39,6 +39,8 @@ Object.assign(Game.prototype, {
         owner: boss,
         color,
         soft,
+        slowEdge: !!opts.slowEdge,
+        killName: opts.killName,
         hit: false,
         dead: false,
         age: 0,
@@ -64,17 +66,22 @@ Object.assign(Game.prototype, {
       }
       if (!line.hit) {
         line.hit = true;
-        // удар!
         const d = distToSegment(this.player.x, this.player.y, line.x1, line.y1, line.x2, line.y2);
-        if (d < line.halfW + this.player.r) {
-          if (this.player.invincible <= 0 && this.player.lunchTimer <= 0 && this.player.dashTime <= 0) {
+        const inBand = d < line.halfW + this.player.r;
+        const coreW = line.slowEdge ? line.halfW * 0.42 : line.halfW;
+        const inCore = d < coreW + this.player.r;
+        if (inBand && this.player.invincible <= 0 && this.player.lunchTimer <= 0 && this.player.dashTime <= 0) {
+          if (line.slowEdge && !inCore) {
+            this.player.slowTimer = Math.max(this.player.slowTimer || 0, 1.6);
+            this.spawnParticles(this.player.x, this.player.y, 8, '#7dd3fc', 90, 0.28);
+          } else {
             this.tookDamage = true;
             if (this.selectedChallenge === 'no_damage') this.challengeFailed = true;
             const midX = (line.x1 + line.x2) / 2;
             const midY = (line.y1 + line.y2) / 2;
             if (this.player.takeDamage(midX, midY)) {
               this.spawnParticles(this.player.x, this.player.y, Math.round(36 * this._fxBudget()), '#e74c3c', 320, 0.75);
-              this.endGame(false, (line.owner && line.owner.nameTag) || 'Босс');
+              this.endGame(false, line.killName || (line.owner && line.owner.nameTag) || 'Босс');
               killed = true;
             } else {
               sfx.hurt();
@@ -86,7 +93,7 @@ Object.assign(Game.prototype, {
               }
             }
           }
-        } else {
+        } else if (!inBand) {
           // промах — лёгкий FX на линии (на поздних минутах режем)
           const missCount = Math.round(10 * this._fxBudget());
           if (missCount > 0) this.spawnParticles((line.x1 + line.x2) / 2, (line.y1 + line.y2) / 2, missCount, '#f1c40f', 120, 0.3);
