@@ -152,10 +152,18 @@ Object.assign(Game.prototype, {
       const th = ARENA_THEMES[id];
       if (!th) continue;
       const name = SALE_ARENA_MENU_NAMES[th.id] || th.name;
+      const run = (typeof SALE_ARENA_RUN !== 'undefined' && SALE_ARENA_RUN[th.id]) || null;
+      const slots = run && run.weaponSlots
+        ? run.weaponSlots
+        : (typeof SALE_MAX_WEAPONS !== 'undefined' ? SALE_MAX_WEAPONS : 4);
+      const slotWord = (slots >= 2 && slots <= 4) ? 'слота' : 'слотов';
+      const desc = run && run.hpMul > 1
+        ? `Сложнее · ${slots} ${slotWord} оружия`
+        : `Арена распродажи · ${slots} ${slotWord} оружия`;
       grid.appendChild(this.createSaleStartCard({
         ico: th.ico,
         title: name,
-        desc: 'Арена распродажи · зал торгового центра',
+        desc,
         action: this.selectedArena === th.id ? 'Выбрана' : 'Выбрать',
         selected: this.selectedArena === th.id,
         onClick: () => this.pickSaleStartArena(th.id),

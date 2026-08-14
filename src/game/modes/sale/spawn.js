@@ -4,7 +4,8 @@
 'use strict';
 
 Game.prototype.spawnSaleEnemy = function (forcedType) {
-  const cap = saleMaxEnemiesForTime(this.saleTime || 0);
+  const run = this.getSaleArenaRun();
+  const cap = Math.round(saleMaxEnemiesForTime(this.saleTime || 0) * (run.capMul || 1));
   if (this.enemies.filter((e) => e.hp > 0).length >= cap) return null;
   const t = this.saleTime || 0;
   // VS-feel: в начале спавн дальше за экраном
@@ -44,8 +45,9 @@ Game.prototype.applySaleEnemyDifficulty = function (e, opts) {
   opts = opts || {};
   if (!e || opts.noScale) return e;
   const t = this.saleTime || 0;
-  const hpMul = saleEnemyScaleMul(t) * (SALE_STAT_SCALE || 1);
-  const spdMul = saleEnemySpdScale(t);
+  const run = this.getSaleArenaRun();
+  const hpMul = saleEnemyScaleMul(t) * (SALE_STAT_SCALE || 1) * (run.hpMul || 1);
+  const spdMul = saleEnemySpdScale(t) * (run.spdMul || 1);
   e.maxHp = Math.max(1, Math.round(e.maxHp * hpMul));
   e.hp = e.maxHp;
   e.speed = (e.speed || 60) * spdMul;

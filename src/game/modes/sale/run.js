@@ -268,10 +268,26 @@ Game.prototype.tickSaleSynergyAnnounce = function () {
   }
 };
 
+Game.prototype.getSaleArenaRun = function () {
+  const id = this.selectedArena || 'sport';
+  const extra = (typeof SALE_ARENA_RUN !== 'undefined' && SALE_ARENA_RUN[id]) || {};
+  const base = (typeof SALE_ARENA_RUN_DEFAULT !== 'undefined')
+    ? SALE_ARENA_RUN_DEFAULT
+    : { weaponSlots: SALE_MAX_WEAPONS, hpMul: 1, spdMul: 1, spawnMul: 1, capMul: 1, burstAdd: 0 };
+  return {
+    weaponSlots: extra.weaponSlots != null ? extra.weaponSlots : base.weaponSlots,
+    hpMul: extra.hpMul != null ? extra.hpMul : base.hpMul,
+    spdMul: extra.spdMul != null ? extra.spdMul : base.spdMul,
+    spawnMul: extra.spawnMul != null ? extra.spawnMul : base.spawnMul,
+    capMul: extra.capMul != null ? extra.capMul : base.capMul,
+    burstAdd: extra.burstAdd != null ? extra.burstAdd : base.burstAdd,
+  };
+};
+
 Game.prototype.saleMaxWeaponSlots = function () {
   const c = this.saleContract;
   if (c && c.maxWeapons) return c.maxWeapons;
-  return SALE_MAX_WEAPONS;
+  return this.getSaleArenaRun().weaponSlots;
 };
 
 Game.prototype.saleDmgMul = function () {
@@ -335,5 +351,5 @@ Game.prototype.saleAuraDmgMul = function () {
   return 1 + (this.salePassives.headphones || 0) * 0.15;
 };
 Game.prototype.saleProjectileBonus = function () {
-  return Math.floor(((this.salePassives.pouch || 0) + 1) / 2);
+  return this.salePassives.pouch || 0;
 };

@@ -10,7 +10,7 @@ const EXTRACT_GEAR_STOCK = [
     id: 'gear_pouch',
     name: 'Поясная сумка',
     ico: '👝',
-    desc: '+1 снаряд за каждые 2 сумки в рюкзаке.',
+    desc: '+1 снаряд за каждую сумку в рюкзаке.',
     price: 45,
     value: 22,
     kind: 'gear',

@@ -15,9 +15,11 @@ Game.prototype.spawnSaleBoss = function (bossId, opts) {
   x = Math.max(60, Math.min(this.worldW - 60, x));
   y = Math.max(60, Math.min(this.worldH - 60, y));
   const m = (this.saleTime || 0) / 60;
+  const run = this.getSaleArenaRun();
   const bossHp = Math.max(1, Math.round(
     Math.max(def.hp, Math.round(
       def.hp * SALE_DIFFICULTY.bossHp(m) * SALE_DIFFICULTY.mul * SALE_DIFFICULTY.warm(m)
+        * (run.hpMul || 1)
     )) * (SALE_STAT_SCALE || 1)
   ));
   const e = this.spawnSaleEnemyNear(x, y, 'boss', {
@@ -29,7 +31,7 @@ Game.prototype.spawnSaleBoss = function (bossId, opts) {
   });
   if (!e) return null;
   e.saleBossId = def.id;
-  e.speed = def.speed * saleEnemySpdScale(this.saleTime || 0);
+  e.speed = def.speed * saleEnemySpdScale(this.saleTime || 0) * (run.spdMul || 1);
   e.r = def.r;
   e.coinDrop = def.coinDrop;
   e.slashTimer = 9999; // отключаем дефолтный slash админа

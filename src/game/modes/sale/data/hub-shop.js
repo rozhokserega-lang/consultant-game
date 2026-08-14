@@ -16,7 +16,7 @@ const SALE_HUB_PASSIVES = [
   { id: 'radio', ico: '📻', name: 'Рация', max: 3, cost: [35, 65, 110], desc: 'Старт с магнитом XP' },
   { id: 'gloves', ico: '🧤', name: 'Перчатки', max: 3, cost: [40, 75, 120], desc: 'Зона / эво швабры → мокрый пол' },
   { id: 'key', ico: '🔑', name: 'Ключ', max: 2, cost: [50, 100], desc: 'Скорость / эво сирены → эвакуация' },
-  { id: 'pouch', ico: '👝', name: 'Сумка', max: 2, cost: [55, 100], desc: 'Снаряды / эво чека → возврат' },
+  { id: 'pouch', ico: '👝', name: 'Сумка', max: 2, cost: [55, 100], desc: '+1 снаряд / ур. / эво чека → возврат' },
   { id: 'money', ico: '💰', name: 'Деньги', max: 2, cost: [55, 100], desc: 'Монеты / эво карты' },
   { id: 'printer', ico: '🖨️', name: 'Чековый аппарат', max: 2, cost: [80, 140], desc: '+размер атак / эво чека' },
   { id: 'spray', ico: '🧴', name: 'Спрей', max: 2, cost: [80, 140], desc: '+урон / эво швабры' },

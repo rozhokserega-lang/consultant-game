@@ -16,6 +16,29 @@ const SALE_STAT_SCALE = 10;
 /** LN-style: жёсткий потолок слотов — билд, а не «собери всё» */
 const SALE_MAX_WEAPONS = 4;
 const SALE_MAX_PASSIVES = 8;
+
+/**
+ * Настройки забега по арене. sport — первый зал; food — второй, сложнее, но 5 слотов.
+ * Не указанные поля берутся из SALE_ARENA_RUN_DEFAULT.
+ */
+const SALE_ARENA_RUN_DEFAULT = {
+  weaponSlots: SALE_MAX_WEAPONS,
+  hpMul: 1,
+  spdMul: 1,
+  spawnMul: 1,
+  capMul: 1,
+  burstAdd: 0,
+};
+const SALE_ARENA_RUN = {
+  food: {
+    weaponSlots: 5,
+    hpMul: 1.22,
+    spdMul: 1.07,
+    spawnMul: 0.88,
+    capMul: 1.15,
+    burstAdd: 1,
+  },
+};
 /** После этого времени/уровня в пул попадают все базы (хаб = ранний ассортимент) */
 const SALE_CATALOG_OPEN_SEC = 360; // 6 мин
 const SALE_CATALOG_OPEN_LV = 12;

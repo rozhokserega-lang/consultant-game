@@ -79,11 +79,12 @@ Game.prototype.updateSale = function (dt) {
 
   // spawn — трикл fodder; при живом боссе урезаем burst, чтобы босс читался
   this.saleSpawnAcc += realDt;
-  const interval = saleSpawnInterval(this.saleTime) * (this.saleSpawnMul || 1);
+  const run = this.getSaleArenaRun();
+  const interval = saleSpawnInterval(this.saleTime) * (this.saleSpawnMul || 1) * (run.spawnMul || 1);
   const bossAlive = this.saleBossAlive();
   while (this.saleSpawnAcc >= interval) {
     this.saleSpawnAcc -= interval;
-    let burst = saleSpawnBurst(this.saleTime);
+    let burst = saleSpawnBurst(this.saleTime) + (run.burstAdd || 0);
     if (bossAlive) burst = Math.max(1, Math.floor(burst * 0.55));
     for (let i = 0; i < burst; i++) this.spawnSaleEnemy();
   }
