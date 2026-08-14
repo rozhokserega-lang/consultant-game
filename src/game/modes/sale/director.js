@@ -33,6 +33,7 @@ Game.prototype.spawnSaleBoss = function (bossId, opts) {
   e.saleBossId = def.id;
   e.speed = def.speed * saleEnemySpdScale(this.saleTime || 0) * (run.spdMul || 1);
   e.r = def.r;
+  if (def.trainer) e._trainer = true;
   e.coinDrop = def.coinDrop;
   e.slashTimer = 9999; // отключаем дефолтный slash админа
   e.bossPhase = 1;
@@ -45,6 +46,7 @@ Game.prototype.spawnSaleBoss = function (bossId, opts) {
     : def.id === 'security_chief' ? 200
     : def.id === 'promo_witch' ? 280
     : def.id === 'cart_horde' ? 260
+    : def.id === 'mall_closing' ? 0
     : def.id === 'floor_manager' ? 0
     : 15;
   e._saleFinalBoss = !!def.final;
@@ -142,7 +144,7 @@ Game.prototype.onSaleBossKilled = function (enemy) {
   if (enemy._saleFinalBoss || enemy.saleBossId === 'mall_closing') {
     this.saleArenaShrink = 0;
     // финал ночи ТЦ — победа сразу после килла (не ждать таймер 20:00)
-    this.showEventBanner('🏆 ТЦ СДАЛСЯ! Закрытие отменено', 2.5);
+    this.showEventBanner('🏆 Тренер сдал смену!', 2.5);
     setTimeout(() => {
       if (!this.gameOver && !this.won && this.gameMode === 'sale') this.endSaleGame(true);
     }, 900);

@@ -390,13 +390,14 @@ Game.prototype.tickSaleBossAI = function (enemy, dt) {
       });
     }
   } else if (id === 'mall_closing') {
-    // сжатие · тьма · орда · линии директора · пожары · врата
+    // финал: тренер — сжатие арены · рывок · орда · линии · пожары
     this.saleArenaShrink = Math.min(0.55, 0.12 + (1 - hpRatio) * 0.4);
-    if (enemy._saleBossCd <= 0) {
+    if (enemy._saleChargeT <= 0 && enemy._saleBossCd <= 0) {
       enemy._saleBossCd = Math.max(2.2, 4.6 - ph * 0.5);
+      this.saleBossStartCharge(enemy, 0.7, { spd: 340 + ph * 40, slide: 0.16, kb: 0.55 });
       this.lightsOut = Math.max(this.lightsOut || 0, 2.4);
       if (typeof SpeechBubble === 'function') {
-        enemy.bubble = new SpeechBubble(enemy, pick(['ТЦ ЗАКРЫВАЕТСЯ!', 'На выход!', 'Последний звонок!']));
+        enemy.bubble = new SpeechBubble(enemy, pick(['Ещё подход!', 'Не халтурь!', 'Последний сет!']));
       }
     }
     if (enemy._saleBossCd2 <= 0) {
@@ -431,13 +432,13 @@ Game.prototype.tickSaleBossAI = function (enemy, dt) {
       const dy = p.y - this.worldH / 2;
       const d = Math.sqrt(dx * dx + dy * dy);
       if (d > maxR) {
-        if (this.saleBossHurtPlayer(p.x + dx, p.y + dy, 'Закрытие ТЦ')) return;
+        if (this.saleBossHurtPlayer(p.x + dx, p.y + dy, 'Тренер')) return;
       }
     }
     if (enemy._salePhaseSpike && ph === 3) {
       enemy._salePhaseSpike = false;
       this.saleBossGraveRing(p.x, p.y, 4, {
-        radius: 120, warn: 1.25, r: 40, killName: 'CLOSED',
+        radius: 120, warn: 1.25, r: 40, killName: 'ТРЕНЕР',
         color: SALE_BOSS_DEFS.mall_closing.color,
       });
       this.lightsOut = Math.max(this.lightsOut || 0, 3.2);

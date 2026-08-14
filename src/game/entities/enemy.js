@@ -375,7 +375,9 @@ class Enemy {
     const flash = Math.max(0, this.hitFlash / 0.15);
     // Простая тень без shadowBlur — blur на Android убивает FPS при толпе
     c.fillStyle = 'rgba(0,0,0,0.22)';
-    c.beginPath(); c.ellipse(this.x + 2, this.y + 3, 11, 4.5, 0, 0, Math.PI * 2); c.fill();
+    const shW = this._trainer ? 18 : 11;
+    const shH = this._trainer ? 6 : 4.5;
+    c.beginPath(); c.ellipse(this.x + 2, this.y + 3, shW, shH, 0, 0, Math.PI * 2); c.fill();
 
     if (this.type === 'manager') {
       c.strokeStyle = 'rgba(155,89,186,0.28)'; c.lineWidth = 2;
@@ -395,7 +397,7 @@ class Enemy {
       c.strokeStyle = 'rgba(255,80,180,0.65)'; c.lineWidth = 2;
       c.strokeRect(this.x - 40, this.y - 50, 80, 70);
     }
-    if (this.type === 'director' || this.type === 'miniboss') {
+    if ((this.type === 'director' || this.type === 'miniboss') && !this._trainer) {
       c.strokeStyle = 'rgba(231,76,60,0.5)'; c.lineWidth = 2;
       c.beginPath(); c.arc(this.x, this.y, this.r + 16, 0, Math.PI * 2); c.stroke();
     }
@@ -412,8 +414,13 @@ class Enemy {
       : this.type === 'tank' ? 0.62
       : 0.52;
     if (flash > 0) c.globalAlpha = 0.55 + flash * 0.45;
-    const frameKey = enemyMobFrameKey(this);
-    const drewMob = frameKey && drawEnemyMob(c, frameKey, this.x, this.y + 4, { scale, flip });
+    let drewMob = false;
+    if (this._trainer && typeof drawTrainerMob === 'function') {
+      drewMob = drawTrainerMob(c, this, { flip });
+    } else {
+      const frameKey = enemyMobFrameKey(this);
+      drewMob = !!(frameKey && drawEnemyMob(c, frameKey, this.x, this.y + 4, { scale, flip }));
+    }
     if (!drewMob && !drawSprite(c, spriteName, this.x, this.y + 4, { scale, flip, anchorY: 1 })) {
       c.fillStyle = this.type === 'fatty' ? '#e67e22' : (isRush ? '#e74c3c' : '#5dade2');
       c.beginPath(); c.arc(this.x, this.y, this.r, 0, Math.PI * 2); c.fill();
@@ -429,16 +436,24 @@ class Enemy {
 
     // Одна полоска HP вместо десятка кружков
     if (this.hp < this.maxHp) {
-      const bw = Math.min(36, 10 + this.maxHp * 2);
+      const bw = this._trainer ? 40 : Math.min(36, 10 + this.maxHp * 2);
+      const head = this._trainer && typeof TRAINER_ONSCREEN_H === 'number'
+        ? TRAINER_ONSCREEN_H
+        : this.r;
       const bx = this.x - bw / 2;
-      const by = this.y - this.r - 14;
+      const by = this.y - head - 14;
       c.fillStyle = 'rgba(0,0,0,0.45)';
       c.fillRect(bx - 1, by - 1, bw + 2, 5);
       c.fillStyle = '#2ecc71';
       c.fillRect(bx, by, bw * Math.max(0, this.hp / this.maxHp), 3);
     }
     c.restore();
-    if (this.bubble && !this.bubble.dead) this.bubble.draw(c, this.x, this.y - this.r - 22);
+    if (this.bubble && !this.bubble.dead) {
+      const bubH = this._trainer && typeof TRAINER_ONSCREEN_H === 'number'
+        ? TRAINER_ONSCREEN_H
+        : this.r;
+      this.bubble.draw(c, this.x, this.y - bubH - 8);
+    }
   }
 
   hit(damage, fromX, fromY, knock = 300, stun = 0) {

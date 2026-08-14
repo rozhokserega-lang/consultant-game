@@ -62,15 +62,16 @@ const SALE_BOSS_DEFS = {
   },
   mall_closing: {
     id: 'mall_closing',
-    name: 'Закрытие ТЦ',
+    name: 'Тренер',
     hp: 520,
     speed: 50,
-    r: 36,
-    color: '#fb923c',
-    tag: 'CLOSED',
+    r: 32,
+    color: '#f97316',
+    tag: 'ТРЕНЕР',
     xpReward: 50,
     coinDrop: 34,
     final: true,
+    trainer: true,
   },
 };
 const SALE_BOSS_ORDER = [

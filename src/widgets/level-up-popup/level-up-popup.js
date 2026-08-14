@@ -125,7 +125,14 @@
 
     if (!title) title = '?';
 
-    return { title, level, description, icon, isUpgrade, evoReady: Boolean(choice.evoReady) };
+    let lane = 'other';
+    if (kind === 'weapon_new' || kind === 'weapon_up' || kind === 'weapon_over' || kind === 'evolve') {
+      lane = 'weapon';
+    } else if (kind === 'passive' || kind === 'overflow') {
+      lane = 'perk';
+    }
+
+    return { title, level, description, icon, isUpgrade, evoReady: Boolean(choice.evoReady), lane };
   }
 
   /**
@@ -136,11 +143,18 @@
    */
   function createCard(card, index, onClick) {
     const btn = document.createElement('button');
-    btn.className = 'level-up-card' + (card.evoReady ? ' level-up-card--evo' : '');
+    const lane = card.lane === 'weapon' || card.lane === 'perk' ? card.lane : '';
+    btn.className = 'level-up-card'
+      + (card.evoReady ? ' level-up-card--evo' : '')
+      + (lane && !card.evoReady ? ` level-up-card--${lane}` : '');
     btn.type = 'button';
     btn.dataset.index = String(index);
     if (card.evoReady) {
       btn.title = card.evoName ? `Эволюция: ${card.evoName}` : 'Эволюция';
+    } else if (lane === 'weapon') {
+      btn.title = 'Оружие';
+    } else if (lane === 'perk') {
+      btn.title = 'Перк';
     }
 
     const iconWrap = document.createElement('span');
@@ -149,6 +163,13 @@
     iconInner.className = 'level-up-card__icon-inner';
     iconInner.textContent = card.icon || '?';
     iconWrap.appendChild(iconInner);
+    if (lane) {
+      const kindMark = document.createElement('span');
+      kindMark.className = 'level-up-card__kind';
+      kindMark.setAttribute('aria-hidden', 'true');
+      kindMark.textContent = lane === 'weapon' ? 'О' : 'П';
+      iconWrap.appendChild(kindMark);
+    }
 
     const body = document.createElement('span');
     body.className = 'level-up-card__body';
@@ -173,8 +194,9 @@
       body.appendChild(desc);
     }
 
+    const showBadge = card.isUpgrade || card.evoReady || !!lane;
     const badge = document.createElement('span');
-    badge.className = 'level-up-card__badge' + (card.isUpgrade || card.evoReady ? '' : ' level-up-card__badge--hidden');
+    badge.className = 'level-up-card__badge' + (showBadge ? '' : ' level-up-card__badge--hidden');
 
     const arrow = document.createElement('span');
     arrow.className = 'level-up-card__badge-arrow';
@@ -182,7 +204,7 @@
 
     const badgeText = document.createElement('span');
     badgeText.className = 'level-up-card__badge-text';
-    badgeText.textContent = card.evoReady ? 'ЭВО' : 'UPGRADE';
+    badgeText.textContent = card.evoReady ? 'ЭВО' : card.isUpgrade ? 'UPGRADE' : (lane === 'weapon' ? 'ОРУЖ' : lane === 'perk' ? 'ПЕРК' : '');
 
     badge.appendChild(arrow);
     badge.appendChild(badgeText);

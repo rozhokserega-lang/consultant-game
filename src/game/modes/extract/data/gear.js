@@ -43,7 +43,7 @@ const EXTRACT_GEAR_STOCK = [
     id: 'gear_gloves',
     name: 'Перчатки грузчика',
     ico: '🧤',
-    desc: '+12% размер атак.',
+    desc: '+12% зона атак, не героя',
     price: 35,
     value: 18,
     kind: 'gear',

@@ -63,7 +63,7 @@
       R(
         bq('boss', 'discount_king', 'Король скидок') +
           bq('boss', 'security_chief', 'Охрана') +
-          bq('boss', 'mall_closing', 'Закрытие ТЦ'),
+          bq('boss', 'mall_closing', 'Тренер'),
       ) +
       H('Пауэрапы') +
       R(

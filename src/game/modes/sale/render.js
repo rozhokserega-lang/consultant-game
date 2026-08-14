@@ -176,7 +176,10 @@ Game.prototype.renderSaleOverlays = function () {
       ctx.fillStyle = def.color;
       ctx.font = 'bold 10px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(def.tag, e.x, e.y - e.r - 20);
+      const tagH = e._trainer && typeof TRAINER_ONSCREEN_H === 'number'
+        ? TRAINER_ONSCREEN_H
+        : e.r;
+      ctx.fillText(def.tag, e.x, e.y - tagH - 20);
       ctx.restore();
     }
   }

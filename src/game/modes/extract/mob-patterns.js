@@ -37,10 +37,13 @@ Object.assign(Game.prototype, {
       e.summonTimer = 1e9;
       if (!e._extractBossPattern) {
         e._extractBossPattern = floor >= 3 ? 'auditor_final'
-          : floor >= 2 ? 'security_chief' : 'floor_manager';
+          : floor >= 2 ? 'security_chief' : 'trainer';
       }
-      if (floor === 1) e.nameTag = e.nameTag || 'Старший смены';
-      else if (floor === 2) e.nameTag = e.nameTag || 'Начальник охраны';
+      if (floor === 1) {
+        e._trainer = true;
+        e.nameTag = 'Тренер';
+        e.r = typeof TRAINER_RADIUS === 'number' ? TRAINER_RADIUS : 32;
+      } else if (floor === 2) e.nameTag = e.nameTag || 'Начальник охраны';
       else e.nameTag = e.nameTag || 'Главный ревизор';
     }
 
@@ -406,6 +409,7 @@ Object.assign(Game.prototype, {
       }
 
       switch (pat) {
+        case 'trainer':
         case 'floor_manager': {
           enemy._extractLineT = (enemy._extractLineT == null) ? 2.2 : enemy._extractLineT - realDt;
           if (enemy._extractLineT <= 0 && !enemy._extractBossRushState) {
@@ -415,7 +419,7 @@ Object.assign(Game.prototype, {
                 lines: 1, warn: 1.15, length: 520, halfW: 32, soft: true,
               });
             }
-            extractBubble(this, enemy, 'Стой где стоишь!');
+            extractBubble(this, enemy, enemy._trainer ? 'Ещё подход!' : 'Стой где стоишь!');
           }
           if (ratio < 0.5) {
             enemy._extractRushCd = (enemy._extractRushCd == null) ? 1.5 : enemy._extractRushCd - realDt;
@@ -424,8 +428,8 @@ Object.assign(Game.prototype, {
               enemy._extractBossRushState = 'windup';
               enemy._extractBossRushT = 0.55;
               enemy._extractBossRushAng = angleTo(enemy.x, enemy.y, player.x, player.y);
-              extractBubble(this, enemy, 'Ко мне!');
-              this.showExtractBanner('⚠️ Старший смены рыщет!', 1.6);
+              extractBubble(this, enemy, enemy._trainer ? 'Рывок!' : 'Ко мне!');
+              this.showExtractBanner(enemy._trainer ? '⚠️ Тренер идёт на таран!' : '⚠️ Старший смены рыщет!', 1.6);
             }
           }
           break;
