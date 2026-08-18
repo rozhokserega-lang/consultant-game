@@ -666,8 +666,8 @@ Game.prototype.renderSaleScreenUI = function () {
     ctx.restore();
   }
   // чемоданчик за экраном — стрелка у края
-  for (const pk of this.pickups || []) {
-    if (pk.dead || pk.type !== 'lunch') continue;
+  for (const pk of this.salePowerups || []) {
+    if (pk.dead || pk.life <= 0 || pk.kind !== 'wepcase') continue;
     const sx = (pk.x - cam.x) * cam.z;
     const sy = (pk.y - cam.y) * cam.z;
     const pad = 26;
