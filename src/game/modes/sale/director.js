@@ -16,10 +16,12 @@ Game.prototype.spawnSaleBoss = function (bossId, opts) {
   y = Math.max(60, Math.min(this.worldH - 60, y));
   const m = (this.saleTime || 0) / 60;
   const run = this.getSaleArenaRun();
+  const loop = this.saleV2 ? Math.floor((this.saleBossIdx || 0) / SALE_BOSS_ORDER.length) : 0;
+  const loopHp = 1 + loop * 0.4;
   const bossHp = Math.max(1, Math.round(
     Math.max(def.hp, Math.round(
       def.hp * SALE_DIFFICULTY.bossHp(m) * SALE_DIFFICULTY.mul * SALE_DIFFICULTY.warm(m)
-        * (run.hpMul || 1)
+        * (run.hpMul || 1) * loopHp
     )) * (SALE_STAT_SCALE || 1)
   ));
   const e = this.spawnSaleEnemyNear(x, y, 'boss', {
@@ -53,11 +55,13 @@ Game.prototype.spawnSaleBoss = function (bossId, opts) {
   e._saleBossSpawnAt = this.saleTime || 0;
   this.saleBossSpawned = this.saleBossSpawned || {};
   this.saleBossSpawned[def.id] = true;
-  const n = Math.min(SALE_BOSS_ORDER.length, (this.saleBossIdx || 0) + 1);
+  const n = (this.saleBossIdx || 0) + 1;
   this._eventBanner = {
     t: 4.2,
-    text: (def.final ? '⚠ ФИНАЛ: ' : '⚠ ') + def.name.toUpperCase() + '!',
-    sub: def.tag + ' · босс ' + n + '/' + SALE_BOSS_ORDER.length,
+    text: (def.final && !this.saleV2 ? '⚠ ФИНАЛ: ' : '⚠ ') + def.name.toUpperCase() + '!',
+    sub: loop
+      ? ('круг ' + (loop + 1) + ' · босс ' + n)
+      : (def.tag + ' · босс ' + Math.min(SALE_BOSS_ORDER.length, n) + '/' + SALE_BOSS_ORDER.length),
   };
   this.spawnAnimFx('afx_darkburst', e.x, e.y, { life: 0.75, scale: 1.6, scaleEnd: 2.2 });
   this.spawnAnimFx('afx_ring', e.x, e.y, { life: 0.5, scale: 1.0, scaleEnd: 3.0 });
@@ -73,10 +77,10 @@ Game.prototype.saleBossAlive = function () {
 Game.prototype.tickSaleBossSchedule = function () {
   if (this.saleBossIdx == null) this.saleBossIdx = 0;
   if (this.saleBossT == null) this.saleBossT = SALE_BOSS_INTERVAL;
-  if (this.saleBossIdx >= SALE_BOSS_ORDER.length) return;
+  if (this.saleBossIdx >= SALE_BOSS_ORDER.length && !this.saleV2) return;
   if (this.saleBossAlive()) return;
   if ((this.saleTime || 0) < this.saleBossT) return;
-  const id = SALE_BOSS_ORDER[this.saleBossIdx];
+  const id = SALE_BOSS_ORDER[this.saleBossIdx % SALE_BOSS_ORDER.length];
   const b = this.spawnSaleBoss(id);
   if (!b) return;
   this.saleBossIdx++;
@@ -136,7 +140,7 @@ Game.prototype.onSaleBossKilled = function (enemy) {
   if (this.player && this.player.hp < this.player.maxHp) {
     this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);
   }
-  this.spawnSalePowerup(enemy.x, enemy.y - 18, 'bomb');
+  if (!this.saleV2) this.spawnSalePowerup(enemy.x, enemy.y - 18, 'bomb');
   if (this.saleV2 && typeof this.grantSaleV2BossCoupon === 'function') {
     this.grantSaleV2BossCoupon(enemy);
   } else if (enemy.saleBossId) {
@@ -145,16 +149,25 @@ Game.prototype.onSaleBossKilled = function (enemy) {
   // не стакать следующего босса сразу после долгого боя
   const now = this.saleTime || 0;
   this.saleBossT = Math.max(this.saleBossT || 0, now + SALE_BOSS_GAP_AFTER_KILL);
-  if (enemy._saleFinalBoss || enemy.saleBossId === 'mall_closing') {
+  const isFinal = !!(enemy._saleFinalBoss || enemy.saleBossId === 'mall_closing');
+  if (this.saleV2 && isFinal) {
+    this.saleArenaShrink = 0;
+    if ((this.saleBossIdx || 0) <= SALE_BOSS_ORDER.length) {
+      this.showEventBanner('∞ Торговый центр не закрывается!', 2.6);
+      if (typeof this.unlockSaleHeroesForSaleWin === 'function') {
+        this.unlockSaleHeroesForSaleWin(this.selectedArena || 'sport');
+      }
+      if (typeof this.unlockNextSaleArena === 'function') this.unlockNextSaleArena();
+      if (typeof this.persist === 'function') this.persist();
+    }
+    return;
+  }
+  if (!this.saleV2 && isFinal) {
     this.saleArenaShrink = 0;
     this.showEventBanner('🏆 Тренер сдал смену!', 2.5);
-    if (this.saleV2) {
-      this._saleV2WinAfterUber = true;
-    } else {
-      setTimeout(() => {
-        if (!this.gameOver && !this.won && this.gameMode === 'sale') this.endSaleGame(true);
-      }, 900);
-    }
+    setTimeout(() => {
+      if (!this.gameOver && !this.won && this.gameMode === 'sale') this.endSaleGame(true);
+    }, 900);
   }
 };
 

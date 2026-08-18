@@ -3,8 +3,8 @@
  */
 'use strict';
 
-const SALE_VERSION = '0.12.0-tree-keys';
-const SALE_DURATION = 20 * 60; // 20 минут
+const SALE_VERSION = '0.16.0-endless';
+const SALE_DURATION = 20 * 60; // классика: конец; 2.0: старт овертайма
 const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
 const SALE_WORLD_MUL = 2.75;
 /**

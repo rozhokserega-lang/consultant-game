@@ -42,6 +42,9 @@ var SALE_HEADERS = [
   'weapon_share',
   'bosses',
   'payload_json',
+  'sale_v2',
+  'ubers_end',
+  'overflow_end',
 ];
 
 var EXTRACT_HEADERS = [
@@ -119,6 +122,9 @@ function appendSaleRun_(run) {
     JSON.stringify(run.weaponShare || {}),
     JSON.stringify(run.bosses || []),
     JSON.stringify(run).slice(0, 49000),
+    run.saleV2 === true ? 'v2' : 'classic',
+    JSON.stringify(run.ubersEnd || run.ubersTaken || []),
+    JSON.stringify(run.overflowEnd || {}),
   ]);
 }
 
@@ -156,6 +162,14 @@ function ensureSheet_(name, headers) {
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(headers);
     sheet.setFrozenRows(1);
+    return sheet;
+  }
+  var lastCol = Math.max(1, sheet.getLastColumn());
+  var existing = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  for (var i = 0; i < headers.length; i++) {
+    if (existing.indexOf(headers[i]) < 0) {
+      sheet.getRange(1, sheet.getLastColumn() + 1).setValue(headers[i]);
+    }
   }
   return sheet;
 }

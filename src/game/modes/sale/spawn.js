@@ -60,7 +60,10 @@ Game.prototype.applySaleEnemyDifficulty = function (e, opts) {
 
 Game.prototype.spawnSaleEnemyNear = function (x, y, type, opts) {
   opts = opts || {};
-  if (this.enemies.filter((e) => e.hp > 0).length >= SALE_MAX_ENEMIES + (opts.overCap || 0)) return null;
+  const run = this.getSaleArenaRun();
+  const cap = Math.round(saleMaxEnemiesForTime(this.saleTime || 0) * (run.capMul || 1))
+    + (opts.overCap || 0);
+  if (this.enemies.filter((e) => e.hp > 0).length >= cap) return null;
   const e = new Enemy(x, y, type || 'normal', 1);
   if (opts.nameTag) e.nameTag = opts.nameTag;
   if (opts.hp) { e.hp = e.maxHp = opts.hp; }

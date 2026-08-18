@@ -34,7 +34,8 @@ function saleMaxEnemiesForTime(t) {
   if (t < 180) return 50;
   if (t < 360) return 75;
   if (t < 600) return 105;
-  return SALE_MAX_ENEMIES;
+  const extra = Math.floor(saleOvertimeMin(t) * 6);
+  return Math.min(200, SALE_MAX_ENEMIES + extra);
 }
 
 function saleXpToNext(level) {
@@ -43,36 +44,43 @@ function saleXpToNext(level) {
   return Math.floor(10 + level * 5.2 + level * level * 0.42 + late * late * 0.55);
 }
 
+function saleOvertimeMin(tSec) {
+  return Math.max(0, ((tSec || 0) - SALE_DURATION) / 60);
+}
+
 function saleTimeFactor(t) {
-  // 0..1 за 20 минут
-  return Math.min(1, t / SALE_DURATION);
+  // классика обрывается на 20:00, поэтому f > 1 бывает только в 2.0
+  return Math.max(0, t) / SALE_DURATION;
 }
 
 function saleSpawnInterval(t) {
-  const f = saleTimeFactor(t);
+  const f = Math.min(1.4, saleTimeFactor(t));
   // VS-like: старт редкий (~1с), к концу орда
-  let iv = Math.max(0.07, 1.05 - f * 0.95);
+  let iv = Math.max(0.055, 1.05 - f * 0.95);
   if (t < 120) iv = Math.max(iv, 0.9);
   else if (t < 300) iv = Math.max(iv, 0.55);
   if (t >= 600) iv *= 0.85;
+  if (t >= SALE_DURATION) iv *= Math.max(0.65, 1 - saleOvertimeMin(t) * 0.04);
   return iv;
 }
 
 /** Сколько мобов за один тик спавна */
 function saleSpawnBurst(t) {
-  const f = saleTimeFactor(t);
+  const f = Math.min(1, saleTimeFactor(t));
   let burst = 1;
   if (f > 0.75) burst = 5;
   else if (f > 0.5) burst = 4;
   else if (f > 0.35) burst = 3;
   else if (f > 0.22) burst = 2; // ~4.5 мин, не со 2-й
   if (t >= 600) burst += 1;
-  return burst;
+  if (t >= SALE_DURATION) burst += 1 + Math.floor(saleOvertimeMin(t) / 4);
+  return Math.min(9, burst);
 }
 
 function saleEnemyType(t) {
-  const f = saleTimeFactor(t);
+  const f = Math.min(1, saleTimeFactor(t));
   const r = Math.random();
+  if (t >= SALE_DURATION && r < Math.min(0.14, 0.05 + saleOvertimeMin(t) * 0.012)) return 'director';
   if (f > 0.85 && r < 0.04) return 'director';
   if (f > 0.55 && r < 0.08) return 'boss';
   if (f > 0.35 && r < 0.12) return 'fatty';

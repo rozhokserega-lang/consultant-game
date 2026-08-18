@@ -47,14 +47,18 @@ Game.prototype.spawnSalePowerup = function (x, y, kind, extra) {
 
 Game.prototype.dropSalePowerup = function (enemy) {
   if (enemy.saleBossId) {
-    // уникальный босс ТЦ — гарантированная посылка + магнит (+ bomb/heal в onSaleBossKilled)
+    // уникальный босс ТЦ — посылка + магнит (+ heal в onSaleBossKilled; bomb только в классике)
     this.spawnSalePowerup(enemy.x - 22, enemy.y, 'chest', { fromBoss: true });
     this.spawnSalePowerup(enemy.x + 22, enemy.y, 'magnet');
     this.spawnSalePowerup(enemy.x, enemy.y - 26, 'heart');
     return;
   }
   if (enemy._saleElite) {
-    this.spawnSalePowerup(enemy.x, enemy.y, 'chest', { fromElite: true });
+    if (this.saleV2) {
+      this.spawnSalePowerup(enemy.x, enemy.y, Math.random() < 0.5 ? 'magnet' : 'heart');
+    } else {
+      this.spawnSalePowerup(enemy.x, enemy.y, 'chest', { fromElite: true });
+    }
     if (Math.random() < 0.55) this.spawnSalePowerup(enemy.x + rand(-16, 16), enemy.y - 18, 'heart');
     return;
   }
@@ -62,7 +66,12 @@ Game.prototype.dropSalePowerup = function (enemy) {
   if (!elite) return;
   if (Math.random() > 0.55) return;
   const r = Math.random();
-  const kind = r < 0.45 ? 'bomb' : r < 0.8 ? 'magnet' : 'chest';
+  let kind;
+  if (this.saleV2) {
+    kind = r < 0.18 ? 'bomb' : r < 0.7 ? 'magnet' : 'heart';
+  } else {
+    kind = r < 0.45 ? 'bomb' : r < 0.8 ? 'magnet' : 'chest';
+  }
   this.spawnSalePowerup(enemy.x, enemy.y, kind);
 };
 
@@ -112,8 +121,16 @@ Game.prototype.applySalePowerup = function (pu) {
     const t = this.saleTime || 0;
     const canEvo = !this.saleV2 && (!!pu.fromBoss || (!!pu.fromElite && t >= 360));
     if (canEvo && this.tryGrantSaleChestEvolution()) return;
+    if (this.saleV2) {
+      this.saleVacuumT = Math.max(this.saleVacuumT || 0, 1.4);
+      this.dropCoins({ x: p.x, y: p.y, coinDrop: 8 });
+      this.showEventBanner('📦 Посылка: монеты и магнит XP', 1.5);
+      this.spawnAnimFx('afx_levelup', p.x, p.y, { life: 0.6, scale: 1.0, scaleEnd: 1.35, anchorY: 0.9 });
+      sfx.pickup();
+      return;
+    }
     this.pendingUpgrades = (this.pendingUpgrades || 0) + 1;
-    this.showEventBanner(this.saleV2 ? '📦 Посылка: очко дерева!' : '📦 Посылка со склада: бесплатное улучшение!', 1.8);
+    this.showEventBanner('📦 Посылка со склада: бесплатное улучшение!', 1.8);
     this.spawnAnimFx('afx_levelup', p.x, p.y, { life: 0.95, scale: 1.2, scaleEnd: 1.65, anchorY: 0.9 });
     sfx.level();
     this._saleLevelFxT = Math.max(this._saleLevelFxT || 0, 0.75);
@@ -122,22 +139,29 @@ Game.prototype.applySalePowerup = function (pu) {
     this.showEventBanner('🧲 Промо-магнит: весь XP летит к тебе!', 1.5);
     sfx.pickup();
   } else if (pu.kind === 'bomb') {
-    const R = 540;
-    this.showEventBanner('🧨 Хлопушка: зал зачищен!', 1.5);
+    const v2 = !!this.saleV2;
+    const R = v2 ? 260 : 540;
+    this.showEventBanner(v2 ? '🧨 Хлопушка: волна поредела' : '🧨 Хлопушка: зал зачищен!', 1.5);
     this.screenShake = Math.max(this.screenShake, 0.6);
     this.boomFx = this.boomFx || [];
     this.boomFx.push({ x: p.x, y: p.y, life: 0.45, max: 0.45 });
-    this.spawnAnimFx('afx_bigburst', p.x, p.y, { life: 0.6, scale: 2.4, scaleEnd: 3.6 });
-    this.spawnAnimFx('afx_ring', p.x, p.y, { life: 0.5, scale: 1.5, scaleEnd: 5.5 });
-    this.spawnParticles(p.x, p.y, 60, '#ff6b00', 480, 0.9);
+    this.spawnAnimFx('afx_bigburst', p.x, p.y, { life: 0.6, scale: v2 ? 1.6 : 2.4, scaleEnd: v2 ? 2.4 : 3.6 });
+    this.spawnAnimFx('afx_ring', p.x, p.y, { life: 0.5, scale: v2 ? 1.1 : 1.5, scaleEnd: v2 ? 3.2 : 5.5 });
+    this.spawnParticles(p.x, p.y, v2 ? 28 : 60, '#ff6b00', v2 ? 280 : 480, 0.9);
     this.vibrate([50, 40, 70]);
     sfx.hurt();
     for (const e of this.enemies) {
       if (e.hp <= 0) continue;
       if (dist(p.x, p.y, e.x, e.y) > R) continue;
-      const dmg = this.saleFlatDmg(
-        e.saleBossId ? 12 : (e.type === 'boss' || e.type === 'director' || e.type === 'miniboss') ? 20 : 999
-      );
+      const elite = e.type === 'boss' || e.type === 'director' || e.type === 'miniboss';
+      let dmg;
+      if (v2) {
+        dmg = e.saleBossId || elite
+          ? this.saleFlatDmg(8)
+          : Math.max(1, Math.round(e.maxHp * 0.4));
+      } else {
+        dmg = this.saleFlatDmg(e.saleBossId ? 12 : elite ? 20 : 999);
+      }
       this.saleHitEnemy(e, dmg, p.x, p.y, 300, { impact: 'sp_fwave2', color: '#ff6b00', raw: true, source: 'bomb' });
     }
   } else if (pu.kind === 'heart') {

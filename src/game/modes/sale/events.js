@@ -203,9 +203,9 @@ Game.prototype._saleSpawnTempWalls = function () {
 
 Game.prototype.tickSaleEvents = function (dt) {
   const minute = Math.floor(this.saleTime / 60);
-  if (minute >= 1 && minute > this.saleEventMinute && minute <= 19) {
+  if (minute >= 1 && minute > this.saleEventMinute && (minute <= 19 || this.saleV2)) {
     this.saleEventMinute = minute;
-    const id = pickSaleEventId(minute, this.saleLastEventId);
+    const id = pickSaleEventId(minute, this.saleLastEventId, { endless: !!this.saleV2 });
     this.startSaleEvent(id);
   }
 

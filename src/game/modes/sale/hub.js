@@ -12,6 +12,7 @@ Game.prototype.renderSaleHubLoadout = function () {
     const tips = [];
     for (const ev of SALE_EVOLUTIONS) {
       if (ev.from !== wid) continue;
+      if (ev.v2Only) continue;
       tips.push(ev.name);
     }
     return tips.length ? ' · эво: ' + tips.join(' / ') : '';

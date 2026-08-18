@@ -162,13 +162,13 @@ Game.prototype.resetSaleGame = function () {
       for (const id of ['coffee', 'receipt', 'card', 'speaker', 'phone', 'mop']) {
         const d = SALE_WEAPONS[id];
         if (!d || d.evolved || contractBan.includes(d.type)) continue;
-        if (typeof this.isSaleWeaponHeroUnlocked === 'function' && !this.isSaleWeaponHeroUnlocked(id)) continue;
+        if (!this.saleV2 && typeof this.isSaleWeaponHeroUnlocked === 'function' && !this.isSaleWeaponHeroUnlocked(id)) continue;
         return id;
       }
       for (const id of Object.keys(SALE_WEAPONS)) {
         const d = SALE_WEAPONS[id];
         if (!d || d.evolved || contractBan.includes(d.type)) continue;
-        if (typeof this.isSaleWeaponHeroUnlocked === 'function' && !this.isSaleWeaponHeroUnlocked(id)) continue;
+        if (!this.saleV2 && typeof this.isSaleWeaponHeroUnlocked === 'function' && !this.isSaleWeaponHeroUnlocked(id)) continue;
         return id;
       }
       return 'receipt';
@@ -324,6 +324,18 @@ Game.prototype.saleMaxWeaponSlots = function () {
   return this.getSaleArenaRun().weaponSlots + this.saleTreeBonus('weaponSlots');
 };
 
+/** Слоты: каждое оружие кроме меты. Две ветки одной базы = два слота. */
+Game.prototype.saleWeaponSlotCount = function () {
+  let n = 0;
+  for (const id of Object.keys(this.saleWeapons || {})) {
+    if (!(this.saleWeapons[id] > 0)) continue;
+    const def = typeof SALE_WEAPONS !== 'undefined' ? SALE_WEAPONS[id] : null;
+    if (def && def.meta) continue;
+    n += 1;
+  }
+  return n;
+};
+
 Game.prototype.saleDmgMul = function () {
   const hero = getSaleHero(this.saleHeroId || this.selectedHeroId);
   const over = (this.saleOverflow && this.saleOverflow.power) || 0;
@@ -375,6 +387,13 @@ Game.prototype.saleMagnetRange = function () {
     + (floor && floor.magnetBonus ? floor.magnetBonus : 0)
     + (eq.magnet || 0) + this.saleTreeBonus('magnet');
   if (this.saleWeapons && this.saleWeapons.vip) bonus += 50;
+  if (this.saleWeapons) {
+    for (const id of Object.keys(this.saleWeapons)) {
+      if (!(this.saleWeapons[id] > 0) || id === 'vip') continue;
+      const def = SALE_WEAPONS[id];
+      if (def && def.magnetBonus) bonus += def.magnetBonus;
+    }
+  }
   if (this.saleV2) bonus *= 1 + this.saleV2Stat('magnetPct');
   return bonus;
 };

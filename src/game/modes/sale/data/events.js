@@ -33,7 +33,10 @@ const SALE_EVENT_POOLS = {
   finale: ['mall_closing'],
 };
 
-function saleEventPoolForMinute(minute) {
+function saleEventPoolForMinute(minute, opts) {
+  const endless = !!(opts && opts.endless);
+  if (endless && minute >= 15) return SALE_EVENT_POOLS.brutal;
+  if (minute >= 20) return SALE_EVENT_POOLS.brutal;
   if (minute >= 19) return SALE_EVENT_POOLS.finale;
   if (minute >= 15) return SALE_EVENT_POOLS.brutal;
   if (minute >= 10) return SALE_EVENT_POOLS.late;
@@ -41,8 +44,8 @@ function saleEventPoolForMinute(minute) {
   return SALE_EVENT_POOLS.early;
 }
 
-function pickSaleEventId(minute, lastId) {
-  const pool = saleEventPoolForMinute(minute).slice();
+function pickSaleEventId(minute, lastId, opts) {
+  const pool = saleEventPoolForMinute(minute, opts).slice();
   if (pool.length > 1 && lastId) {
     const filtered = pool.filter((id) => id !== lastId);
     if (filtered.length) return filtered[randi(0, filtered.length - 1)];
@@ -76,9 +79,10 @@ function saleEventHudLabel(id) {
 }
 
 /** Секунд до следующего минутного события или null, если расписание кончилось. */
-function saleNextEventEta(saleTime) {
+function saleNextEventEta(saleTime, opts) {
   const t = Math.max(0, saleTime || 0);
   const minute = Math.floor(t / 60);
-  if (minute >= 19) return null;
+  const endless = !!(opts && opts.endless);
+  if (!endless && minute >= 19) return null;
   return (minute + 1) * 60 - t;
 }

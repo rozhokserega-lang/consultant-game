@@ -172,6 +172,9 @@ Game.prototype.pickSaleV2Node = function (id) {
   if (!this.investSaleV2Node(id)) return;
   sfx.click();
   this.pendingUpgrades = Math.max(0, (this.pendingUpgrades | 0) - 1);
+  if (this._saleBal && typeof this.recordSaleBalanceV2Event === 'function') {
+    this.recordSaleBalanceV2Event('tree', { id, lv: this.saleV2NodeLevel(id) });
+  }
   this._saleV2InspectId = id;
   if (this.pendingUpgrades > 0) this.openSaleV2TreeUI();
   else {
@@ -222,6 +225,9 @@ Game.prototype.openSaleV2TreeUI = function () {
     this.saleOverflow = this.saleOverflow || {};
     this.saleOverflow.power = (this.saleOverflow.power || 0) + 1;
     this.showEventBanner('💪 Дерево закрыто: +урон', 1.4);
+    if (this._saleBal && typeof this.recordSaleBalanceV2Event === 'function') {
+      this.recordSaleBalanceV2Event('overflow', { id: 'power', src: 'tree_cap' });
+    }
     this.pendingUpgrades = Math.max(0, (this.pendingUpgrades | 0) - 1);
     if (this.pendingUpgrades > 0) {
       this.openSaleV2TreeUI();
@@ -318,20 +324,67 @@ Game.prototype.buildSaleV2TreeView = function (branchId) {
   return saleV2PassivesInLane(branchId || 'tempo').map((def) => this.saleV2NodeView(def));
 };
 
+Game.prototype.listSaleV2SiblingBranches = function () {
+  const out = [];
+  if (typeof SALE_EVOLUTIONS === 'undefined') return out;
+  const byFrom = {};
+  for (const ev of SALE_EVOLUTIONS) {
+    if (ev.v2Only && !this.saleV2) continue;
+    (byFrom[ev.from] = byFrom[ev.from] || []).push(ev);
+  }
+  for (const evs of Object.values(byFrom)) {
+    const owned = evs.filter((ev) => this.saleWeapons[ev.into]);
+    const missing = evs.filter((ev) => !this.saleWeapons[ev.into]);
+    if (owned.length < 1 || !missing.length) continue;
+    for (const ev of missing) out.push(ev);
+  }
+  return out;
+};
+
+Game.prototype.tryGrantSaleV2Meta = function () {
+  if (!this.saleV2 || typeof SALE_META_EVOS === 'undefined') return;
+  for (const family of Object.keys(SALE_META_EVOS)) {
+    const meta = SALE_META_EVOS[family];
+    if (!meta || this.saleWeapons[meta.id]) continue;
+    const ids = typeof saleEvoIdsForFamily === 'function' ? saleEvoIdsForFamily(family) : [];
+    if (ids.length < 2) continue;
+    if (!ids.every((id) => this.saleWeapons[id])) continue;
+    if (!SALE_WEAPONS[meta.id]) continue;
+    this.saleWeapons[meta.id] = 1;
+    this.saleWeaponCd = this.saleWeaponCd || {};
+    this.saleWeaponCd[meta.id] = 0.2;
+    this.showEventBanner((meta.ico || '🧋') + ' Мета: ' + meta.name + '!', 2.4);
+    sfx.level();
+    if (this.player) {
+      this.spawnAnimFx('afx_levelup', this.player.x, this.player.y, {
+        life: 1.2, scale: 1.8, scaleEnd: 2.3, anchorY: 0.9,
+      });
+    }
+    if (this._saleBal) {
+      this._saleBal.metaTaken = this._saleBal.metaTaken || [];
+      this._saleBal.metaTaken.push({
+        id: meta.id, family, t: Math.round((this.saleTime || 0) * 10) / 10,
+      });
+    }
+    if (typeof this.recordSaleBalanceV2Event === 'function') {
+      this.recordSaleBalanceV2Event('meta', { id: meta.id, family });
+    }
+  }
+};
+
 Game.prototype.saleV2WeaponOffered = function (id) {
   const def = SALE_WEAPONS[id];
   if (!def || def.evolved) return false;
   const banTypes = (this.saleContract && this.saleContract.banTypes) || [];
   if (banTypes.includes(def.type)) return false;
-  if (typeof this.isSaleWeaponHeroUnlocked === 'function' && !this.isSaleWeaponHeroUnlocked(id)) {
-    return false;
-  }
   return true;
 };
 
 Game.prototype.buildSaleV2WeaponChoices = function () {
   const candidates = [];
-  const slotCount = Object.keys(this.saleWeapons || {}).filter((id) => (this.saleWeapons[id] || 0) > 0).length;
+  const slotCount = typeof this.saleWeaponSlotCount === 'function'
+    ? this.saleWeaponSlotCount()
+    : Object.keys(this.saleWeapons || {}).filter((id) => (this.saleWeapons[id] || 0) > 0).length;
   const canNewWeapon = slotCount < this.saleMaxWeaponSlots();
   const banned = this.saleBanned || {};
   this.saleOverflow = this.saleOverflow || {};
@@ -343,6 +396,7 @@ Game.prototype.buildSaleV2WeaponChoices = function () {
     const lv = this.saleWeapons[def.id] || 0;
     if (lv <= 0) {
       if (!canNewWeapon) continue;
+      if (typeof saleHasFamily === 'function' && saleHasFamily(this.saleWeapons, def.id)) continue;
       if (!this.saleV2WeaponOffered(def.id)) continue;
       const role = SALE_ROLE_LABEL[def.type] || def.type;
       candidates.push({
@@ -368,10 +422,26 @@ Game.prototype.buildSaleV2WeaponChoices = function () {
     }
   }
 
+  if (canNewWeapon) {
+    for (const ev of this.listSaleV2SiblingBranches()) {
+      const into = SALE_WEAPONS[ev.into];
+      if (!into || banned['w:' + ev.into]) continue;
+      const fromDef = SALE_WEAPONS[ev.from];
+      const role = SALE_ROLE_LABEL[into.type] || into.type;
+      candidates.push({
+        kind: 'branch2', id: ev.into, from: ev.from, ico: into.ico,
+        ttl: `✨ 2-я ветка: ${ev.name}`,
+        desc: `${(fromDef && fromDef.name) || ev.from}: ${into.desc} · ${role}`,
+        weight: 3.8, role, branch: ev.branch || null,
+      });
+    }
+  }
+
   // хвост оружия на капе — не глобальные «Час пик» / «Расширение зала»
   for (const [wid] of Object.entries(this.saleWeapons || {})) {
     const def = SALE_WEAPONS[wid];
     if (!def || banned['w:' + wid]) continue;
+    if (def.meta) continue;
     const lv = this.saleWeapons[wid] || 0;
     const atCap = def.evolved || lv >= (def.max || 5);
     if (!atCap) continue;
@@ -425,6 +495,9 @@ Game.prototype.openSaleV2WeaponCaseUI = function () {
     this.saleOverflow = this.saleOverflow || {};
     this.saleOverflow.power = (this.saleOverflow.power || 0) + 1;
     this.showEventBanner('💪 Оружие на капе: +урон', 1.3);
+    if (this._saleBal && typeof this.recordSaleBalanceV2Event === 'function') {
+      this.recordSaleBalanceV2Event('overflow', { id: 'power', src: 'wep_cap' });
+    }
     this._saleV2WepPick = false;
     this._saleV2WepPending = Math.max(0, (this._saleV2WepPending | 0) - 1);
     this.openNextSaleV2Pick();
@@ -436,9 +509,9 @@ Game.prototype.openSaleV2WeaponCaseUI = function () {
       title: '🧳 Чемодан с оружием',
       cards: this.upgradeChoices.map((up) => {
         const card = saleChoiceToCard(up);
-        if (up.kind === 'evolve') {
+        if (up.kind === 'evolve' || up.kind === 'branch2') {
           card.evoReady = true;
-          card.evoBadge = 'ЭВО';
+          card.evoBadge = up.kind === 'branch2' ? '2-Я ВЕТКА' : 'ЭВО';
           card.evoName = up.ttl;
           card.isUpgrade = true;
         } else if (up.kind === 'weapon_up') {
@@ -465,6 +538,12 @@ Game.prototype.grantSaleV2BossCoupon = function (enemy) {
   this._saleV2UberQueue.push(mythic ? 'mythic' : 'normal');
   this._saleLevelFxT = Math.max(this._saleLevelFxT || 0, 0.55);
   this.showEventBanner(mythic ? '👑 Mythic-купон!' : '🏷 Чёрный купон!', 1.8);
+  if (this._saleBal && typeof this.recordSaleBalanceV2Event === 'function') {
+    this.recordSaleBalanceV2Event('coupon', {
+      rarity: mythic ? 'mythic' : 'normal',
+      bossId: (enemy && enemy.saleBossId) || '',
+    });
+  }
 };
 
 Game.prototype.buildSaleV2UberChoices = function (rarity) {
@@ -522,6 +601,9 @@ Game.prototype.openSaleV2UberUI = function () {
     this.saleOverflow = this.saleOverflow || {};
     this.saleOverflow.power = (this.saleOverflow.power || 0) + 1;
     this.showEventBanner('💪 Купоны кончились: +урон', 1.3);
+    if (this._saleBal && typeof this.recordSaleBalanceV2Event === 'function') {
+      this.recordSaleBalanceV2Event('overflow', { id: 'power', src: 'uber_empty' });
+    }
     this._saleV2UberPick = false;
     this._saleV2UberQueue.shift();
     this.openNextSaleV2Pick();
@@ -556,6 +638,9 @@ Game.prototype.applySaleV2Uber = function (id) {
   }
   this.applySalePassivesToPlayer();
   this.showEventBanner((def.rarity === 'mythic' ? '👑 ' : '🏷 ') + def.name, 1.6);
+  if (this._saleBal && typeof this.recordSaleBalanceV2Event === 'function') {
+    this.recordSaleBalanceV2Event('uber', { id: def.id, rarity: def.rarity || 'normal' });
+  }
   return true;
 };
 

@@ -5,7 +5,9 @@
 
 Game.prototype.buildSaleUpgradeChoices = function () {
   const candidates = [];
-  const slotCount = Object.keys(this.saleWeapons).filter((id) => (this.saleWeapons[id] || 0) > 0).length;
+  const slotCount = typeof this.saleWeaponSlotCount === 'function'
+    ? this.saleWeaponSlotCount()
+    : Object.keys(this.saleWeapons).filter((id) => (this.saleWeapons[id] || 0) > 0).length;
   const ownedP = Object.keys(this.salePassives).filter((id) => (this.salePassives[id] || 0) > 0);
   const canNewWeapon = slotCount < this.saleMaxWeaponSlots();
   const banned = this.saleBanned || {};
@@ -244,7 +246,7 @@ Game.prototype.toggleSaleBanish = function () {
 Game.prototype.banSaleUpgrade = function (i) {
   const up = this.upgradeChoices[i];
   if (!up) return;
-  if (up.kind === 'evolve' || up.kind === 'heal') { sfx.hurt(); return; }
+  if (up.kind === 'evolve' || up.kind === 'branch2' || up.kind === 'heal') { sfx.hurt(); return; }
   if ((this.saleBanishesLeft | 0) <= 0) { sfx.hurt(); return; }
   this.saleBanned = this.saleBanned || {};
   const key = up.kind === 'passive' ? 'p:' + up.id
@@ -288,6 +290,17 @@ Game.prototype.pickSaleUpgrade = function (i) {
     if (!this.saleV2 && this.saleWeapons[up.id] >= 3) this.armSaleKeyPity(up.id);
   } else if (up.kind === 'evolve') {
     this.applySaleEvolution(up.from, up.id);
+  } else if (up.kind === 'branch2') {
+    this.saleWeapons[up.id] = 1;
+    this.saleWeaponCd = this.saleWeaponCd || {};
+    this.saleWeaponCd[up.id] = 0.15;
+    if (this._saleBal) {
+      this._saleBal.evoTaken = this._saleBal.evoTaken || [];
+      this._saleBal.evoTaken.push({
+        into: up.id, from: up.from, t: Math.round((this.saleTime || 0) * 10) / 10, branch2: true,
+      });
+    }
+    if (typeof this.tryGrantSaleV2Meta === 'function') this.tryGrantSaleV2Meta();
   } else if (up.kind === 'passive') {
     this.salePassives[up.id] = (this.salePassives[up.id] || 0) + 1;
     if (up.id === 'mug') {

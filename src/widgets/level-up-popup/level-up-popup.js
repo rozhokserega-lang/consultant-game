@@ -115,7 +115,7 @@
       const match = title.match(/\+(\d+)/);
       if (match) level = Number(match[1]);
       title = title.replace(/\s*\+\d+.*/, '').trim();
-    } else if (kind === 'evolve') {
+    } else if (kind === 'evolve' || kind === 'branch2') {
       isUpgrade = true;
       title = title.replace(/^✨\s*/, '').trim();
     } else if (kind === 'heal') {
@@ -129,7 +129,7 @@
     if (!title) title = '?';
 
     let lane = 'other';
-    if (kind === 'weapon_new' || kind === 'weapon_up' || kind === 'weapon_over' || kind === 'evolve') {
+    if (kind === 'weapon_new' || kind === 'weapon_up' || kind === 'weapon_over' || kind === 'evolve' || kind === 'branch2') {
       lane = 'weapon';
     } else if (kind === 'passive' || kind === 'overflow') {
       lane = 'perk';

@@ -122,14 +122,16 @@
       case 'warp': {
         const run = saleDevEnsureRun();
         if (!run) break;
-        run.saleTime = Math.min(SALE_DURATION - 1, (run.saleTime || 0) + (+arg || 0));
+        const cap = run.saleV2 ? 99 * 60 : (SALE_DURATION - 1);
+        run.saleTime = Math.min(cap, (run.saleTime || 0) + (+arg || 0));
         info(`время ${fmtSaleClock(run.saleTime)}`);
         break;
       }
       case 'warpto': {
         const run = saleDevEnsureRun();
         if (!run) break;
-        run.saleTime = Math.max(0, Math.min(SALE_DURATION - 1, +arg || 0));
+        const cap = run.saleV2 ? 99 * 60 : (SALE_DURATION - 1);
+        run.saleTime = Math.max(0, Math.min(cap, +arg || 0));
         info(`время ${fmtSaleClock(run.saleTime)}`);
         break;
       }

@@ -162,6 +162,7 @@ Game.prototype.updateSaleWeapons = function (dt) {
       this.saleRings.push({
         x: p.x, y: p.y, r: 18, maxR, dmg, hit: new Set(),
         knock: def.knock || 200, ico: def.ico, visual: def.visual || id, weaponId: id,
+        stun: def.stun || 0,
       });
       this._saleNova = { r: maxR, t: 0.38 };
       this.spawnAnimFx('afx_ring', p.x, p.y, {
@@ -260,6 +261,7 @@ Game.prototype.updateSaleWeapons = function (dt) {
           x: p.x, y: p.y, angle: ang, speed: def.speed || 460, life: 1.6, r: 11,
           dmg, ico: def.ico, visual: def.visual || id, bounces: 0, puddle: false,
           mark: def.markSec || 4, impact: def.impact, hit: new Set(), weaponId: id,
+          explodeOnKill: !!def.explodeOnKill,
         });
       }
       continue;
@@ -277,7 +279,7 @@ Game.prototype.updateSaleWeapons = function (dt) {
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
         if (Math.abs(diff) < half) {
-          this.saleHitEnemy(e, dmg, p.x, p.y, 160, { impact: def.impact || 'sp_fwave1', color: '#e67e22', weapon: id });
+          this.saleHitEnemy(e, dmg, p.x, p.y, def.knock || 160, { impact: def.impact || 'sp_fwave1', color: '#e67e22', weapon: id });
         }
       }
       this.spawnSpriteFx(def.impact || 'sp_fwave2', p.x + Math.cos(ang) * 40, p.y + Math.sin(ang) * 40, {
@@ -763,6 +765,7 @@ Game.prototype.updateSaleRings = function (dt) {
         ring.hit.add(e);
         this.saleHitEnemy(e, ring.dmg, ring.x, ring.y, ring.knock || 200, {
           color: '#f39c12', impact: 'sp_fwave1', weapon: ring.weaponId || 'nova',
+          stun: ring.stun || 0,
         });
       }
     }

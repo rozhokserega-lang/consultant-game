@@ -127,10 +127,16 @@ Game.prototype.initSaleBalanceLog = function () {
     hero: hero.id,
     floor: this.saleFloorId || this.selectedFloorId || 'grocery',
     contract: (this.saleContract && this.saleContract.id) || this.selectedContractId || 'none',
+    saleV2: !!this.saleV2,
     tree: (this.saleTreeActive || this.saleTreeSelected || []).slice(),
     keysOffered: 0,
     keysTaken: [],
+    treePicks: [],
+    ubersTaken: [],
+    couponsGranted: [],
+    overflowPicks: [],
     evoTaken: [],
+    metaTaken: [],
     recipeReadyAt: {},
     minutes: [],
     weaponDmg: {},
@@ -170,6 +176,32 @@ Game.prototype.hookSaleBalancePlayerHurt = function () {
     return dead;
   };
   this.player._saleBalHurtHooked = true;
+};
+
+Game.prototype.recordSaleBalanceV2Event = function (kind, payload) {
+  const bal = this._saleBal;
+  if (!bal || !kind) return;
+  const row = Object.assign({ t: Math.round((this.saleTime || 0) * 10) / 10 }, payload || {});
+  if (kind === 'uber') {
+    bal.ubersTaken = bal.ubersTaken || [];
+    bal.ubersTaken.push(row);
+  } else if (kind === 'tree') {
+    bal.treePicks = bal.treePicks || [];
+    bal.treePicks.push(row);
+  } else if (kind === 'coupon') {
+    bal.couponsGranted = bal.couponsGranted || [];
+    bal.couponsGranted.push(row);
+  } else if (kind === 'overflow') {
+    bal.overflowPicks = bal.overflowPicks || [];
+    bal.overflowPicks.push(row);
+  } else if (kind === 'meta') {
+    bal.metaTaken = bal.metaTaken || [];
+    bal.metaTaken.push(row);
+  }
+};
+
+Game.prototype.saleBalanceOwnedNodes = function () {
+  return Object.keys(this.salePassives || {}).filter((id) => (this.salePassives[id] || 0) > 0);
 };
 
 Game.prototype.recordSaleBalanceRevive = function () {
@@ -266,8 +298,14 @@ Game.prototype.sampleSaleBalanceMinute = function (minute) {
     eliteCount: eliteAlive,
     weapons: { ...(this.saleWeapons || {}) },
     passives: { ...(this.salePassives || {}) },
-    keys: Object.keys(this.salePassives || {}).filter((id) => (this.salePassives[id] || 0) > 0),
-    tree: (this.saleTreeActive || []).slice(),
+    keys: this.saleV2
+      ? (this.saleUbers || []).slice()
+      : this.saleBalanceOwnedNodes(),
+    tree: this.saleV2
+      ? this.saleBalanceOwnedNodes()
+      : (this.saleTreeActive || []).slice(),
+    ubers: (this.saleUbers || []).slice(),
+    overflow: { ...(this.saleOverflow || {}) },
     weaponSharePct: wepShare,
   });
   bal._acc = { dmg: 0, kills: 0, elites: 0, xp: 0, gold: 0, hurt: 0, hearts: 0 };
@@ -307,7 +345,7 @@ Game.prototype.finalizeSaleBalanceLog = function (won, killer) {
   if (hasAcc || bal._lastSampleMin < m) {
     this.sampleSaleBalanceMinute(Math.max(m, 1));
   }
-  const survived = Math.min(SALE_DURATION, this.saleTime || 0);
+  const survived = this.saleTime || 0;
   const summary = {
     id: bal.id,
     version: bal.version,
@@ -319,6 +357,7 @@ Game.prototype.finalizeSaleBalanceLog = function (won, killer) {
     hero: bal.hero,
     floor: bal.floor,
     contract: bal.contract,
+    saleV2: !!(bal.saleV2 || this.saleV2),
     level: this.saleLevel || 1,
     coins: this.coins || 0,
     kills: bal.totals.kills,
@@ -332,10 +371,19 @@ Game.prototype.finalizeSaleBalanceLog = function (won, killer) {
     avgDps: survived > 0 ? Math.round((bal.totals.dmg / survived) * 10) / 10 : 0,
     weaponsEnd: { ...(this.saleWeapons || {}) },
     passivesEnd: { ...(this.salePassives || {}) },
-    tree: bal.tree || (this.saleTreeActive || []).slice(),
-    keysTaken: bal.keysTaken || [],
+    overflowEnd: { ...(this.saleOverflow || {}) },
+    ubersEnd: (this.saleUbers || []).slice(),
+    ubersTaken: bal.ubersTaken || [],
+    couponsGranted: bal.couponsGranted || [],
+    treePicks: bal.treePicks || [],
+    overflowPicks: bal.overflowPicks || [],
+    tree: this.saleV2
+      ? this.saleBalanceOwnedNodes()
+      : (bal.tree || (this.saleTreeActive || []).slice()),
+    keysTaken: this.saleV2 ? (bal.treePicks || []) : (bal.keysTaken || []),
     keysOffered: bal.keysOffered || 0,
     evoTaken: bal.evoTaken || [],
+    metaTaken: bal.metaTaken || [],
     recipeReadyAt: bal.recipeReadyAt || this._saleRecipeReadyAt || {},
     weaponShare: this.buildSaleBalanceWeaponShare(),
     bosses: bal.bosses,
@@ -351,8 +399,10 @@ Game.prototype.finalizeSaleBalanceLog = function (won, killer) {
   this._saleBalLast = summary;
   this._saleBal = null;
   try {
-    console.log('[sale-balance]', summary.id, won ? 'WIN' : 'LOSS',
+    console.log('[sale-balance]', summary.id, summary.saleV2 ? 'v2' : 'classic',
+      won ? 'WIN' : 'LOSS',
       `t=${summary.survivedSec}s lv=${summary.level} dps=${summary.avgDps}`,
+      summary.ubersEnd && summary.ubersEnd.length ? summary.ubersEnd : '',
       summary.weaponShare);
   } catch (_) { /* ignore */ }
   return summary;

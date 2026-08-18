@@ -72,7 +72,10 @@ const SALE_BOSS_DEFS = {
     tag: 'ТРЕНЕР',
     xpReward: 50,
     coinDrop: 34,
+    /** Классика: финал забега. 2.0: mythic-купон, забег идёт дальше. */
     final: true,
+    /** Mythic-купон в Распродаже 2.0. */
+    mythicCoupon: true,
     trainer: true,
   },
 };

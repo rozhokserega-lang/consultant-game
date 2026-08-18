@@ -197,6 +197,7 @@ Game.prototype.listSaleReadyEvolutions = function () {
     const fromMax = (SALE_WEAPONS[ev.from] && SALE_WEAPONS[ev.from].max) || 5;
     if ((this.saleWeapons[ev.from] || 0) < fromMax) continue;
     if (this.saleWeapons[ev.into]) continue;
+    if (ev.v2Only && !this.saleV2) continue;
     if (ev.needPassive && !((this.salePassives[ev.needPassive] || 0) > 0)) continue;
     if (ev.needWeapon && !((this.saleWeapons[ev.needWeapon] || 0) > 0)) continue;
     ready.push(ev);
@@ -235,6 +236,7 @@ Game.prototype.applySaleEvolution = function (fromId, intoId) {
     this._saleBal.evoTaken = this._saleBal.evoTaken || [];
     this._saleBal.evoTaken.push({ into: intoId, from: fromId, t: Math.round((this.saleTime || 0) * 10) / 10 });
   }
+  if (this.saleV2 && typeof this.tryGrantSaleV2Meta === 'function') this.tryGrantSaleV2Meta();
   return true;
 };
 
@@ -307,7 +309,9 @@ Game.prototype.armSaleKeyPity = function (weaponId) {
 };
 
 Game.prototype.saleOverflowUnlocked = function () {
-  const n = Object.keys(this.saleWeapons || {}).filter((id) => (this.saleWeapons[id] || 0) > 0).length;
+  const n = typeof this.saleWeaponSlotCount === 'function'
+    ? this.saleWeaponSlotCount()
+    : Object.keys(this.saleWeapons || {}).filter((id) => (this.saleWeapons[id] || 0) > 0).length;
   const gate = typeof SALE_OVERFLOW_UNLOCK_SEC === 'number' ? SALE_OVERFLOW_UNLOCK_SEC : 720;
   return (this.saleTime || 0) >= gate || n >= this.saleMaxWeaponSlots();
 };

@@ -7,6 +7,13 @@
 const SALE_VISUAL_ALIAS = {
   fire: 'extinguisher', sound: 'speaker', beam: 'flashlight',
   blood: 'bloody_price', blood_aura: 'bloody_aura', bat: 'bats',
+  video_call: 'phone', megaphone: 'speaker', strobe: 'flashlight',
+  antitheft: 'turnstile', markdown: 'bloody_price', chart_top: 'speaker',
+  refund_bags: 'giftbag', bubble_tea: 'coffee', bag_of_bags: 'giftbag',
+  receipt_nest: 'endless_receipt', deep_clean: 'mop', livestream: 'phone',
+  sound_blast: 'speaker', black_vip: 'black_card', fire_exit: 'siren',
+  raid_light: 'hunter', friday_cart: 'mag_cart', full_lock: 'turnstile',
+  auto_markdown: 'bloody_price', emergency_hit: 'speaker',
 };
 
 function saleVisualKey(visual) {

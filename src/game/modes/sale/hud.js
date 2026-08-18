@@ -19,10 +19,17 @@ Game.prototype.updateSaleHUD = function () {
   if (this.$coins) this.$coins.textContent = '🪙 ' + this.coins;
 
   const left = Math.max(0, SALE_DURATION - this.saleTime);
-  const m = Math.floor(left / 60);
-  const s = Math.floor(left % 60).toString().padStart(2, '0');
-  this.$mode.textContent = `⏱ ${m}:${s}`;
-  this.$mode.className = 'hud-mode ' + (left < 60 ? 'chase' : 'flee');
+  if (this.saleV2) {
+    const em = Math.floor((this.saleTime || 0) / 60);
+    const es = Math.floor((this.saleTime || 0) % 60).toString().padStart(2, '0');
+    this.$mode.textContent = `∞ ${em}:${es}`;
+    this.$mode.className = 'hud-mode ' + ((this.saleTime || 0) >= SALE_DURATION ? 'chase' : 'flee');
+  } else {
+    const m = Math.floor(left / 60);
+    const s = Math.floor(left % 60).toString().padStart(2, '0');
+    this.$mode.textContent = `⏱ ${m}:${s}`;
+    this.$mode.className = 'hud-mode ' + (left < 60 ? 'chase' : 'flee');
+  }
 
   // фаза LN-директора: босс N/6 / до следующего босса / волна·элита
   const bossN = SALE_BOSS_ORDER.length;
@@ -30,9 +37,12 @@ Game.prototype.updateSaleHUD = function () {
   const aliveBoss = (this.enemies || []).find((e) => e.hp > 0 && e.saleBossId);
   let phaseTxt;
   if (aliveBoss) {
-    const shown = Math.min(bossN, Math.max(1, idx));
-    phaseTxt = `⚔ Босс ${shown}/${bossN} · ${aliveBoss.nameTag || 'Босс'}`;
-  } else if (idx >= bossN) {
+    const shown = this.saleV2 ? Math.max(1, idx) : Math.min(bossN, Math.max(1, idx));
+    const loop = this.saleV2 ? Math.floor(Math.max(0, idx - 1) / bossN) : 0;
+    phaseTxt = loop
+      ? `⚔ Круг ${loop + 1} · ${aliveBoss.nameTag || 'Босс'}`
+      : `⚔ Босс ${shown}/${bossN} · ${aliveBoss.nameTag || 'Босс'}`;
+  } else if (idx >= bossN && !this.saleV2) {
     phaseTxt = this.saleActiveEvent
       ? `📣 ${Math.ceil(this.saleActiveEvent.t)}с · финал`
       : '🔥 Финал забега';
@@ -40,8 +50,13 @@ Game.prototype.updateSaleHUD = function () {
     const eta = Math.max(0, Math.ceil((this.saleBossT || 0) - (this.saleTime || 0)));
     const waveEta = Math.max(0, Math.ceil(this.saleWaveT || 0));
     const eliteReady = (this.saleTime || 0) >= SALE_ELITE_START;
-    phaseTxt = `⏳ Босс ${idx + 1}/${bossN} через ${eta}с · волна ${waveEta}с`
-      + (eliteReady ? ' · элита' : '');
+    if (this.saleV2 && idx >= bossN) {
+      const loop = Math.floor(idx / bossN);
+      phaseTxt = `⏳ Круг ${loop + 1} · босс через ${eta}с · волна ${waveEta}с`;
+    } else {
+      phaseTxt = `⏳ Босс ${idx + 1}/${bossN} через ${eta}с · волна ${waveEta}с`
+        + (eliteReady ? ' · элита' : '');
+    }
     if (this.saleActiveEvent) {
       phaseTxt = `📣 ${Math.ceil(this.saleActiveEvent.t)}с · босс через ${eta}с`;
     }
@@ -59,7 +74,7 @@ Game.prototype.updateSaleHUD = function () {
     const label = (SALE_EVENT_BANNERS && SALE_EVENT_BANNERS[ev.id]) || saleEventHudLabel(ev.id);
     tags.push(`<span class="buff-tag event">${label} ${this.formatBattleElapsed(ev.t)}</span>`);
   } else {
-    const eta = saleNextEventEta(this.saleTime || 0);
+    const eta = saleNextEventEta(this.saleTime || 0, { endless: !!this.saleV2 });
     if (eta != null) {
       tags.push(`<span class="buff-tag event-wait">До события ${this.formatBattleElapsed(eta)}</span>`);
     }

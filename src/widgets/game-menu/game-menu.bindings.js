@@ -90,12 +90,16 @@ Object.assign(Game.prototype, {
       .filter(([, lv]) => lv > 0)
       .map(([id, lv]) => {
         const def = (typeof SALE_WEAPONS !== 'undefined' && SALE_WEAPONS[id]) || { ico: '⚔', name: id, max: 5 };
-        return `<button type="button" class="pause-chip pause-chip--wep" data-wep="${id}" aria-label="${def.name || id}">`
+        const meta = !!(def && def.meta);
+        return `<button type="button" class="pause-chip pause-chip--wep${meta ? ' pause-chip--meta' : ''}" data-wep="${id}" aria-label="${def.name || id}">`
           + `<span>${def.ico || '⚔'}</span>`
           + `<span class="nm">${def.name || id}</span>`
-          + `<span class="lv">Lv${lv}${def.max ? '/' + def.max : ''}</span>`
+          + `<span class="lv">${meta ? 'мета' : ('Lv' + lv + (def.max ? '/' + def.max : ''))}</span>`
           + `</button>`;
       });
+    const slotN = typeof this.saleWeaponSlotCount === 'function'
+      ? this.saleWeaponSlotCount()
+      : weps.length;
     const pass = Object.entries(this.salePassives || {})
       .filter(([, lv]) => lv > 0)
       .map(([id, lv]) => {
@@ -111,7 +115,7 @@ Object.assign(Game.prototype, {
       });
     const passChips = meta.concat(pass);
     box.innerHTML = `
-      <div class="sec">Оружие · ${weps.length}/${wepMax}</div>
+      <div class="sec">Оружие · ${slotN}/${wepMax}</div>
       <div class="pause-chips">${weps.length ? weps.join('') : '<span class="pause-empty">Пока только кулаки…</span>'}</div>
       <div class="pause-wep-detail" id="pause-wep-detail" hidden></div>
       <div class="sec">Пассивки · ${pass.length}/${passMax}</div>
@@ -186,15 +190,19 @@ Object.assign(Game.prototype, {
     const def = typeof SALE_WEAPONS !== 'undefined' ? SALE_WEAPONS[weaponId] : null;
     if (!def) return [];
     if (def.evolved) {
+      if (def.meta) return [{ done: true, text: 'Мета-эволюция — обе ветки уже в слотах' }];
       return [{ done: true, text: 'Уже эволюция — дальше не качается' }];
     }
     if (typeof SALE_EVOLUTIONS === 'undefined') return [];
     const tips = [];
     for (const ev of SALE_EVOLUTIONS) {
       if (ev.from !== weaponId) continue;
+      if (ev.v2Only && !this.saleV2) continue;
       const into = SALE_WEAPONS[ev.into];
       const pass = typeof SALE_PASSIVES !== 'undefined' ? SALE_PASSIVES[ev.needPassive] : null;
-      const havePass = ev.needPassive ? ((this.salePassives && this.salePassives[ev.needPassive]) || 0) > 0 : true;
+      const havePass = this.saleV2
+        ? true
+        : (ev.needPassive ? ((this.salePassives && this.salePassives[ev.needPassive]) || 0) > 0 : true);
       const fromMax = def.max || 5;
       const curLv = (this.saleWeapons && this.saleWeapons[weaponId]) || 0;
       const haveMax = curLv >= fromMax;
@@ -202,7 +210,9 @@ Object.assign(Game.prototype, {
       tips.push({
         name: ev.name || (into && into.name) || ev.into,
         ico: (into && into.ico) || '✨',
-        passLabel: pass ? `${pass.ico || ''} ${pass.name}`.trim() : (ev.needPassive || '—'),
+        passLabel: this.saleV2
+          ? (ev.branchHint || '6 ур. чемодана')
+          : (pass ? `${pass.ico || ''} ${pass.name}`.trim() : (ev.needPassive || '—')),
         havePass,
         haveMax,
         fromMax,

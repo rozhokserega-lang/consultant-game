@@ -13,7 +13,7 @@ Game.prototype.updateSale = function (dt) {
   this.saleTime += realDt;
   if (this.tickSaleBalanceLog) this.tickSaleBalanceLog(realDt);
   if (this._saleLsCd > 0) this._saleLsCd -= realDt;
-  if (this.saleTime >= SALE_DURATION) {
+  if (this.saleTime >= SALE_DURATION && !this.saleV2) {
     this.endSaleGame(true);
     return;
   }
