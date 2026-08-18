@@ -12,17 +12,28 @@ Game.prototype.saleHitEnemy = function (e, dmg, srcX, srcY, knock, opts) {
   if (opts.mark) e._saleMarked = Math.max(e._saleMarked || 0, opts.mark);
   if ((e._saleMarked || 0) > 0) {
     let markMul = 1.3;
-    if (this.salePassives.sticker) markMul += this.salePassives.sticker * 0.12;
+    if (this.saleV2) markMul += this.saleV2Stat('mark');
+    else if (this.salePassives.sticker) markMul += this.salePassives.sticker * 0.10;
+    markMul += this.saleTreeBonus('mark') || 0;
     if (this.saleSynergyOn('markAura') && opts.fromAura) markMul += 0.25;
     dmg = Math.max(1, Math.round(dmg * markMul));
   }
   const floor = this.getSaleFloor();
   if (knock) {
-    if (this.salePassives.guard_pass) knock *= 1 + this.salePassives.guard_pass * 0.10;
+    if (this.saleV2) knock *= 1 + this.saleV2Stat('knock');
+    else if (this.salePassives.guard_pass) knock *= 1 + this.salePassives.guard_pass * 0.12;
     if (floor && floor.knockMul) knock *= floor.knockMul;
   }
   // цифры и лог = реально снятое HP (не «бумажный» урон и не оверкилл)
   const hpBefore = Math.max(0, e.hp || 0);
+  this._saleLastCrit = false;
+  if (this.saleV2 && !opts.echo) {
+    const crit = this.saleV2Stat('crit');
+    if (crit > 0 && Math.random() < crit) {
+      dmg = Math.max(1, Math.round(dmg * 2));
+      this._saleLastCrit = true;
+    }
+  }
   const died = e.hit(dmg, srcX, srcY, knock || 140, opts.stun || 0);
   const dealt = Math.max(0, hpBefore - Math.max(0, e.hp || 0));
   if (dealt > 0 && this.recordSaleBalanceDmg) {

@@ -18,3 +18,4 @@ mountWidget('main-menu-overlay', MainMenu);
 mountWidget('crash-overlay', CrashOverlay);
 mountWidget('extract-hud', ExtractHud);
 mountWidget('extract-shop-overlay', ExtractShop);
+mountWidget('sale-tree-overlay', SaleTreePopup);

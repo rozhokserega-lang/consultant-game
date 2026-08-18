@@ -23,31 +23,34 @@ Game.prototype.dropSaleXp = function (enemy) {
   }
 };
 
-Game.prototype.spawnSalePowerup = function (x, y, kind) {
+Game.prototype.spawnSalePowerup = function (x, y, kind, extra) {
   const def = SALE_POWERUPS[kind];
   if (!def) return;
+  extra = extra || {};
   this.salePowerups = this.salePowerups || [];
   this.salePowerups.push({
     kind,
     x: Math.max(40, Math.min(this.worldW - 40, x)),
     y: Math.max(40, Math.min(this.worldH - 40, y)),
-    r: 16,
-    life: 25,
-    vx: rand(-50, 50),
-    vy: rand(-70, -20),
+    r: extra.r || 16,
+    life: extra.life != null ? extra.life : 25,
+    vx: extra.vx != null ? extra.vx : rand(-50, 50),
+    vy: extra.vy != null ? extra.vy : rand(-70, -20),
+    fromBoss: !!extra.fromBoss,
+    fromElite: !!extra.fromElite,
   });
 };
 
 Game.prototype.dropSalePowerup = function (enemy) {
   if (enemy.saleBossId) {
     // уникальный босс ТЦ — гарантированная посылка + магнит (+ bomb/heal в onSaleBossKilled)
-    this.spawnSalePowerup(enemy.x - 22, enemy.y, 'chest');
+    this.spawnSalePowerup(enemy.x - 22, enemy.y, 'chest', { fromBoss: true });
     this.spawnSalePowerup(enemy.x + 22, enemy.y, 'magnet');
     this.spawnSalePowerup(enemy.x, enemy.y - 26, 'heart');
     return;
   }
   if (enemy._saleElite) {
-    this.spawnSalePowerup(enemy.x, enemy.y, 'chest');
+    this.spawnSalePowerup(enemy.x, enemy.y, 'chest', { fromElite: true });
     if (Math.random() < 0.55) this.spawnSalePowerup(enemy.x + rand(-16, 16), enemy.y - 18, 'heart');
     return;
   }
@@ -59,7 +62,7 @@ Game.prototype.dropSalePowerup = function (enemy) {
   this.spawnSalePowerup(enemy.x, enemy.y, kind);
 };
 
-/** LN-style: хил с мобов; чаще при низком HP / с аптечкой (у LN ~0.2%, у нас щедрее — HP мало). */
+/** Сердца с мобов; чаще при низком HP. Кейстоун «Неотложка» добавляет шанс. */
 Game.prototype.dropSaleHeart = function (enemy) {
   if (!enemy || enemy.saleBossId || enemy._saleElite) return; // уже в dropSalePowerup
   const p = this.player;
@@ -68,8 +71,10 @@ Game.prototype.dropSaleHeart = function (enemy) {
   if (p.hp < p.maxHp) chance = 0.08;
   if (p.hp <= Math.max(1, Math.ceil(p.maxHp * 0.4))) chance = 0.13;
   if (p.hp >= p.maxHp) chance *= 0.2; // почти не мусорим пол при фулл HP
-  const med = this.salePassives.medkit || this.salePassives.regen || 0;
-  chance += med * 0.02;
+  if (p.hp <= Math.max(1, Math.ceil(p.maxHp * 0.4))) {
+    chance += this.saleTreeBonus('heartLow') || 0;
+    if (this.saleV2) chance += this.saleV2Stat('heartLow');
+  }
   if (enemy.type === 'fatty' || enemy.type === 'tank') chance += 0.04;
   if (enemy.type === 'miniboss' || enemy.type === 'director') chance += 0.12;
   if (Math.random() >= chance) return;
@@ -93,21 +98,18 @@ Game.prototype.pickSaleEvoKeyDrop = function () {
 
 Game.prototype.applySalePowerup = function (pu) {
   const p = this.player;
-  if (pu.kind === 'chest') {
-    // редко: ключ эво вместо/вместе с апгрейдом
-    if (Math.random() < 0.28) {
-      const key = this.pickSaleEvoKeyDrop();
-      if (key && SALE_PASSIVES[key]) {
-        this.salePassives[key] = (this.salePassives[key] || 0) + 1;
-        this.applySalePassivesToPlayer();
-        this.showEventBanner(`📦 В посылке ключ: ${SALE_PASSIVES[key].name}!`, 2.0);
-        this.spawnAnimFx('afx_levelup', p.x, p.y, { life: 0.95, scale: 1.2, scaleEnd: 1.65, anchorY: 0.9 });
-        sfx.level();
-        return;
-      }
-    }
+  if (pu.kind === 'wepcase') {
+    this._saleV2WepPending = (this._saleV2WepPending || 0) + 1;
+    this.showEventBanner('🧳 Чемодан с оружием: выбери одно из трёх', 1.6);
+    this.spawnAnimFx('afx_levelup', p.x, p.y, { life: 0.75, scale: 1.05, scaleEnd: 1.45, anchorY: 0.9 });
+    sfx.level();
+    this._saleLevelFxT = Math.max(this._saleLevelFxT || 0, 0.45);
+  } else if (pu.kind === 'chest') {
+    const t = this.saleTime || 0;
+    const canEvo = !this.saleV2 && (!!pu.fromBoss || (!!pu.fromElite && t >= 360));
+    if (canEvo && this.tryGrantSaleChestEvolution()) return;
     this.pendingUpgrades = (this.pendingUpgrades || 0) + 1;
-    this.showEventBanner('📦 Посылка со склада: бесплатное улучшение!', 1.8);
+    this.showEventBanner(this.saleV2 ? '📦 Посылка: очко дерева!' : '📦 Посылка со склада: бесплатное улучшение!', 1.8);
     this.spawnAnimFx('afx_levelup', p.x, p.y, { life: 0.95, scale: 1.2, scaleEnd: 1.65, anchorY: 0.9 });
     sfx.level();
     this._saleLevelFxT = Math.max(this._saleLevelFxT || 0, 0.75);
@@ -135,7 +137,17 @@ Game.prototype.applySalePowerup = function (pu) {
       this.saleHitEnemy(e, dmg, p.x, p.y, 300, { impact: 'sp_fwave2', color: '#ff6b00', raw: true, source: 'bomb' });
     }
   } else if (pu.kind === 'heart') {
-    p.hp = Math.min(p.maxHp, p.hp + 1);
+    let heal = 1;
+    if (this.saleV2 && this.saleV2HasEffect && this.saleV2HasEffect('heart_boost')) {
+      heal = 2;
+      if (p.slowTimer) p.slowTimer = 0;
+      if (p.muteAttack) p.muteAttack = 0;
+    }
+    p.hp = Math.min(p.maxHp, p.hp + heal);
+    if (this._saleBal) {
+      this._saleBal.totals.hearts = (this._saleBal.totals.hearts || 0) + 1;
+      if (this._saleBal._acc) this._saleBal._acc.hearts = (this._saleBal._acc.hearts || 0) + 1;
+    }
     this.spawnAnimFx('afx_heal', p.x, p.y - 10, { life: 0.45, scale: 0.75, vy: -18 });
     this.spawnParticles(p.x, p.y, 10, '#e11d48', 100, 0.35);
     sfx.pickup();
@@ -153,8 +165,8 @@ Game.prototype.updateSalePowerups = function (dt) {
     pu.vy *= 0.9;
     if (!p) continue;
     const d = dist(p.x, p.y, pu.x, pu.y);
-    // лёгкий магнит на пауэрапы
-    if (d < 110) {
+    // чемодан с оружием не притягивается — надо подойти
+    if (d < 110 && pu.kind !== 'wepcase') {
       const a = angleTo(pu.x, pu.y, p.x, p.y);
       const pull = (110 - d) * 4 * dt;
       pu.x += Math.cos(a) * pull;

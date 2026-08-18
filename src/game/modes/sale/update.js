@@ -20,6 +20,8 @@ Game.prototype.updateSale = function (dt) {
 
   // минутные события ТЦ
   this.tickSaleEvents(realDt);
+  if (typeof this.tickSaleV2Weapons === 'function') this.tickSaleV2Weapons(realDt);
+  if (typeof this.tickSaleV2Capstones === 'function') this.tickSaleV2Capstones(realDt);
   if (typeof this.tryUnlockSaleCashier === 'function') this.tryUnlockSaleCashier();
 
   // timers inherited from shift events
@@ -31,17 +33,7 @@ Game.prototype.updateSale = function (dt) {
   }
   if (this.modeFlash > 0) this.modeFlash -= realDt;
 
-  // regen
-  const regenLv = this.salePassives.medkit || this.salePassives.regen || 0;
-  if (regenLv > 0) {
-    this.saleRegenTimer += realDt;
-    const every = Math.max(4, 12 - regenLv * 2.5);
-    if (this.saleRegenTimer >= every) {
-      this.saleRegenTimer = 0;
-      if (this.player.hp < this.player.maxHp) this.player.hp++;
-    }
-  }
-
+  // regen снят из пула уровня — сердца даёт кейстоун «Неотложка»
   if (this._saleAura) { this._saleAura.t -= realDt; if (this._saleAura.t <= 0) this._saleAura = null; }
   if (this._saleNova) { this._saleNova.t -= realDt; if (this._saleNova.t <= 0) this._saleNova = null; }
 
@@ -239,8 +231,7 @@ Game.prototype.updateSale = function (dt) {
     pk.update(realDt, this.player);
     if (!pk.dead && dist(this.player.x, this.player.y, pk.x, pk.y) < this.player.r + pk.r + 8) {
       if (pk.type === 'coin' || pk.type === 'coins') {
-        const wallet = 1 + (this.salePassives.wallet || 0) * 0.15
-          + (this.salePassives.ribbon || 0) * 0.10;
+        const wallet = 1 + (this.saleV2 ? this.saleV2Stat('coins') : (this.salePassives.money || 0) * 0.12);
         const warmCoins = saleCoinWarmMul(this.saleTime || 0);
         const gain = Math.ceil((pk.value || 1) * wallet * (this.coinMult || 1) * warmCoins);
         this.coins += gain;
@@ -277,9 +268,18 @@ Game.prototype.updateSale = function (dt) {
     this._saleLevelFxT -= realDt;
     if (this._saleLevelFxT <= 0) {
       this._saleLevelFxT = 0;
-      if ((this.pendingUpgrades || 0) > 0 && !this.choosingUpgrade && !this.gameOver && !this.won) {
+      if (!this.saleV2 && (this.pendingUpgrades || 0) > 0 && !this.choosingUpgrade
+        && !this.gameOver && !this.won) {
         this.openSaleUpgradeUI();
       }
+    }
+  }
+  if (this.saleV2 && !this.choosingUpgrade && !this.gameOver && !this.won
+    && !(this._saleLevelFxT > 0)) {
+    if ((this._saleV2WepPending || 0) > 0 && typeof this.openSaleV2WeaponCaseUI === 'function') {
+      this.openSaleV2WeaponCaseUI();
+    } else if ((this.pendingUpgrades || 0) > 0) {
+      this.openSaleV2TreeUI();
     }
   }
 };

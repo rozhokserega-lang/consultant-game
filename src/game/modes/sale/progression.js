@@ -41,6 +41,9 @@ Game.prototype.gainSaleXp = function (amount) {
     this.saleXp -= this.saleXpNext;
     this.saleLevel++;
     this.saleXpNext = saleXpToNext(this.saleLevel);
+    if (this.saleV2 && typeof SALE_V2_XP_MUL === 'number') {
+      this.saleXpNext = Math.floor(this.saleXpNext * SALE_V2_XP_MUL);
+    }
     leveled++;
     this.player.fillSkill(0.15);
   }

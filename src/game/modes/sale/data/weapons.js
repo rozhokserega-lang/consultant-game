@@ -5,7 +5,7 @@
 
 /**
  * Оружия Распродажи — LN-роли + mall extras (турникет/ценник/радио/пакет).
- * type: projectile | orbit | ricochet | aura | boomerang | puddle | nova | beam | sword | charge | spray | shield | radio | mark
+ * Бюджет ST-DPS по ролям — docs/SALE_BALANCE_V2.md. Эво ≤ 1.7× базы за счёт паттерна, не сырого dmg.
  */
 const SALE_WEAPONS = {
   // bolt → ценник: залп в ближайших (id не scanner — тот в сейвах = старый чек)

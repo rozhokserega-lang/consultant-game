@@ -127,6 +127,11 @@ Game.prototype.initSaleBalanceLog = function () {
     hero: hero.id,
     floor: this.saleFloorId || this.selectedFloorId || 'grocery',
     contract: (this.saleContract && this.saleContract.id) || this.selectedContractId || 'none',
+    tree: (this.saleTreeActive || this.saleTreeSelected || []).slice(),
+    keysOffered: 0,
+    keysTaken: [],
+    evoTaken: [],
+    recipeReadyAt: {},
     minutes: [],
     weaponDmg: {},
     bosses: [],
@@ -138,8 +143,9 @@ Game.prototype.initSaleBalanceLog = function () {
         gold: 0,
         hurt: 0,
         revives: 0,
+        hearts: 0,
       },
-      _acc: { dmg: 0, kills: 0, elites: 0, xp: 0, gold: 0, hurt: 0 },
+      _acc: { dmg: 0, kills: 0, elites: 0, xp: 0, gold: 0, hurt: 0, hearts: 0 },
     _lastSampleMin: -1,
     _sampleT: 0,
   };
@@ -255,13 +261,16 @@ Game.prototype.sampleSaleBalanceMinute = function (minute) {
     hurt: acc.hurt,
     xp: Math.round(acc.xp),
     gold: Math.round(acc.gold),
+    hearts: acc.hearts || 0,
     enemyCount: enemies.length,
     eliteCount: eliteAlive,
     weapons: { ...(this.saleWeapons || {}) },
     passives: { ...(this.salePassives || {}) },
+    keys: Object.keys(this.salePassives || {}).filter((id) => (this.salePassives[id] || 0) > 0),
+    tree: (this.saleTreeActive || []).slice(),
     weaponSharePct: wepShare,
   });
-  bal._acc = { dmg: 0, kills: 0, elites: 0, xp: 0, gold: 0, hurt: 0 };
+  bal._acc = { dmg: 0, kills: 0, elites: 0, xp: 0, gold: 0, hurt: 0, hearts: 0 };
   bal._lastSampleMin = minute;
 };
 
@@ -319,9 +328,15 @@ Game.prototype.finalizeSaleBalanceLog = function (won, killer) {
     dmg: Math.round(bal.totals.dmg),
     xp: Math.round(bal.totals.xp),
     gold: Math.round(bal.totals.gold),
+    hearts: bal.totals.hearts || 0,
     avgDps: survived > 0 ? Math.round((bal.totals.dmg / survived) * 10) / 10 : 0,
     weaponsEnd: { ...(this.saleWeapons || {}) },
     passivesEnd: { ...(this.salePassives || {}) },
+    tree: bal.tree || (this.saleTreeActive || []).slice(),
+    keysTaken: bal.keysTaken || [],
+    keysOffered: bal.keysOffered || 0,
+    evoTaken: bal.evoTaken || [],
+    recipeReadyAt: bal.recipeReadyAt || this._saleRecipeReadyAt || {},
     weaponShare: this.buildSaleBalanceWeaponShare(),
     bosses: bal.bosses,
     minutes: bal.minutes,

@@ -5,6 +5,7 @@ Object.assign(Game.prototype, {
     this.buildMainMenuButtons();
     this.buildGameMenu();
     this.buildLevelUpPopup();
+    this.buildSaleTreePopup();
     if (typeof this.bindExtractHud === 'function') this.bindExtractHud();
     if (typeof this.bindExtractShop === 'function') this.bindExtractShop();
     document.getElementById('btn-pause').onclick = () => this.togglePause();

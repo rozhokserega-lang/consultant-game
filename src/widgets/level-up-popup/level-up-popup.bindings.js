@@ -14,16 +14,21 @@ Object.assign(Game.prototype, {
     if (typeof LevelUpPopup === 'undefined') return;
     LevelUpPopup.updateFooter({
       rerollsLeft: this.upgradeRerollsLeft | 0,
-      choosingUpgrade: !!this.choosingUpgrade,
+      choosingUpgrade: !!this.choosingUpgrade && !this._saleChestEvoPick
+        && (!this.saleV2 || !!this._saleV2WepPick),
     });
   },
 
   rerollUpgradeChoices() {
     if (!this.choosingUpgrade) return;
-    if ((this.upgradeRerollsLeft | 0) <= 0) { sfx.hurt(); return; }
+    if ((this.upgradeRerollsLeft | 0) <= 0 || this._saleChestEvoPick) { sfx.hurt(); return; }
     this.upgradeRerollsLeft -= 1;
     sfx.click();
-    if (this.gameMode === 'sale' && typeof this.openSaleUpgradeUI === 'function') {
+    if (this._saleV2WepPick && typeof this.openSaleV2WeaponCaseUI === 'function') {
+      this._saleRerolling = true;
+      this.openSaleV2WeaponCaseUI();
+      this._saleRerolling = false;
+    } else if (this.gameMode === 'sale' && typeof this.openSaleUpgradeUI === 'function') {
       // не тратим pending — только пересобираем карточки
       this._saleRerolling = true;
       this.openSaleUpgradeUI();

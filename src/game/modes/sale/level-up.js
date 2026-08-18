@@ -5,13 +5,13 @@
 
 Game.prototype.buildSaleUpgradeChoices = function () {
   const candidates = [];
-  // слот занимает любое оружие, включая эволюции (evo заменяет базу, слот тот же)
   const slotCount = Object.keys(this.saleWeapons).filter((id) => (this.saleWeapons[id] || 0) > 0).length;
   const ownedP = Object.keys(this.salePassives).filter((id) => (this.salePassives[id] || 0) > 0);
   const canNewWeapon = slotCount < this.saleMaxWeaponSlots();
   const banned = this.saleBanned || {};
   this.saleOverflow = this.saleOverflow || {};
   this.saleWeaponOver = this.saleWeaponOver || {};
+  const keyWeight = 1 + (this.saleTreeBonus('keyWeight') || 0);
 
   for (const def of Object.values(SALE_WEAPONS)) {
     if (def.evolved) continue;
@@ -34,8 +34,7 @@ Game.prototype.buildSaleUpgradeChoices = function () {
         desc: `Улучшить до ${lv + 1}/${def.max} · ${role}`,
         weight: 3, role,
       });
-    } else {
-      // поверх капа — мягкий оверлевел оружия
+    } else if (this.saleOverflowUnlocked()) {
       const ov = this.saleWeaponOver[def.id] || 0;
       if (ov < 12) {
         candidates.push({
@@ -46,107 +45,87 @@ Game.prototype.buildSaleUpgradeChoices = function () {
       }
     }
   }
-  // эволюции тоже можно «докрутить»
-  for (const [wid, lv] of Object.entries(this.saleWeapons)) {
-    const def = SALE_WEAPONS[wid];
-    if (!def || !def.evolved || banned['w:' + wid]) continue;
-    const ov = this.saleWeaponOver[wid] || 0;
-    if (ov < 12) {
-      candidates.push({
-        kind: 'weapon_over', id: wid, ico: def.ico,
-        ttl: `${def.name} +${ov + 1}`, desc: '+7% урон этого оружия',
-        weight: 1.8,
-      });
+  if (this.saleOverflowUnlocked()) {
+    for (const [wid] of Object.entries(this.saleWeapons)) {
+      const def = SALE_WEAPONS[wid];
+      if (!def || !def.evolved || banned['w:' + wid]) continue;
+      const ov = this.saleWeaponOver[wid] || 0;
+      if (ov < 12) {
+        candidates.push({
+          kind: 'weapon_over', id: wid, ico: def.ico,
+          ttl: `${def.name} +${ov + 1}`, desc: '+7% урон этого оружия',
+          weight: 1.8,
+        });
+      }
     }
   }
 
   const canNewPassive = ownedP.length < SALE_MAX_PASSIVES;
   const seenPassive = new Set();
-  for (const def of Object.values(SALE_PASSIVES)) {
+  const keyCandidates = [];
+  const readyEvos = this.listSaleReadyEvolutions();
+  for (const def of SALE_EVO_KEYS) {
     if (seenPassive.has(def.id)) continue;
     seenPassive.add(def.id);
     if (banned['p:' + def.id]) continue;
+    const baseLv = (this.saleWeapons[def.weapon] || 0);
+    if (baseLv <= 0) continue;
     const lv = this.salePassives[def.id] || 0;
     if (lv <= 0 && !canNewPassive) continue;
-    if (lv < def.max) {
-      // ключ эво: если база уже на капе — чаще предлагаем пассивку, чтобы ветка открылась
-      let weight = 2;
-      for (const ev of SALE_EVOLUTIONS) {
-        if (ev.needPassive !== def.id) continue;
-        const fromMax = SALE_WEAPONS[ev.from]?.max || 5;
-        if ((this.saleWeapons[ev.from] || 0) >= fromMax && !this.saleWeapons[ev.into]) {
-          weight = 4.8;
-          break;
-        }
-      }
+    if (lv >= def.max) continue;
+    const fromMax = (SALE_WEAPONS[def.weapon] && SALE_WEAPONS[def.weapon].max) || 5;
+    let weight = 2 * keyWeight;
+    if (baseLv >= fromMax && !readyEvos.some((ev) => ev.needPassive === def.id)) {
+      weight = 4.8 * keyWeight;
+    }
+    const card = {
+      kind: 'passive', id: def.id, ico: def.ico,
+      ttl: def.name, desc: def.desc,
+      weight,
+    };
+    candidates.push(card);
+    keyCandidates.push(card);
+  }
+
+  if (this.saleOverflowUnlocked()) {
+    for (const ov of SALE_OVERFLOW) {
+      if (banned['o:' + ov.id]) continue;
+      const lv = this.saleOverflow[ov.id] || 0;
+      if (lv >= ov.max) continue;
       candidates.push({
-        kind: 'passive', id: def.id, ico: def.ico,
-        ttl: `${def.name} ур.${lv + 1}`, desc: def.desc,
-        weight,
+        kind: 'overflow', id: ov.id, ico: ov.ico,
+        ttl: `${ov.name} · ${lv + 1}`, desc: ov.desc,
+        weight: 2.4,
       });
     }
   }
 
-  // оверфлоу-статы — всегда есть что взять до конца 20 мин
-  for (const ov of SALE_OVERFLOW) {
-    if (banned['o:' + ov.id]) continue;
-    const lv = this.saleOverflow[ov.id] || 0;
-    if (lv >= ov.max) continue;
-    candidates.push({
-      kind: 'overflow', id: ov.id, ico: ov.ico,
-      ttl: `${ov.name} · ${lv + 1}`, desc: ov.desc,
-      weight: 2.4,
-    });
-  }
-
-  // эволюции — гарантированные слоты (как в LN)
-  const guaranteed = [];
-  for (const ev of SALE_EVOLUTIONS) {
-    const haveFrom = (this.saleWeapons[ev.from] || 0) >= (SALE_WEAPONS[ev.from]?.max || 5);
-    if (!haveFrom) continue;
-    if (this.saleWeapons[ev.into]) continue;
-    if (ev.needPassive && !(this.salePassives[ev.needPassive] > 0)) continue;
-    if (ev.needWeapon && !(this.saleWeapons[ev.needWeapon] > 0)) continue;
-    const into = SALE_WEAPONS[ev.into];
-    const fromDef = SALE_WEAPONS[ev.from];
-    const fromName = fromDef?.name || ev.from;
-    const role = SALE_ROLE_LABEL[into.type] || into.type;
-    const before = fromDef ? `${SALE_ROLE_LABEL[fromDef.type] || fromDef.type}` : '?';
-    const after = `${role}`;
-    const hint = ev.branchHint ? `${ev.branchHint} · ` : '';
-    guaranteed.push({
-      kind: 'evolve', id: ev.into, from: ev.from, ico: into.ico,
-      ttl: ev.branch ? `✨ ${fromName} → ${ev.name}` : `✨ ${ev.name}`,
-      desc: `${hint}${into.desc} · ${before} → ${after}`,
-      branch: ev.branch || null,
-      role,
-    });
-  }
-
-  // две готовые ветки одной базы (сканер / карта) — только выбор ветки, без лишних карт
-  const byFrom = {};
-  for (const g of guaranteed) {
-    (byFrom[g.from] = byFrom[g.from] || []).push(g);
-  }
-  const branchPick = Object.values(byFrom).find((arr) => arr.length >= 2);
-  if (branchPick) {
-    return branchPick.map((g) => ({
-      ...g,
-      ttl: `✨ Ветка «${g.branch || g.id}»: ${SALE_WEAPONS[g.id]?.name || g.id}`,
-    }));
-  }
-
-  if (this.player.hp < this.player.maxHp) {
-    candidates.push({ kind: 'heal', id: 'heal', ico: '❤️', ttl: 'Аптечка', desc: '+2 HP сейчас', weight: 1.2 });
-  }
-
   const picked = [];
   const used = new Set();
-  for (const g of guaranteed) {
-    if (picked.length >= 3) break;
-    picked.push(g);
-    used.add(g.kind + ':' + g.id);
+  const forceKeys = [];
+  if (!this._saleRerolling) {
+    this._saleKeyPity = this._saleKeyPity || {};
+    for (const wid of Object.keys(this._saleKeyPity)) {
+      const keys = saleEvoKeysForWeapon(wid);
+      if (!keys.length || keys.some((key) => (this.salePassives[key.id] || 0) > 0)) {
+        delete this._saleKeyPity[wid];
+        continue;
+      }
+      this._saleKeyPity[wid] -= 1;
+      if (this._saleKeyPity[wid] <= 0) {
+        const missing = keys.filter((key) => !banned['p:' + key.id] && !(this.salePassives[key.id] > 0));
+        if (missing.length) forceKeys.push(missing[randi(0, missing.length - 1)].id);
+        delete this._saleKeyPity[wid];
+      }
+    }
   }
+  for (const keyId of forceKeys) {
+    const card = keyCandidates.find((c) => c.id === keyId) || candidates.find((c) => c.kind === 'passive' && c.id === keyId);
+    if (!card || picked.length >= 3) continue;
+    picked.push(card);
+    used.add(card.kind + ':' + card.id);
+  }
+
   while (picked.length < 3 && candidates.length) {
     let total = 0;
     const avail = [];
@@ -165,6 +144,9 @@ Game.prototype.buildSaleUpgradeChoices = function () {
     }
     picked.push(choice);
     used.add(choice.kind + ':' + choice.id);
+  }
+  if (this._saleBal) {
+    this._saleBal.keysOffered = (this._saleBal.keysOffered || 0) + picked.filter((c) => c.kind === 'passive').length;
   }
   return picked;
 };
@@ -196,6 +178,7 @@ Game.prototype.saleChoiceUnlocksEvo = function (up) {
 };
 
 Game.prototype.openSaleUpgradeUI = function () {
+  if (this.saleV2) return this.openSaleV2TreeUI();
   this.choosingUpgrade = true;
   this.paused = true;
   if (this.upgradeRerollsLeft == null) this.upgradeRerollsLeft = 3;
@@ -230,6 +213,7 @@ Game.prototype.openSaleUpgradeUI = function () {
         const evo = this.saleChoiceUnlocksEvo(up);
         if (evo) {
           card.evoReady = true;
+          card.evoBadge = up.kind === 'evolve' ? 'ЭВО' : 'РЕЦЕПТ';
           card.evoName = evo.name;
           card.isUpgrade = true;
         }
@@ -245,7 +229,7 @@ Game.prototype.openSaleUpgradeUI = function () {
 };
 
 Game.prototype.toggleSaleBanish = function () {
-  if (!this.choosingUpgrade) return;
+  if (!this.choosingUpgrade || this._saleChestEvoPick || this.saleV2) return;
   if (!this._saleBanishMode && (this.saleBanishesLeft | 0) <= 0) { sfx.hurt(); return; }
   this._saleBanishMode = !this._saleBanishMode;
   sfx.click();
@@ -278,7 +262,7 @@ Game.prototype.banSaleUpgrade = function (i) {
 };
 
 Game.prototype.skipSaleUpgrade = function () {
-  if (!this.choosingUpgrade) return;
+  if (!this.choosingUpgrade || this._saleChestEvoPick || this.saleV2) return;
   sfx.click();
   if (typeof LevelUpPopup !== 'undefined') LevelUpPopup.close();
   this.choosingUpgrade = false;
@@ -295,27 +279,26 @@ Game.prototype.skipSaleUpgrade = function () {
 Game.prototype.pickSaleUpgrade = function (i) {
   const up = this.upgradeChoices[i];
   if (!up) return;
+  const chestPick = !!this._saleChestEvoPick;
   if (up.kind === 'weapon_new') {
     this.saleWeapons[up.id] = 1;
     this.saleWeaponCd[up.id] = 0.15;
   } else if (up.kind === 'weapon_up') {
     this.saleWeapons[up.id] = (this.saleWeapons[up.id] || 1) + 1;
+    if (!this.saleV2 && this.saleWeapons[up.id] >= 3) this.armSaleKeyPity(up.id);
   } else if (up.kind === 'evolve') {
-    delete this.saleWeapons[up.from];
-    this.saleWeapons[up.id] = 1;
-    this.saleWeaponCd[up.id] = 0.1;
-    this.spawnAnimFx('afx_levelup', this.player.x, this.player.y, {
-      life: 1.15, scale: 1.7, scaleEnd: 2.2, anchorY: 0.9,
-    });
-    this.spawnParticles(this.player.x, this.player.y, 28, '#f1c40f', 240, 0.6);
-    this.applySalePassivesToPlayer();
+    this.applySaleEvolution(up.from, up.id);
   } else if (up.kind === 'passive') {
     this.salePassives[up.id] = (this.salePassives[up.id] || 0) + 1;
-    if (up.id === 'vitality' || up.id === 'mug') {
+    if (up.id === 'mug') {
       this.player.maxHp += 1;
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);
     }
     this.applySalePassivesToPlayer();
+    if (this._saleBal) {
+      this._saleBal.keysTaken = this._saleBal.keysTaken || [];
+      this._saleBal.keysTaken.push({ id: up.id, t: Math.round((this.saleTime || 0) * 10) / 10 });
+    }
   } else if (up.kind === 'overflow') {
     this.saleOverflow = this.saleOverflow || {};
     this.saleOverflow[up.id] = (this.saleOverflow[up.id] || 0) + 1;
@@ -334,11 +317,35 @@ Game.prototype.pickSaleUpgrade = function (i) {
       this.spawnSpriteFx('sp_heal2', this.player.x, this.player.y, { scale: 0.55, life: 0.4, vy: -10 });
     }
   }
+  if (this.saleV2 && typeof this.tryGrantSaleV2PendingEvos === 'function') {
+    this.tryGrantSaleV2PendingEvos();
+  }
+  this.refreshSaleRecipeReady();
   sfx.click();
   if (typeof LevelUpPopup !== 'undefined') LevelUpPopup.close();
   this.choosingUpgrade = false;
   this._saleBanishMode = false;
   this.updateUpgradeRerollBtn();
+  if (chestPick) {
+    this._saleChestEvoPick = false;
+    if (this.pendingUpgrades > 0) this.openSaleUpgradeUI();
+    else {
+      this.paused = false;
+      this.refreshMusicState();
+    }
+    return;
+  }
+  if (this._saleV2WepPick) {
+    this._saleV2WepPick = false;
+    this._saleV2WepPending = Math.max(0, (this._saleV2WepPending | 0) - 1);
+    if ((this._saleV2WepPending || 0) > 0) this.openSaleV2WeaponCaseUI();
+    else if ((this.pendingUpgrades || 0) > 0) this.openSaleV2TreeUI();
+    else {
+      this.paused = false;
+      this.refreshMusicState();
+    }
+    return;
+  }
   this.pendingUpgrades = Math.max(0, this.pendingUpgrades - 1);
   if (this.pendingUpgrades > 0) this.openSaleUpgradeUI();
   else {

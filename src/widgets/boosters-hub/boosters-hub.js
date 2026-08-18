@@ -20,7 +20,7 @@
             </div>
             <button type="button" class="hub-back-btn" id="hub-back-main">← НАЗАД</button>
           </div>
-          <h2 class="hub-header__title" id="hub-header-title">ПОДГОТОВКА</h2>
+          <h2 class="hub-header__title" id="hub-header-title">ДЕРЕВО</h2>
           <span class="hub-header__meta">
             <span id="hub-version" class="hub-version" title="Дев-панель">v?</span>
           </span>
@@ -30,7 +30,7 @@
       <div class="hub-body hub-scroll">
         <div class="hub-pane on" id="hub-pane-prep">
           <div class="hub-shop-tabs">
-            <button type="button" class="hub-shop-tab on" id="hub-tab-passives">ПАССИВКИ</button>
+            <button type="button" class="hub-shop-tab on" id="hub-tab-passives">ДЕРЕВО</button>
             <button type="button" class="hub-shop-tab" id="hub-tab-weapons">ОРУЖИЕ</button>
           </div>
           <div class="hub-shop-stage">

@@ -8,7 +8,7 @@ Game.prototype.updateSaleWeapons = function (dt) {
   const area = this.saleAreaMul();
   const dmgM = this.saleDmgMul();
   const cdM = this.saleCdMul();
-  const projBonus = this.saleProjectileBonus();
+  const rangeM = this.saleRangeMul ? this.saleRangeMul() : 1;
   if (this._saleShieldT > 0) this._saleShieldT -= dt;
   if (this.saleRoleBan) {
     this.saleRoleBan.t -= dt;
@@ -36,9 +36,12 @@ Game.prototype.updateSaleWeapons = function (dt) {
     if (def.type === 'aura') dmg = Math.max(1, Math.round(dmg * this.saleAuraDmgMul()));
 
     if (def.type === 'orbit') {
-      const printLv = this.saleOrbitBonus();
-      const need = (def.count[level] || def.count[0] || 1) + printLv;
-      const radius = (def.radius[level] || def.radius[0] || 60) * area * (1 + printLv * 0.08);
+      const family = saleWeaponFamily(id);
+      let extra = 0;
+      if (family === 'receipt') extra += this.saleProjectileBonus();
+      if (family === 'giftbag') extra += this.saleOrbitBonus();
+      const need = (def.count[level] || def.count[0] || 1) + extra;
+      const radius = (def.radius[level] || def.radius[0] || 60) * area * (1 + extra * 0.08);
       const spin = def.spin || 3;
       let list = this.saleOrbits.filter((o) => o.weaponId === id);
       while (list.length < need) {
@@ -64,9 +67,13 @@ Game.prototype.updateSaleWeapons = function (dt) {
     }
 
     this.saleWeaponCd[id] = def.baseCd * cdM;
+    if (this.saleV2 && this._saleV2FreeShot) {
+      this.saleWeaponCd[id] = 0.05;
+      this._saleV2FreeShot = false;
+    }
 
     if (def.type === 'beam') {
-      const len = (def.length[level] || def.length[0] || 120) * area;
+      const len = (def.length[level] || def.length[0] || 120) * area * rangeM;
       this.saleBeams = this.saleBeams.filter((b) => b.weaponId !== id);
       this.saleBeams.push({
         weaponId: id,
@@ -90,9 +97,9 @@ Game.prototype.updateSaleWeapons = function (dt) {
       this.saleWeaponCd[id] = 0;
       const sprayLv = this.salePassives.spray || 0;
       const need = def.count[level] || def.count[0] || 1;
-      const range = (def.range[level] || def.range[0] || 150) * area;
+      const range = (def.range[level] || def.range[0] || 150) * area * rangeM;
       const speed = def.speed || 175;
-      const swordDmg = Math.max(1, Math.round(dmg * (1 + sprayLv * 0.12)));
+      const swordDmg = Math.max(1, Math.round(dmg * (1 + sprayLv * 0.06)));
       const trail = !!def.trail || sprayLv > 0;
       this.saleSwords = this.saleSwords || [];
       let list = this.saleSwords.filter((s) => s.weaponId === id);
@@ -223,7 +230,8 @@ Game.prototype.updateSaleWeapons = function (dt) {
 
     if (def.type === 'radio') {
       let maxR = (def.radius[level] || def.radius[0] || 160) * area;
-      if (this.salePassives.broadcast) maxR *= 1 + this.salePassives.broadcast * 0.1;
+      const radioB = this.saleV2 ? this.saleV2Stat('radio') : (this.salePassives.broadcast || 0) * 0.08;
+      if (radioB) maxR *= 1 + radioB;
       for (const e of this.enemies) {
         if (e.hp <= 0) continue;
         if (dist(p.x, p.y, e.x, e.y) > maxR + e.r) continue;
@@ -240,7 +248,7 @@ Game.prototype.updateSaleWeapons = function (dt) {
     }
 
     if (def.type === 'mark') {
-      let count = (def.count?.[level] || def.count?.[0] || 1) + projBonus;
+      let count = (def.count?.[level] || def.count?.[0] || 1);
       const targets = this.enemies.filter((e) => e.hp > 0)
         .map((e) => ({ e, d: dist(p.x, p.y, e.x, e.y) }))
         .sort((a, b) => a.d - b.d);
@@ -258,7 +266,7 @@ Game.prototype.updateSaleWeapons = function (dt) {
     }
 
     if (def.type === 'spray') {
-      const range = (def.range[level] || 100) * area;
+      const range = (def.range[level] || 100) * area * rangeM;
       const ang = p.angle;
       const half = def.arc || 0.65;
       for (const e of this.enemies) {
@@ -284,7 +292,7 @@ Game.prototype.updateSaleWeapons = function (dt) {
       const a = nearest ? angleTo(p.x, p.y, nearest.x, nearest.y) : ang;
       this.saleCharges.push({
         x: p.x, y: p.y, angle: a, speed: def.speed || 320,
-        life: ((def.range && def.range[level]) || def.range?.[0] || 260) / (def.speed || 320),
+        life: ((def.range && def.range[level]) || def.range?.[0] || 260) / (def.speed || 320) * rangeM,
         dmg, ico: def.ico, visual: def.visual || id, size: def.size || 1.2, pull: def.pull || 0, hit: new Set(), impact: def.impact,
         weaponId: id,
       });
@@ -292,7 +300,7 @@ Game.prototype.updateSaleWeapons = function (dt) {
     }
 
     if (def.type === 'boomerang') {
-      const range = (def.range?.[level] || def.range?.[0] || 200) * area;
+      const range = (def.range?.[level] || def.range?.[0] || 200) * area * rangeM;
       const nearest = this.nearestSaleEnemy(p.x, p.y, 500);
       const a = nearest ? angleTo(p.x, p.y, nearest.x, nearest.y) : p.angle;
       this.saleBoomerangs.push({
@@ -304,7 +312,7 @@ Game.prototype.updateSaleWeapons = function (dt) {
     }
 
     if (def.type === 'seek') {
-      const count = (def.count[level] || 2) + projBonus;
+      const count = (def.count[level] || 2);
       for (let i = 0; i < count; i++) {
         const ang = rand(0, Math.PI * 2);
         this.saleSeekers.push({
@@ -319,7 +327,7 @@ Game.prototype.updateSaleWeapons = function (dt) {
     }
 
     if (def.type === 'puddle' || def.type === 'projectile' || def.type === 'ricochet') {
-      let count = (def.count?.[level] || def.count?.[0] || 1) + projBonus;
+      let count = (def.count?.[level] || def.count?.[0] || 1);
       if (def.id === 'caffeine') count = 3;
       const targets = this.enemies.filter((e) => e.hp > 0)
         .map((e) => ({ e, d: dist(p.x, p.y, e.x, e.y) }))
@@ -331,7 +339,7 @@ Game.prototype.updateSaleWeapons = function (dt) {
         this.saleProjectiles.push({
           x: p.x, y: p.y, angle: ang,
           speed: def.speed || 340,
-          life: def.type === 'ricochet' ? 2.2 : 1.5,
+          life: (def.type === 'ricochet' ? 2.2 : 1.5) * rangeM,
           r: 12, dmg, ico: def.ico, visual: def.visual || id,
           bounces: def.type === 'ricochet' ? (def.bounces?.[level] || 3) : 0,
           puddle: def.type === 'puddle',
@@ -459,9 +467,29 @@ Game.prototype.updateSaleProjectiles = function (dt) {
         this.saleHitEnemy(e, pr.dmg, pr.x, pr.y, 160, {
           confuse: pr.confuse, lifesteal: pr.lifesteal, impact: pr.impact,
           explodeOnKill: pr.explodeOnKill, color: '#f1c40f', mark: pr.mark || 0,
-          weapon: pr.weaponId,
+          weapon: pr.weaponId, echo: !!pr.echo,
         });
         if (pr.impact) this.spawnSpriteFx(pr.impact, pr.x, pr.y, { scale: 0.45, life: 0.2, vy: 0 });
+        if (this._saleLastCrit && this.saleV2HasEffect && this.saleV2HasEffect('crit_echo')
+          && !pr.echo && !pr.puddle) {
+          let best = null;
+          let bd = 280;
+          for (const n of this.enemies) {
+            if (n.hp <= 0 || n === e) continue;
+            const nd = dist(pr.x, pr.y, n.x, n.y);
+            if (nd < bd) { bd = nd; best = n; }
+          }
+          if (best) {
+            this.saleProjectiles.push({
+              x: pr.x, y: pr.y,
+              angle: angleTo(pr.x, pr.y, best.x, best.y),
+              speed: pr.speed || 340, life: 0.7, r: Math.max(8, (pr.r || 12) * 0.85),
+              dmg: Math.max(1, Math.round(pr.dmg * 0.45)),
+              ico: pr.ico, visual: pr.visual, bounces: 0, puddle: false,
+              echo: true, hit: new Set([e]), weaponId: pr.weaponId, impact: pr.impact,
+            });
+          }
+        }
         if (pr.puddle) {
           const wid = pr.weaponId || '';
           const coffeeSkin = (wid === 'coffee' || wid === 'caffeine')
@@ -482,6 +510,8 @@ Game.prototype.updateSaleProjectiles = function (dt) {
           if (next && next !== e) pr.angle = angleTo(pr.x, pr.y, next.x, next.y);
           else pr.life = 0;
           if (pr.impact) this.spawnSpriteFx(pr.impact, pr.x, pr.y, { scale: 0.4, life: 0.18, vy: 0 });
+        } else if (this.saleV2HasEffect && this.saleV2HasEffect('pierce') && !pr.puddle) {
+          // капстон «Сквозь витрину»: летим дальше, урон не падает
         } else {
           pr.life = 0;
         }

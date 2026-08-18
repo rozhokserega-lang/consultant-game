@@ -231,6 +231,299 @@
   pointer-events: none;
 }
 
+.hub-shop-scene.is-collapsed {
+  display: none;
+}
+
+.hub-shop-stage.is-tree {
+  background: #0a0806;
+}
+
+/* ── Дерево навыков (Diablo-like) ──────────────────────────────────────── */
+
+.sale-tree {
+  --tree-gold: #e4c36a;
+  --tree-gold-dim: #8a6a2a;
+  --tree-stone: #1a1410;
+  display: flex;
+  flex-direction: column;
+  margin: 0 0 8px;
+  border: 2px solid #5a3d18;
+  border-radius: 4px;
+  background:
+    radial-gradient(ellipse at 50% 8%, rgba(140, 70, 24, 0.28), transparent 52%),
+    linear-gradient(180deg, #241810 0%, #100c0a 55%, #0c0a08 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(228, 195, 106, 0.18),
+    inset 0 0 48px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+.sale-tree__bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 8px 6px;
+  border-bottom: 1px solid rgba(228, 195, 106, 0.28);
+  background: linear-gradient(180deg, rgba(72, 48, 18, 0.55) 0%, rgba(24, 16, 10, 0.2) 100%);
+}
+
+.sale-tree__sockets {
+  display: flex;
+  gap: 6px;
+}
+
+.sale-tree__socket {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #5a3d18;
+  background: radial-gradient(circle at 35% 30%, #3a3228, #1a140e 70%);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.sale-tree__socket.is-on {
+  border-color: var(--tree-gold);
+  background: radial-gradient(circle at 35% 30%, #ffe9a8, #d4a017 55%, #7a4e00 100%);
+  box-shadow: 0 0 8px rgba(241, 196, 15, 0.75);
+}
+
+.sale-tree__bar-text {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tree-gold);
+  text-shadow: 0 1px 0 #000;
+}
+
+.sale-tree__board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2px;
+  padding: 8px 4px 10px;
+  min-height: 268px;
+}
+
+.sale-tree__col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sale-tree__col-title {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tree-gold);
+  text-shadow: 0 1px 0 #000, 0 0 8px rgba(228, 195, 106, 0.35);
+  margin-bottom: 8px;
+  white-space: nowrap;
+}
+
+.sale-tree__col--damage .sale-tree__col-title { color: #e07060; }
+.sale-tree__col--tempo .sale-tree__col-title { color: #6cb4e8; }
+.sale-tree__col--survival .sale-tree__col-title { color: #6fd48a; }
+.sale-tree__col--utility .sale-tree__col-title { color: var(--tree-gold); }
+
+.sale-tree__link {
+  width: 3px;
+  height: 16px;
+  margin: 1px 0;
+  background: #3a2a18;
+  box-shadow: 0 0 0 1px #1a120c;
+  position: relative;
+}
+
+.sale-tree__link::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  margin: -4px 0 0 -4px;
+  transform: rotate(45deg);
+  background: #3a2a18;
+  border: 1px solid #1a120c;
+}
+
+.sale-tree__link.is-open {
+  background: #6a4e22;
+}
+
+.sale-tree__link.is-open::after {
+  background: #6a4e22;
+}
+
+.sale-tree__link.is-on {
+  background: var(--tree-gold);
+  box-shadow: 0 0 8px rgba(241, 196, 15, 0.55);
+}
+
+.sale-tree__link.is-on::after {
+  background: var(--tree-gold);
+  border-color: #fff3c4;
+  box-shadow: 0 0 6px rgba(241, 196, 15, 0.8);
+}
+
+.sale-tree-node {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sale-tree-node__gem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  border: 2px solid #4a3820;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.12), transparent 42%),
+    linear-gradient(180deg, #3a3228 0%, #1a1612 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 0 2px #0a0806,
+    0 4px 0 #050403;
+}
+
+.sale-tree-node__ico {
+  font-size: 22px;
+  line-height: 1;
+  filter: grayscale(0.35) brightness(0.85);
+  text-shadow: 0 1px 0 #000;
+}
+
+.sale-tree-node.is-ready .sale-tree-node__gem {
+  border-color: #8a7a58;
+}
+
+.sale-tree-node.is-ready .sale-tree-node__ico {
+  filter: none;
+}
+
+.sale-tree-node.is-on .sale-tree-node__gem {
+  border-color: var(--tree-gold);
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255, 240, 180, 0.35), transparent 46%),
+    linear-gradient(180deg, #5a4018 0%, #2a1c08 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 220, 0.35),
+    0 0 0 2px #0a0806,
+    0 0 14px rgba(241, 196, 15, 0.7);
+}
+
+.sale-tree-node.is-on .sale-tree-node__ico {
+  filter: none;
+  transform: translateY(-1px);
+}
+
+.sale-tree-node.is-lock .sale-tree-node__gem {
+  border-color: #2a2218;
+  background: linear-gradient(180deg, #1e1a16 0%, #0e0c0a 100%);
+}
+
+.sale-tree-node.is-lock .sale-tree-node__ico {
+  filter: grayscale(1) brightness(0.45);
+}
+
+.sale-tree-node.is-keystone {
+  width: 58px;
+  height: 58px;
+}
+
+.sale-tree-node.is-keystone .sale-tree-node__gem {
+  border-radius: 4px;
+  transform: rotate(45deg);
+  width: 44px;
+  height: 44px;
+  margin: 0 auto;
+}
+
+.sale-tree-node.is-keystone .sale-tree-node__ico {
+  transform: rotate(-45deg);
+  font-size: 20px;
+}
+
+.sale-tree-node.is-on.is-keystone .sale-tree-node__gem {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 220, 0.4),
+    0 0 0 2px #0a0806,
+    0 0 18px rgba(230, 80, 40, 0.55),
+    0 0 10px rgba(241, 196, 15, 0.7);
+}
+
+.sale-tree-node:hover:not(.is-lock) .sale-tree-node__gem,
+.sale-tree-node:focus-visible .sale-tree-node__gem {
+  border-color: #f3e2a8;
+}
+
+.sale-tree-node__cost {
+  position: absolute;
+  left: 50%;
+  bottom: -2px;
+  transform: translateX(-50%);
+  font-size: 8px;
+  font-weight: 800;
+  color: var(--tree-gold);
+  text-shadow: 0 1px 0 #000;
+  pointer-events: none;
+}
+
+.sale-tree-node.is-keystone .sale-tree-node__cost {
+  bottom: -1px;
+}
+
+.sale-tree__inspect {
+  padding: 8px 10px 10px;
+  border-top: 1px solid rgba(228, 195, 106, 0.28);
+  background: linear-gradient(180deg, rgba(40, 28, 14, 0.7) 0%, rgba(12, 10, 8, 0.9) 100%);
+  min-height: 72px;
+}
+
+.sale-tree__inspect-name {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tree-gold);
+  text-shadow: 0 1px 0 #000;
+}
+
+.sale-tree__inspect-desc {
+  font-size: 11px;
+  color: #d8c8a8;
+  line-height: 1.35;
+  margin-top: 3px;
+}
+
+.sale-tree__inspect-meta {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8a7a58;
+  margin-top: 5px;
+}
+
+.sale-tree__inspect-meta.is-on {
+  color: #8fd4a0;
+}
+
+.sale-tree__inspect-meta.is-lock {
+  color: var(--tree-gold);
+}
+
 .hub-shop-scroll {
   flex: 1 1 auto;
   min-width: 0;
@@ -565,6 +858,35 @@
   .hub-header__title {
     font-size: 13px;
     letter-spacing: 0.08em;
+  }
+
+  .sale-tree-node {
+    width: 46px;
+    height: 46px;
+  }
+
+  .sale-tree-node.is-keystone {
+    width: 52px;
+    height: 52px;
+  }
+
+  .sale-tree-node.is-keystone .sale-tree-node__gem {
+    width: 38px;
+    height: 38px;
+  }
+
+  .sale-tree-node__ico {
+    font-size: 18px;
+  }
+
+  .sale-tree__board {
+    min-height: 0;
+    padding: 6px 2px 8px;
+  }
+
+  .sale-tree__col-title {
+    font-size: 7px;
+    letter-spacing: 0.1em;
   }
 }
 

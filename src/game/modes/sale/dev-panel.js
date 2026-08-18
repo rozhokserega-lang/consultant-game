@@ -55,6 +55,14 @@
       R(bq('ts', 0.5, '0.5×') + bq('ts', 1, '1×') + bq('ts', 2, '2×') + bq('ts', 3, '3×')) +
       H('Прокачка') +
       R(bq('lvl', 1, '+1 ур') + bq('lvl', 5, '+5 ур') + bq('gold', 500, '+500 🪙') + bq('bank', 1000, '+1000 банк')) +
+      H('Распродажа 2.0') +
+      R(
+        bq('v2on', null, 'вкл 2.0') +
+          bq('v2tick', null, 'тик оружия') +
+          (typeof SALE_V2_BRANCHES !== 'undefined'
+            ? SALE_V2_BRANCHES.map((b) => bq('v2branch', b.id, 'ветка ' + b.name)).join('')
+            : ''),
+      ) +
       H('Читы') +
       R(bq('god', null, 'бог-мод') + bq('heal', null, 'хил') + bq('killall', null, 'убить всех') + bq('killself', null, 'убить себя')) +
       H('Спавн ×15') +
@@ -135,6 +143,29 @@
         const n = Math.max(1, +arg || 1);
         for (let i = 0; i < n; i++) run.gainSaleXp(run.saleXpNext || 99);
         info(`уровень ${run.saleLevel}`);
+        break;
+      }
+      case 'v2on': {
+        const run = saleDevEnsureRun();
+        if (!run) break;
+        run.saleV2 = true;
+        info('Распродажа 2.0 ON (рестарт смены применит таймер)');
+        break;
+      }
+      case 'v2tick': {
+        const run = saleDevEnsureRun();
+        if (!run || !run.applySaleV2WeaponTick) break;
+        run.saleV2 = true;
+        run.applySaleV2WeaponTick();
+        info('чемодан оружия 2.0');
+        break;
+      }
+      case 'v2branch': {
+        const run = saleDevEnsureRun();
+        if (!run || !run.maxSaleV2Branch) break;
+        run.saleV2 = true;
+        run.maxSaleV2Branch(arg);
+        info('ветка 2.0 ' + arg);
         break;
       }
       case 'gold': {

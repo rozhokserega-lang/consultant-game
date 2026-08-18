@@ -78,6 +78,14 @@ Game.prototype.updateSaleHUD = function () {
   if (this.lightsOut > 0) tags.push(`<span class="buff-tag bad">💡 темнота ${this.lightsOut.toFixed(0)}с</span>`);
   if (this.fireAlarm > 0) tags.push(`<span class="buff-tag bad">🚨 тревога ${this.fireAlarm.toFixed(0)}с</span>`);
   if (this.saleInvulnExcept) tags.push(`<span class="buff-tag bad">📋 только ${this.saleInvulnExcept}</span>`);
+  if (this.saleV2) {
+    const caseOut = (this.salePowerups || []).some((pu) => pu.kind === 'wepcase' && !pu.dead);
+    if (caseOut || (this._saleV2WepPending || 0) > 0) {
+      tags.push('<span class="buff-tag">🧳 чемодан на поле</span>');
+    } else if ((this._saleV2WepT || 0) > 0) {
+      tags.push(`<span class="buff-tag">🧳 чемодан ${Math.ceil(this._saleV2WepT)}с</span>`);
+    }
+  }
   this.$buffBar.innerHTML = tags.join('');
 
   if (this.$skillFill) this.$skillFill.style.width = (100 * p.skill / p.skillMax) + '%';

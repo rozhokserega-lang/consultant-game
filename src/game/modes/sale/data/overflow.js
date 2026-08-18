@@ -3,6 +3,9 @@
  */
 'use strict';
 
+/** Overflow в уровне только после 12:00 или 4-го оружия. До этого — дроп босса. */
+const SALE_OVERFLOW_UNLOCK_SEC = 12 * 60;
+
 /** Бесконечный хвост прокачки (как LN после капов) */
 const SALE_OVERFLOW = [
   { id: 'power', ico: '💪', name: 'Сверхурочные', desc: '+8% урона всему', max: 30 },

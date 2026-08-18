@@ -21,6 +21,7 @@ class Game {
     this.hubTab = 'prep';
     this.hubScreen = 'prep'; // prep | book (режим «Смена» убран)
     this.gameMode = 'sale';
+    this.saleV2 = false;
     this.selectedArena = this.save.selectedArena || 'sport';
     this.selectedChallenge = 'none';
     const saleArenas = Array.isArray(this.save.saleUnlockedArenas) ? this.save.saleUnlockedArenas : [];
@@ -34,6 +35,11 @@ class Game {
     }).filter((id) => typeof SALE_WEAPONS === 'undefined' || SALE_WEAPONS[id]);
     this.saleUnlockedWeapons = Array.from(new Set(['receipt', ...migratedSale]));
     this.saleStartPassives = Object.assign({}, this.save.saleStartPassives || {});
+    const treeUnlocked = Array.isArray(this.save.saleTreeUnlocked) ? this.save.saleTreeUnlocked : SALE_TREE_DEFAULT_UNLOCKED;
+    this.saleTreeUnlocked = Array.from(new Set([...SALE_TREE_DEFAULT_UNLOCKED, ...treeUnlocked.filter((id) => getSaleTreePerk(id))]));
+    const treeSelected = Array.isArray(this.save.saleTreeSelected) ? this.save.saleTreeSelected : SALE_TREE_DEFAULT_SELECTED;
+    this.saleTreeSelected = clampSaleTreeSelected(treeSelected, this.saleTreeUnlocked);
+    if (!this.saleTreeSelected.length) this.saleTreeSelected = SALE_TREE_DEFAULT_SELECTED.slice();
     this.selectedHeroId = this.save.selectedHeroId || 'igor';
     const saleHeroes = Array.isArray(this.save.saleUnlockedHeroes) ? this.save.saleUnlockedHeroes : [];
     this.saleUnlockedHeroes = Array.from(new Set(['igor', ...saleHeroes.filter((id) => SALE_HEROES && SALE_HEROES[id])]));

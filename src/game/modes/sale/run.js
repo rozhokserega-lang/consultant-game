@@ -52,7 +52,11 @@ Game.prototype.resetSaleGame = function () {
   this.comboShield = 0;
   this.pendingUpgrades = 0;
   this.upgradeChoices = [];
-  this.upgradeRerollsLeft = 3;
+  this._saleKeyPity = {};
+  this._saleRecipeReadyAt = {};
+  this._saleChestEvoPick = false;
+  this._saleV2WepPick = false;
+  this._saleV2WepPending = 0;
   this.choosingUpgrade = false;
   this._saleLevelFxT = 0;
   this.shopping = false;
@@ -120,13 +124,27 @@ Game.prototype.resetSaleGame = function () {
   this.saleLevel = 1;
   this.saleXp = 0;
   this.saleXpNext = saleXpToNext(1);
-  this.salePassives = {};
-  // стартовые пассивки из хаба
-  const startP = this.saleStartPassives || {};
-  for (const [id, lv] of Object.entries(startP)) {
-    const n = Math.max(0, lv | 0);
-    if (n > 0) this.salePassives[id] = n;
+  if (this.saleV2 && typeof SALE_V2_XP_MUL === 'number') {
+    this.saleXpNext = Math.floor(this.saleXpNext * SALE_V2_XP_MUL);
   }
+  this.salePassives = {};
+  this._saleV2WepT = typeof SALE_V2_WEAPON_TICK === 'number' ? SALE_V2_WEAPON_TICK : 30;
+  this._saleV2Picked = {};
+  this._saleV2PendingEvos = [];
+  this._saleV2FreeShot = false;
+  this._saleV2FreeCdT = 0;
+  this._saleV2AuraStunT = 0;
+  this._saleV2YankT = 0;
+  this._saleV2TillCd = 0;
+  this._saleV2Side = 'atk';
+  // Дерево хаба — только классика. 2.0 качает пассивки в забеге.
+  if (this.saleV2) {
+    this.saleTreeActive = [];
+  } else {
+    this.saleTreeActive = (this.saleTreeSelected || []).filter((id) => (this.saleTreeUnlocked || []).includes(id));
+    this.saleTreeActive = clampSaleTreeSelected(this.saleTreeActive, this.saleTreeUnlocked);
+  }
+  this.upgradeRerollsLeft = 3 + (this.saleTreeBonus('reroll') || 0);
   // LN-style: в руки только стартер героя. Купленное в хабе — ассортимент пула, не инвентарь.
   const heroStart = getSaleHero(this.selectedHeroId);
   let starter = heroStart.starterWeapon || 'coffee';
@@ -178,14 +196,14 @@ Game.prototype.resetSaleGame = function () {
 
   this.initSaleBalanceLog();
   this.hookSaleBalancePlayerHurt();
+  if (typeof this.hookSaleV2PlayerDefense === 'function') this.hookSaleV2PlayerDefense();
 
   this.applyMetaToPlayer();
   this.applySalePassivesToPlayer();
   this.applySaleHeroToPlayer();
-  // стартовое HP из хаба (mug; vitality — старый id)
-  const vit = (this.salePassives.mug || 0) + (this.salePassives.vitality || 0);
-  if (vit > 0) {
-    this.player.maxHp += vit;
+  const treeHp = this.saleTreeBonus('hp');
+  if (treeHp) {
+    this.player.maxHp += treeHp;
     this.player.hp = this.player.maxHp;
   }
   // HP героя после vitality
@@ -221,11 +239,22 @@ Game.prototype.resetSaleGame = function () {
 Game.prototype.applySalePassivesToPlayer = function () {
   const p = this.player;
   if (!p) return;
-  const spd = (this.salePassives.speed || 0) + (this.salePassives.shoes || 0) + (this.salePassives.key || 0);
+  const spd = this.saleV2
+    ? this.saleV2Stat('speed')
+    : (this.salePassives.key || 0) * 0.06;
   const caffDef = this.saleWeapons.caffeine && SALE_WEAPONS.caffeine;
   const caff = caffDef ? ((caffDef.buffSpeed || 1.25) - 1) : 0;
   const hero = getSaleHero(this.selectedHeroId);
-  p._saleSpeedMul = (1 + spd * 0.08 + caff) * (hero.speedMul || 1);
+  p._saleSpeedMul = (1 + spd + caff) * (hero.speedMul || 1);
+};
+
+Game.prototype.saleTreeBonus = function (key) {
+  let total = 0;
+  for (const id of this.saleTreeActive || this.saleTreeSelected || []) {
+    const perk = getSaleTreePerk(id);
+    if (perk && perk.bonus && perk.bonus[key] != null) total += perk.bonus[key];
+  }
+  return total;
 };
 
 Game.prototype.applySaleHeroToPlayer = function () {
@@ -288,15 +317,16 @@ Game.prototype.getSaleArenaRun = function () {
 Game.prototype.saleMaxWeaponSlots = function () {
   const c = this.saleContract;
   if (c && c.maxWeapons) return c.maxWeapons;
-  return this.getSaleArenaRun().weaponSlots;
+  return this.getSaleArenaRun().weaponSlots + this.saleTreeBonus('weaponSlots');
 };
 
 Game.prototype.saleDmgMul = function () {
   const hero = getSaleHero(this.saleHeroId || this.selectedHeroId);
   const over = (this.saleOverflow && this.saleOverflow.power) || 0;
   const p = this.salePassives;
-  return (1 + (p.might || 0) * 0.12 + (p.discount || 0) * 0.1
-    + (p.spray || 0) * 0.08 + (p.sticker || 0) * 0.06 + over * 0.08)
+  const keyDmg = this.saleV2 ? this.saleV2Stat('damage') : (p.discount || 0) * 0.08;
+  return (1 + keyDmg
+    + this.saleTreeBonus('damage') + over * 0.08)
     * (this.saleWeaponDmgMul || 1)
     * (hero.dmgMul || 1)
     * SALE_DIFFICULTY.weaponDmg
@@ -308,49 +338,62 @@ Game.prototype.saleFlatDmg = function (n) {
   return Math.max(1, Math.round((n == null ? 1 : n) * (SALE_STAT_SCALE || 1)));
 };
 Game.prototype.saleCdMul = function () {
-  const haste = (this.salePassives.haste || 0) + (this.salePassives.charger || 0) + (this.salePassives.energy || 0);
+  const haste = this.saleV2
+    ? this.saleV2Stat('cooldown')
+    : (this.salePassives.charger || 0) + (this.salePassives.energy || 0);
   const over = (this.saleOverflow && this.saleOverflow.tempo) || 0;
   const floor = this.getSaleFloor();
   const floorCd = floor && floor.cdMul ? floor.cdMul : 1;
-  return Math.max(0.35, (1 - haste * 0.08 - over * 0.06) * floorCd);
+  const hasteMul = this.saleV2 ? haste : haste * 0.06;
+  return Math.max(0.35, (1 - hasteMul + this.saleTreeBonus('cooldown') - over * 0.06) * floorCd);
 };
 Game.prototype.saleAreaMul = function () {
   const over = (this.saleOverflow && this.saleOverflow.space) || 0;
   const p = this.salePassives;
-  let m = 1 + ((p.area || 0) + (p.gloves || 0) + (p.map || 0)) * 0.1
-    + (p.printer || 0) * 0.08 + (p.broadcast || 0) * 0.08 + over * 0.08;
+  let m = 1 + this.saleTreeBonus('area') + over * 0.08;
+  if (this.saleV2) m += this.saleV2Stat('area');
+  else {
+    m += (p.gloves || 0) * 0.08 + (p.map || 0) * 0.08 + (p.printer || 0) * 0.06;
+  }
   const orb = this.saleSynergyOn('orbitBonus');
   if (orb) m += orb;
   return m;
 };
 Game.prototype.saleMagnetRange = function () {
-  const mag = (this.salePassives.magnet || 0)
-    + (this.salePassives.radio || 0)
-    + (this.salePassives.headlamp || 0)
-    + (this.salePassives.magnet_pass || 0);
   const hero = getSaleHero(this.saleHeroId || this.selectedHeroId);
   const floor = this.getSaleFloor();
   const eq = this.getEquipBonuses ? this.getEquipBonuses() : { magnet: 0 };
-  let bonus = 70 + mag * 36 + (this.salePassives.magnet_pass || 0) * 8
+  const mag = this.saleV2
+    ? this.saleV2Stat('magnet')
+    : ((this.salePassives.headlamp || 0) + (this.salePassives.magnet_pass || 0)) * 25;
+  let bonus = 70 + mag
     + (this.metaPerks.magnet || 0) * 20 + (hero.magnetBonus || 0)
     + (floor && floor.magnetBonus ? floor.magnetBonus : 0)
-    + (eq.magnet || 0);
+    + (eq.magnet || 0) + this.saleTreeBonus('magnet');
   if (this.saleWeapons && this.saleWeapons.vip) bonus += 50;
+  if (this.saleV2) bonus *= 1 + this.saleV2Stat('magnetPct');
   return bonus;
+};
+
+Game.prototype.saleRangeMul = function () {
+  return 1 + (this.saleV2 ? this.saleV2Stat('range') : 0);
 };
 
 /** Бонус орбит от чекового аппарата / ленты (кап 2 — иначе AFK-чек) */
 Game.prototype.saleOrbitBonus = function () {
-  return Math.min(2, (this.salePassives.printer || 0) + (this.salePassives.ribbon || 0));
+  const n = this.saleV2 ? this.saleV2Stat('orbit') : (this.salePassives.ribbon || 0);
+  return Math.min(2, n);
 };
 Game.prototype.saleXpMul = function () {
   const hero = getSaleHero(this.saleHeroId || this.selectedHeroId);
   const eq = this.getEquipBonuses ? this.getEquipBonuses() : { xpMul: 1 };
-  return (1 + (this.salePassives.badge || 0) * 0.12) * (hero.xpMul || 1) * (eq.xpMul || 1);
+  const xp = this.saleV2 ? this.saleV2Stat('xp') : (this.salePassives.badge || 0) * 0.08;
+  return (1 + xp + this.saleTreeBonus('xp')) * (hero.xpMul || 1) * (eq.xpMul || 1);
 };
 Game.prototype.saleAuraDmgMul = function () {
-  return 1 + (this.salePassives.headphones || 0) * 0.15;
+  return 1 + (this.saleV2 ? this.saleV2Stat('aura') : (this.salePassives.headphones || 0) * 0.12);
 };
 Game.prototype.saleProjectileBonus = function () {
-  return this.salePassives.pouch || 0;
+  const n = this.saleV2 ? this.saleV2Stat('projectile') : (this.salePassives.pouch || 0);
+  return Math.min(2, n);
 };

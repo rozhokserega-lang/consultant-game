@@ -72,6 +72,12 @@ Object.assign(Game.prototype, {
     const box = document.getElementById('hub-prep-passives');
     if (!box) return;
     box.innerHTML = '';
+    this.renderSaleTreePicker();
+
+    const metaHead = document.createElement('p');
+    metaHead.className = 'hub-hint hub-hint--accent';
+    metaHead.textContent = 'Постоянные усилители';
+    box.appendChild(metaHead);
 
     for (const def of META_PERKS) {
       const lv = this.metaPerks[def.id] || 0;
@@ -90,26 +96,6 @@ Object.assign(Game.prototype, {
         extraClass,
         disabled: maxed,
         onClick: maxed ? null : () => this.buyMetaPerk(def.id),
-      }));
-    }
-
-    for (const pk of SALE_HUB_PASSIVES) {
-      const lv = (this.saleStartPassives && this.saleStartPassives[pk.id]) || 0;
-      const nextCost = lv >= pk.max ? null : pk.cost[lv];
-      const maxed = nextCost == null;
-      const extraClass = (lv > 0 ? 'is-owned' : '') + (maxed ? ' is-locked' : '');
-      const priceText = maxed
-        ? `КУПЛЕНО · ${lv}/${pk.max}`
-        : this.formatHubPrice(nextCost);
-      const desc = pk.desc + (lv > 0 ? ` · уровень ${lv}/${pk.max}` : '');
-      box.appendChild(this.createHubShopCard({
-        ico: pk.ico,
-        name: pk.name,
-        desc,
-        priceText,
-        extraClass,
-        disabled: maxed,
-        onClick: maxed ? null : () => this.buySaleStartPassive(pk.id),
       }));
     }
   },
@@ -154,6 +140,8 @@ Object.assign(Game.prototype, {
     document.getElementById('hub-tab-weapons')?.classList.toggle('on', !onPass);
     document.getElementById('hub-prep-passives')?.classList.toggle('on', onPass);
     document.getElementById('hub-sale-weapons')?.classList.toggle('on', !onPass);
+    document.querySelector('#boosters-overlay .hub-shop-scene')?.classList.toggle('is-collapsed', onPass);
+    document.querySelector('#boosters-overlay .hub-shop-stage')?.classList.toggle('is-tree', onPass);
   },
 
   setHubTab(tab) {
@@ -189,7 +177,7 @@ Object.assign(Game.prototype, {
 
     const titleEl = document.getElementById('hub-header-title');
     if (titleEl) {
-      titleEl.textContent = onGear ? 'ГАРДЕРОБ' : (onBook ? 'ЖАЛОБЫ' : 'ПОДГОТОВКА');
+      titleEl.textContent = onGear ? 'ГАРДЕРОБ' : (onBook ? 'ЖАЛОБЫ' : 'ДЕРЕВО');
     }
 
     document.getElementById('hub-pane-prep').classList.toggle('on', onPrep);

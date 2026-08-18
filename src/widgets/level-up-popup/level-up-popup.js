@@ -204,7 +204,9 @@
 
     const badgeText = document.createElement('span');
     badgeText.className = 'level-up-card__badge-text';
-    badgeText.textContent = card.evoReady ? 'ЭВО' : card.isUpgrade ? 'UPGRADE' : (lane === 'weapon' ? 'ОРУЖ' : lane === 'perk' ? 'ПЕРК' : '');
+    badgeText.textContent = card.evoReady
+      ? (card.evoBadge || 'ЭВО')
+      : card.isUpgrade ? 'UPGRADE' : (lane === 'weapon' ? 'ОРУЖ' : lane === 'perk' ? 'ПЕРК' : '');
 
     badge.appendChild(arrow);
     badge.appendChild(badgeText);

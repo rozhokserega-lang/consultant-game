@@ -22,6 +22,8 @@ Object.assign(Game.prototype, {
       gameMode: this.gameMode,
       saleUnlockedWeapons: this.saleUnlockedWeapons,
       saleStartPassives: this.saleStartPassives,
+      saleTreeUnlocked: this.saleTreeUnlocked,
+      saleTreeSelected: this.saleTreeSelected,
       selectedFloorId: this.selectedFloorId || 'grocery',
       selectedContractId: this.selectedContractId || 'none',
       selectedHeroId: this.selectedHeroId || 'igor',
@@ -58,6 +60,8 @@ Object.assign(Game.prototype, {
     this.saleUnlockedArenas = ['sport'];
     this.saleUnlockedWeapons = ['receipt'];
     this.saleStartPassives = {};
+    this.saleTreeUnlocked = SALE_TREE_DEFAULT_UNLOCKED.slice();
+    this.saleTreeSelected = SALE_TREE_DEFAULT_SELECTED.slice();
     this.selectedHeroId = 'igor';
     this.saleUnlockedHeroes = ['igor'];
     this.saleHeroId = 'igor';

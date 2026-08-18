@@ -14,9 +14,10 @@ Object.assign(Game.prototype, {
     const box = document.getElementById('main-menu-actions');
     if (!box || typeof UiButton === 'undefined') return;
     box.innerHTML = '';
-    ['Распродажа', 'Вылазка', 'Подготовка', 'Гардероб', 'Настройки', 'Выход'].forEach((label, i) => {
+    ['Распродажа', 'Распродажа 2.0', 'Вылазка', 'Дерево', 'Гардероб', 'Настройки', 'Выход'].forEach((label, i) => {
       const actions = [
         () => this.openSaleStartFlow(),
+        () => this.openSaleV2StartFlow(),
         () => this.startExtractHub(),
         () => this.openBoosters(),
         () => this.openWardrobe(),
@@ -95,14 +96,23 @@ Object.assign(Game.prototype, {
 
   openSaleStartFlow() {
     if (typeof sfx !== 'undefined' && sfx.click) sfx.click();
+    this.saleV2 = false;
+    this.openSaleHeroPick();
+  },
+
+  openSaleV2StartFlow() {
+    if (typeof sfx !== 'undefined' && sfx.click) sfx.click();
+    this.saleV2 = true;
     this.openSaleHeroPick();
   },
 
   openSaleHeroPick() {
     if (typeof this.ensureSaleHeroUnlocks === 'function') this.ensureSaleHeroUnlocks();
     const grid = this.openSaleStartDialog(
-      'Распродажа',
-      'За кого играть? Герой задаёт старт и статы смены.',
+      this.saleV2 ? 'Распродажа 2.0' : 'Распродажа',
+      this.saleV2
+        ? '2.0: оружие само по таймеру, XP качает дерево пассивок.'
+        : 'За кого играть? Герой задаёт старт и статы смены.',
       () => this.showMainMenuHome(),
     );
     if (!grid || typeof SALE_HEROES === 'undefined') return;
@@ -138,7 +148,7 @@ Object.assign(Game.prototype, {
   openSaleArenaPick() {
     if (typeof this.ensureSaleArenaUnlocks === 'function') this.ensureSaleArenaUnlocks();
     const grid = this.openSaleStartDialog(
-      'Распродажа',
+      this.saleV2 ? 'Распродажа 2.0' : 'Распродажа',
       'Где смена? Карта зала распродажи.',
       () => this.openSaleHeroPick(),
     );

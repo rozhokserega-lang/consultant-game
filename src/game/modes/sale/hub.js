@@ -8,14 +8,13 @@ Game.prototype.renderSaleHubLoadout = function () {
   if (!wepBox) return;
   wepBox.innerHTML = '';
 
-  const startP = this.saleStartPassives || {};
   const evoHint = (wid) => {
     const tips = [];
     for (const ev of SALE_EVOLUTIONS) {
       if (ev.from !== wid) continue;
-      if (startP[ev.needPassive] > 0) tips.push('откроет «' + ev.name + '»');
+      tips.push(ev.name);
     }
-    return tips.length ? ' ' + tips.join(' / ') : '';
+    return tips.length ? ' · эво: ' + tips.join(' / ') : '';
   };
 
   for (const def of Object.values(SALE_WEAPONS)) {

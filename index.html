@@ -35,6 +35,7 @@
 <link rel="stylesheet" href="src/widgets/dev-panel/dev-panel.css">
 <link rel="stylesheet" href="src/widgets/extract-hud/extract-hud.css">
 <link rel="stylesheet" href="src/widgets/extract-shop/extract-shop.css">
+<link rel="stylesheet" href="src/widgets/sale-tree-popup/sale-tree-popup.css">
 
 <!-- Последним: перекрытия по режиму приложения (body.sale-mode и т.п.) -->
 <link rel="stylesheet" href="src/shared/styles/body-state.css">
@@ -64,6 +65,7 @@
 
   <!-- Выбор апгрейда (виджет level-up-popup) -->
   <div id="upgrade-overlay"></div>
+  <div id="sale-tree-overlay"></div>
 
   <!-- Игровое меню (пауза / шестерёнка) -->
   <div class="overlay game-menu-overlay" id="game-menu-overlay">
@@ -194,6 +196,8 @@
 <script src="src/game/modes/sale/data/weapons.js"></script>
 <script src="src/game/modes/sale/data/passives.js"></script>
 <script src="src/game/modes/sale/data/evolutions.js"></script>
+<script src="src/game/modes/sale/data/tree-perks.js"></script>
+<script src="src/game/modes/sale/data/v2-passives.js"></script>
 <script src="src/game/modes/sale/data/hub-shop.js"></script>
 <script src="src/game/modes/sale/data/overflow.js"></script>
 <script src="src/game/modes/sale/data/events.js"></script>
@@ -202,6 +206,8 @@
 <script src="src/game/modes/sale/telemetry.js"></script>
 <script src="src/game/modes/sale/hooks.js"></script>
 <script src="src/game/modes/sale/run.js"></script>
+<script src="src/game/modes/sale/tree.js"></script>
+<script src="src/game/modes/sale/v2-tree.js"></script>
 <script src="src/game/modes/sale/spawn.js"></script>
 <script src="src/game/modes/sale/director.js"></script>
 <script src="src/game/modes/sale/boss-ai.js"></script>
@@ -269,6 +275,8 @@
 <script src="src/widgets/complaint-book/complaint-book.bindings.js"></script>
 <script src="src/widgets/level-up-popup/level-up-popup.js"></script>
 <script src="src/widgets/level-up-popup/level-up-popup.bindings.js"></script>
+<script src="src/widgets/sale-tree-popup/sale-tree-popup.js"></script>
+<script src="src/widgets/sale-tree-popup/sale-tree-popup.bindings.js"></script>
 <script src="src/widgets/game-menu/game-menu.js"></script>
 <script src="src/widgets/game-menu/game-menu.bindings.js"></script>
 <script src="src/widgets/battle-hud/battle-hud.bindings.js"></script>
