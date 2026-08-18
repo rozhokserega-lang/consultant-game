@@ -276,7 +276,13 @@ Game.prototype.updateSale = function (dt) {
   }
   if (this.saleV2 && !this.choosingUpgrade && !this.gameOver && !this.won
     && !(this._saleLevelFxT > 0)) {
-    if ((this._saleV2WepPending || 0) > 0 && typeof this.openSaleV2WeaponCaseUI === 'function') {
+    if (typeof this.openNextSaleV2Pick === 'function') {
+      const hasUber = (this._saleV2UberQueue || []).length > 0;
+      const hasWep = (this._saleV2WepPending || 0) > 0;
+      const hasTree = (this.pendingUpgrades || 0) > 0;
+      const winWait = !!this._saleV2WinAfterUber;
+      if (hasUber || hasWep || hasTree || winWait) this.openNextSaleV2Pick();
+    } else if ((this._saleV2WepPending || 0) > 0 && typeof this.openSaleV2WeaponCaseUI === 'function') {
       this.openSaleV2WeaponCaseUI();
     } else if ((this.pendingUpgrades || 0) > 0) {
       this.openSaleV2TreeUI();

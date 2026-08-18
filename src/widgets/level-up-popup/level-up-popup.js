@@ -121,6 +121,9 @@
     } else if (kind === 'heal') {
       isUpgrade = false;
       level = null;
+    } else if (kind === 'uber') {
+      isUpgrade = false;
+      level = null;
     }
 
     if (!title) title = '?';
@@ -130,9 +133,16 @@
       lane = 'weapon';
     } else if (kind === 'passive' || kind === 'overflow') {
       lane = 'perk';
+    } else if (kind === 'uber') {
+      lane = 'uber';
     }
 
-    return { title, level, description, icon, isUpgrade, evoReady: Boolean(choice.evoReady), lane };
+    return {
+      title, level, description, icon, isUpgrade,
+      evoReady: Boolean(choice.evoReady),
+      lane,
+      mythic: choice.rarity === 'mythic' || Boolean(choice.mythic),
+    };
   }
 
   /**
@@ -143,18 +153,23 @@
    */
   function createCard(card, index, onClick) {
     const btn = document.createElement('button');
-    const lane = card.lane === 'weapon' || card.lane === 'perk' ? card.lane : '';
+    const lane = card.lane === 'weapon' || card.lane === 'perk' || card.lane === 'uber' ? card.lane : '';
     btn.className = 'level-up-card'
       + (card.evoReady ? ' level-up-card--evo' : '')
-      + (lane && !card.evoReady ? ` level-up-card--${lane}` : '');
+      + (card.mythic ? ' level-up-card--mythic' : '')
+      + (lane && !card.evoReady && !card.mythic ? ` level-up-card--${lane}` : '');
     btn.type = 'button';
     btn.dataset.index = String(index);
     if (card.evoReady) {
       btn.title = card.evoName ? `Эволюция: ${card.evoName}` : 'Эволюция';
+    } else if (card.mythic) {
+      btn.title = 'Mythic';
     } else if (lane === 'weapon') {
       btn.title = 'Оружие';
     } else if (lane === 'perk') {
       btn.title = 'Перк';
+    } else if (lane === 'uber') {
+      btn.title = 'Купон';
     }
 
     const iconWrap = document.createElement('span');
@@ -167,7 +182,7 @@
       const kindMark = document.createElement('span');
       kindMark.className = 'level-up-card__kind';
       kindMark.setAttribute('aria-hidden', 'true');
-      kindMark.textContent = lane === 'weapon' ? 'О' : 'П';
+      kindMark.textContent = lane === 'weapon' ? 'О' : lane === 'uber' ? 'У' : 'П';
       iconWrap.appendChild(kindMark);
     }
 
@@ -206,7 +221,9 @@
     badgeText.className = 'level-up-card__badge-text';
     badgeText.textContent = card.evoReady
       ? (card.evoBadge || 'ЭВО')
-      : card.isUpgrade ? 'UPGRADE' : (lane === 'weapon' ? 'ОРУЖ' : lane === 'perk' ? 'ПЕРК' : '');
+      : card.mythic ? 'MYTHIC'
+        : card.isUpgrade ? 'UPGRADE'
+          : (lane === 'weapon' ? 'ОРУЖ' : lane === 'perk' ? 'ПЕРК' : lane === 'uber' ? 'КУПОН' : '');
 
     badge.appendChild(arrow);
     badge.appendChild(badgeText);

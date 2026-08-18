@@ -46,7 +46,10 @@ Game.prototype.applySaleEnemyDifficulty = function (e, opts) {
   if (!e || opts.noScale) return e;
   const t = this.saleTime || 0;
   const run = this.getSaleArenaRun();
-  const hpMul = saleEnemyScaleMul(t) * (SALE_STAT_SCALE || 1) * (run.hpMul || 1);
+  const hpMul = saleEnemyScaleMul(t) * (SALE_STAT_SCALE || 1) * (run.hpMul || 1)
+    * (this.saleV2 && this.saleV2HasEffect && this.saleV2HasEffect('after_dark')
+      && t >= (typeof SALE_V2_UBER_AFTER_DARK_SEC === 'number' ? SALE_V2_UBER_AFTER_DARK_SEC : 900)
+      ? 1.25 : 1);
   const spdMul = saleEnemySpdScale(t) * (run.spdMul || 1);
   e.maxHp = Math.max(1, Math.round(e.maxHp * hpMul));
   e.hp = e.maxHp;

@@ -59,6 +59,8 @@ const SALE_BOSS_DEFS = {
     tag: 'АКЦИЯ',
     xpReward: 38,
     coinDrop: 26,
+    /** Mythic-купон в Распродаже 2.0: ведьма ~15:00, до финала ещё есть забег. */
+    mythicCoupon: true,
   },
   mall_closing: {
     id: 'mall_closing',

@@ -17,7 +17,7 @@
         <h2 class="sale-v2-tree__title" id="sale-v2-tree-title">Дерево смены</h2>
         <p class="sale-v2-tree__points" id="sale-v2-tree-points">Очки 0</p>
       </header>
-      <p class="sale-v2-tree__hint">Одна сторона. Сосед откроется после капстона.</p>
+      <p class="sale-v2-tree__hint">Стартовые узлы всегда открыты. Внутри ветки — один путь до капстона.</p>
       <div class="sale-v2-tree__tabs" id="sale-v2-tree-tabs"></div>
       <div class="sale-v2-tree__board" id="sale-v2-tree-board"></div>
       <div class="sale-v2-tree__inspect" id="sale-v2-tree-inspect">
@@ -116,6 +116,16 @@
         if (lane.t1.id === opts.inspectId) inspectNode = lane.t1;
         laneEl.appendChild(nodeBtn(lane.t1, opts.inspectId));
       }
+      const fork = document.createElement('div');
+      fork.className = 'sale-v2-fork';
+      fork.setAttribute('aria-hidden', 'true');
+      fork.innerHTML = '<span class="sale-v2-fork__stem"></span>'
+        + '<span class="sale-v2-fork__bar"></span>'
+        + '<span class="sale-v2-fork__legs">'
+        + '<span class="sale-v2-fork__leg"></span>'
+        + '<span class="sale-v2-fork__leg"></span>'
+        + '</span>';
+      laneEl.appendChild(fork);
       const split = document.createElement('div');
       split.className = 'sale-v2-split';
       (lane.leaves || []).forEach((leaf) => {
@@ -125,6 +135,10 @@
           if (leaf.t2.id === opts.inspectId) inspectNode = leaf.t2;
           leafEl.appendChild(nodeBtn(leaf.t2, opts.inspectId));
         }
+        const arrow = document.createElement('div');
+        arrow.className = 'sale-v2-arrow';
+        arrow.setAttribute('aria-hidden', 'true');
+        leafEl.appendChild(arrow);
         if (leaf.cap) {
           if (leaf.cap.id === opts.inspectId) inspectNode = leaf.cap;
           leafEl.appendChild(nodeBtn(leaf.cap, opts.inspectId));

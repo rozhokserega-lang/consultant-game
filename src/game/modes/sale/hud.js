@@ -85,6 +85,9 @@ Game.prototype.updateSaleHUD = function () {
     } else if ((this._saleV2WepT || 0) > 0) {
       tags.push(`<span class="buff-tag">🧳 чемодан ${Math.ceil(this._saleV2WepT)}с</span>`);
     }
+    if ((this._saleV2UberQueue || []).length > 0) {
+      tags.push('<span class="buff-tag">🏷 купон</span>');
+    }
   }
   this.$buffBar.innerHTML = tags.join('');
 

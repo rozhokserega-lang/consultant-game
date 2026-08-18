@@ -59,6 +59,8 @@
       R(
         bq('v2on', null, 'вкл 2.0') +
           bq('v2tick', null, 'тик оружия') +
+          bq('v2coupon', null, 'купон') +
+          bq('v2coupon', 'mythic', 'mythic') +
           (typeof SALE_V2_BRANCHES !== 'undefined'
             ? SALE_V2_BRANCHES.map((b) => bq('v2branch', b.id, 'ветка ' + b.name)).join('')
             : ''),
@@ -158,6 +160,16 @@
         run.saleV2 = true;
         run.applySaleV2WeaponTick();
         info('чемодан оружия 2.0');
+        break;
+      }
+      case 'v2coupon': {
+        const run = saleDevEnsureRun();
+        if (!run || !run.grantSaleV2BossCoupon) break;
+        run.saleV2 = true;
+        run.grantSaleV2BossCoupon({
+          saleBossId: arg === 'mythic' ? 'promo_witch' : 'floor_manager',
+        });
+        info(arg === 'mythic' ? 'mythic-купон 2.0' : 'чёрный купон 2.0');
         break;
       }
       case 'v2branch': {

@@ -122,6 +122,60 @@
   color: #c8b890;
 }
 
+.sale-v2-fork {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  margin: 0 10%;
+}
+
+.sale-v2-fork__stem {
+  width: 2px;
+  height: 8px;
+  background: #c8b890;
+}
+
+.sale-v2-fork__bar {
+  width: 100%;
+  height: 2px;
+  background: #c8b890;
+}
+
+.sale-v2-fork__legs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+}
+
+.sale-v2-fork__leg {
+  justify-self: center;
+  width: 2px;
+  height: 10px;
+  background: #c8b890;
+}
+
+.sale-v2-arrow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 12px;
+  pointer-events: none;
+}
+
+.sale-v2-arrow::after {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid #c8b890;
+}
+
+.sale-v2-leaf.is-locked .sale-v2-arrow::after {
+  border-top-color: #5a4a30;
+}
+
 .sale-v2-split {
   display: grid;
   grid-template-columns: 1fr 1fr;

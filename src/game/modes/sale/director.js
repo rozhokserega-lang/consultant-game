@@ -137,17 +137,24 @@ Game.prototype.onSaleBossKilled = function (enemy) {
     this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);
   }
   this.spawnSalePowerup(enemy.x, enemy.y - 18, 'bomb');
-  if (enemy.saleBossId) this.applySaleBossDrop(enemy.saleBossId, enemy.x, enemy.y);
+  if (this.saleV2 && typeof this.grantSaleV2BossCoupon === 'function') {
+    this.grantSaleV2BossCoupon(enemy);
+  } else if (enemy.saleBossId) {
+    this.applySaleBossDrop(enemy.saleBossId, enemy.x, enemy.y);
+  }
   // не стакать следующего босса сразу после долгого боя
   const now = this.saleTime || 0;
   this.saleBossT = Math.max(this.saleBossT || 0, now + SALE_BOSS_GAP_AFTER_KILL);
   if (enemy._saleFinalBoss || enemy.saleBossId === 'mall_closing') {
     this.saleArenaShrink = 0;
-    // финал ночи ТЦ — победа сразу после килла (не ждать таймер 20:00)
     this.showEventBanner('🏆 Тренер сдал смену!', 2.5);
-    setTimeout(() => {
-      if (!this.gameOver && !this.won && this.gameMode === 'sale') this.endSaleGame(true);
-    }, 900);
+    if (this.saleV2) {
+      this._saleV2WinAfterUber = true;
+    } else {
+      setTimeout(() => {
+        if (!this.gameOver && !this.won && this.gameMode === 'sale') this.endSaleGame(true);
+      }, 900);
+    }
   }
 };
 

@@ -15,6 +15,11 @@ Game.prototype.saleV2Stat = function (key) {
     if (!def || !def.stat || def.stat[key] == null) continue;
     total += def.stat[key] * (lv | 0);
   }
+  for (const id of this.saleUbers || []) {
+    const def = typeof getSaleV2Uber === 'function' ? getSaleV2Uber(id) : null;
+    if (!def || !def.stat || def.stat[key] == null) continue;
+    total += def.stat[key];
+  }
   return total;
 };
 
@@ -23,6 +28,10 @@ Game.prototype.saleV2HasEffect = function (effect) {
   for (const [id, lv] of Object.entries(this.salePassives || {})) {
     const def = getSaleV2Passive(id);
     if (def && def.effect === effect && (lv | 0) >= (def.max || 1)) return true;
+  }
+  for (const id of this.saleUbers || []) {
+    const def = typeof getSaleV2Uber === 'function' ? getSaleV2Uber(id) : null;
+    if (def && def.effect === effect) return true;
   }
   return false;
 };
@@ -64,8 +73,10 @@ Game.prototype.saleV2NodeAvailable = function (def) {
   if (!def) return false;
   const lv = this.saleV2NodeLevel(def.id);
   if (lv >= (def.max || 1)) return false;
-  if (this.saleV2ChoiceLocked('root', def.root)) return false;
-  if (this.saleV2ChoiceLocked(def.fork, def.option)) return false;
+  if (def.tier >= 2) {
+    if (this.saleV2ChoiceLocked('root', def.root)) return false;
+    if (this.saleV2ChoiceLocked(def.fork, def.option)) return false;
+  }
   if (def.requires && this.saleV2NodeLevel(def.requires.id) < (def.requires.lvl || 1)) return false;
   return true;
 };
@@ -106,7 +117,7 @@ Game.prototype.investSaleV2Node = function (id, opts) {
   this.salePassives[id] = this.saleV2NodeLevel(id) + 1;
   this._saleV2Picked = this._saleV2Picked || {};
   if (def.root && !this._saleV2Picked.root) this._saleV2Picked.root = def.root;
-  if (def.fork && def.option && !this._saleV2Picked[def.fork]) {
+  if (def.tier >= 2 && def.fork && def.option && !this._saleV2Picked[def.fork]) {
     this._saleV2Picked[def.fork] = def.option;
   }
   if (def.stat && def.stat.hp) {
@@ -163,7 +174,34 @@ Game.prototype.pickSaleV2Node = function (id) {
   this.pendingUpgrades = Math.max(0, (this.pendingUpgrades | 0) - 1);
   this._saleV2InspectId = id;
   if (this.pendingUpgrades > 0) this.openSaleV2TreeUI();
-  else this.closeSaleV2TreeUI();
+  else {
+    if (typeof SaleTreePopup !== 'undefined') SaleTreePopup.close();
+    this.openNextSaleV2Pick();
+  }
+};
+
+Game.prototype.openNextSaleV2Pick = function () {
+  if (this.gameOver || this.won) return;
+  if ((this._saleV2UberQueue || []).length && typeof this.openSaleV2UberUI === 'function') {
+    this.openSaleV2UberUI();
+    return;
+  }
+  if ((this._saleV2WepPending || 0) > 0 && typeof this.openSaleV2WeaponCaseUI === 'function') {
+    this.openSaleV2WeaponCaseUI();
+    return;
+  }
+  if ((this.pendingUpgrades || 0) > 0) {
+    this.openSaleV2TreeUI();
+    return;
+  }
+  this.choosingUpgrade = false;
+  this.paused = false;
+  this.updateUpgradeRerollBtn();
+  this.refreshMusicState();
+  if (this._saleV2WinAfterUber) {
+    this._saleV2WinAfterUber = false;
+    this.endSaleGame(true);
+  }
 };
 
 Game.prototype.closeSaleV2TreeUI = function () {
@@ -189,7 +227,8 @@ Game.prototype.openSaleV2TreeUI = function () {
       this.openSaleV2TreeUI();
       return;
     }
-    this.closeSaleV2TreeUI();
+    if (typeof SaleTreePopup !== 'undefined') SaleTreePopup.close();
+    this.openNextSaleV2Pick();
     return;
   }
   if (typeof SaleTreePopup !== 'undefined') {
@@ -246,7 +285,7 @@ Game.prototype.buildSaleV2TreeBoard = function () {
     id: side.id,
     name: side.name,
     ico: side.ico,
-    locked: this.saleV2ChoiceLocked('root', side.id),
+    locked: false,
     lanes: SALE_V2_LANES.filter((lane) => lane.side === side.id).map((lane) => {
       const t1 = Object.values(SALE_V2_PASSIVES).find((d) => d.lane === lane.id && d.tier === 1);
       const leafIds = [...new Set(
@@ -258,7 +297,7 @@ Game.prototype.buildSaleV2TreeBoard = function () {
         id: lane.id,
         name: lane.name,
         ico: lane.ico,
-        locked: this.saleV2ChoiceLocked(lane.fork || side.id, lane.id),
+        locked: false,
         t1: t1 ? this.saleV2NodeView(t1) : null,
         leaves: leafIds.map((leafId) => {
           const t2 = Object.values(SALE_V2_PASSIVES).find((d) => d.option === leafId && d.tier === 2);
@@ -329,40 +368,34 @@ Game.prototype.buildSaleV2WeaponChoices = function () {
     }
   }
 
-  if (this.saleOverflowUnlocked()) {
-    for (const [wid] of Object.entries(this.saleWeapons || {})) {
-      const def = SALE_WEAPONS[wid];
-      if (!def || banned['w:' + wid]) continue;
-      const lv = this.saleWeapons[wid] || 0;
-      const atCap = def.evolved || lv >= (def.max || 5);
-      if (!atCap) continue;
-      if (!def.evolved && this.listSaleV2EvolutionsFor(wid).length) continue;
-      const ov = this.saleWeaponOver[wid] || 0;
-      if (ov >= 12) continue;
-      candidates.push({
-        kind: 'weapon_over', id: wid, ico: def.ico,
-        ttl: `${def.name} +${ov + 1}`, desc: '+7% урон этого оружия',
-        weight: 1.6,
-      });
-    }
-    for (const ov of SALE_OVERFLOW) {
-      if (banned['o:' + ov.id]) continue;
-      const lv = this.saleOverflow[ov.id] || 0;
-      if (lv >= ov.max) continue;
-      candidates.push({
-        kind: 'overflow', id: ov.id, ico: ov.ico,
-        ttl: `${ov.name} · ${lv + 1}`, desc: ov.desc,
-        weight: 2.4,
-      });
-    }
+  // хвост оружия на капе — не глобальные «Час пик» / «Расширение зала»
+  for (const [wid] of Object.entries(this.saleWeapons || {})) {
+    const def = SALE_WEAPONS[wid];
+    if (!def || banned['w:' + wid]) continue;
+    const lv = this.saleWeapons[wid] || 0;
+    const atCap = def.evolved || lv >= (def.max || 5);
+    if (!atCap) continue;
+    if (!def.evolved && this.listSaleV2EvolutionsFor(wid).length) continue;
+    const ov = this.saleWeaponOver[wid] || 0;
+    if (ov >= 12) continue;
+    candidates.push({
+      kind: 'weapon_over', id: wid, ico: def.ico,
+      ttl: `${def.name} +${ov + 1}`, desc: '+7% урон этого оружия',
+      weight: 1.6,
+    });
   }
 
+  return saleV2PickWeighted(candidates, 3);
+};
+
+function saleV2PickWeighted(candidates, n) {
   const picked = [];
   const used = new Set();
-  while (picked.length < 3 && candidates.length) {
+  const list = candidates || [];
+  while (picked.length < n && list.length) {
     let total = 0;
     const avail = [];
-    for (const c of candidates) {
+    for (const c of list) {
       const key = c.kind + ':' + c.id;
       if (used.has(key)) continue;
       avail.push(c);
@@ -378,20 +411,8 @@ Game.prototype.buildSaleV2WeaponChoices = function () {
     picked.push(choice);
     used.add(choice.kind + ':' + choice.id);
   }
-  const fillers = [
-    { kind: 'overflow', id: 'power', ico: '💪', ttl: 'Сверхурочные', desc: '+8% урона всему' },
-    { kind: 'heal', id: 'heal', ico: '❤️', ttl: 'Перерыв', desc: '+2 HP' },
-    { kind: 'overflow', id: 'tempo', ico: '⏱️', ttl: 'Час пик', desc: '−6% перезарядка оружия' },
-  ];
-  for (const f of fillers) {
-    if (picked.length >= 3) break;
-    const key = f.kind + ':' + f.id;
-    if (used.has(key)) continue;
-    picked.push(f);
-    used.add(key);
-  }
   return picked;
-};
+}
 
 Game.prototype.openSaleV2WeaponCaseUI = function () {
   if (!this.saleV2) return;
@@ -406,18 +427,7 @@ Game.prototype.openSaleV2WeaponCaseUI = function () {
     this.showEventBanner('💪 Оружие на капе: +урон', 1.3);
     this._saleV2WepPick = false;
     this._saleV2WepPending = Math.max(0, (this._saleV2WepPending | 0) - 1);
-    if ((this._saleV2WepPending || 0) > 0) {
-      this.openSaleV2WeaponCaseUI();
-      return;
-    }
-    if ((this.pendingUpgrades || 0) > 0) {
-      this.openSaleV2TreeUI();
-      return;
-    }
-    this.choosingUpgrade = false;
-    this.paused = false;
-    this.updateUpgradeRerollBtn();
-    this.refreshMusicState();
+    this.openNextSaleV2Pick();
     sfx.pickup();
     return;
   }
@@ -444,6 +454,109 @@ Game.prototype.openSaleV2WeaponCaseUI = function () {
   this.updateUpgradeRerollBtn();
   this.refreshMusicState();
   if (!this._saleRerolling) sfx.level();
+};
+
+Game.prototype.grantSaleV2BossCoupon = function (enemy) {
+  const def = enemy && enemy.saleBossId && typeof SALE_BOSS_DEFS !== 'undefined'
+    ? SALE_BOSS_DEFS[enemy.saleBossId]
+    : null;
+  const mythic = !!(def && def.mythicCoupon);
+  this._saleV2UberQueue = this._saleV2UberQueue || [];
+  this._saleV2UberQueue.push(mythic ? 'mythic' : 'normal');
+  this._saleLevelFxT = Math.max(this._saleLevelFxT || 0, 0.55);
+  this.showEventBanner(mythic ? '👑 Mythic-купон!' : '🏷 Чёрный купон!', 1.8);
+};
+
+Game.prototype.buildSaleV2UberChoices = function (rarity) {
+  const owned = new Set(this.saleUbers || []);
+  const wantMythic = rarity === 'mythic';
+  const pool = [];
+  const mythics = typeof listSaleV2UbersByRarity === 'function'
+    ? listSaleV2UbersByRarity('mythic') : [];
+  const normals = typeof listSaleV2UbersByRarity === 'function'
+    ? listSaleV2UbersByRarity('normal') : [];
+  const unusedMythic = mythics.filter((u) => !owned.has(u.id));
+  const unusedNormal = normals.filter((u) => !owned.has(u.id));
+  if (wantMythic) {
+    for (const u of unusedMythic) {
+      pool.push(this.saleV2UberChoiceCard(u, 5));
+    }
+    for (const u of unusedNormal) {
+      pool.push(this.saleV2UberChoiceCard(u, 1));
+    }
+  } else {
+    for (const u of unusedNormal) {
+      pool.push(this.saleV2UberChoiceCard(u, 1));
+    }
+  }
+  return saleV2PickWeighted(pool, 3);
+};
+
+Game.prototype.saleV2UberChoiceCard = function (def, weight) {
+  return {
+    kind: 'uber',
+    id: def.id,
+    ico: def.ico,
+    ttl: def.name,
+    desc: def.desc,
+    rarity: def.rarity,
+    weight: weight || 1,
+  };
+};
+
+Game.prototype.openSaleV2UberUI = function () {
+  if (!this.saleV2) return;
+  const queue = this._saleV2UberQueue || [];
+  if (!queue.length) {
+    this.openNextSaleV2Pick();
+    return;
+  }
+  if (typeof SaleTreePopup !== 'undefined') SaleTreePopup.close();
+  this.choosingUpgrade = true;
+  this.paused = true;
+  this._saleV2UberPick = true;
+  this._saleV2WepPick = false;
+  const rarity = queue[0];
+  this.upgradeChoices = this.buildSaleV2UberChoices(rarity);
+  if (!this.upgradeChoices.length) {
+    this.saleOverflow = this.saleOverflow || {};
+    this.saleOverflow.power = (this.saleOverflow.power || 0) + 1;
+    this.showEventBanner('💪 Купоны кончились: +урон', 1.3);
+    this._saleV2UberPick = false;
+    this._saleV2UberQueue.shift();
+    this.openNextSaleV2Pick();
+    return;
+  }
+  const mythic = rarity === 'mythic';
+  if (typeof LevelUpPopup !== 'undefined') {
+    LevelUpPopup.open({
+      title: mythic ? '👑 Mythic-купон' : '🏷 Чёрный купон',
+      cards: this.upgradeChoices.map((up) => {
+        const card = saleChoiceToCard(up);
+        card.mythic = up.rarity === 'mythic';
+        return card;
+      }),
+      onPick: (i) => this.pickSaleUpgrade(i),
+    });
+  }
+  this.updateUpgradeRerollBtn();
+  this.refreshMusicState();
+  sfx.level();
+};
+
+Game.prototype.applySaleV2Uber = function (id) {
+  const def = typeof getSaleV2Uber === 'function' ? getSaleV2Uber(id) : null;
+  if (!def) return false;
+  this.saleUbers = this.saleUbers || [];
+  if (this.saleUbers.indexOf(id) >= 0) return false;
+  this.saleUbers.push(id);
+  if (def.stat && def.stat.hp) {
+    this.player.maxHp += def.stat.hp;
+    this.player.hp = Math.min(this.player.maxHp, this.player.hp + def.stat.hp);
+  }
+  this.applySalePassivesToPlayer();
+  this.showEventBanner((def.rarity === 'mythic' ? '👑 ' : '🏷 ') + def.name, 1.6);
+  return true;
 };
 
 Game.prototype.applySaleV2WeaponTick = function () {

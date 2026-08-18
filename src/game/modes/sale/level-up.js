@@ -316,6 +316,8 @@ Game.prototype.pickSaleUpgrade = function (i) {
     if (typeof drawSpell === 'function') {
       this.spawnSpriteFx('sp_heal2', this.player.x, this.player.y, { scale: 0.55, life: 0.4, vy: -10 });
     }
+  } else if (up.kind === 'uber') {
+    this.applySaleV2Uber(up.id);
   }
   if (this.saleV2 && typeof this.tryGrantSaleV2PendingEvos === 'function') {
     this.tryGrantSaleV2PendingEvos();
@@ -335,15 +337,16 @@ Game.prototype.pickSaleUpgrade = function (i) {
     }
     return;
   }
+  if (this._saleV2UberPick) {
+    this._saleV2UberPick = false;
+    if ((this._saleV2UberQueue || []).length) this._saleV2UberQueue.shift();
+    this.openNextSaleV2Pick();
+    return;
+  }
   if (this._saleV2WepPick) {
     this._saleV2WepPick = false;
     this._saleV2WepPending = Math.max(0, (this._saleV2WepPending | 0) - 1);
-    if ((this._saleV2WepPending || 0) > 0) this.openSaleV2WeaponCaseUI();
-    else if ((this.pendingUpgrades || 0) > 0) this.openSaleV2TreeUI();
-    else {
-      this.paused = false;
-      this.refreshMusicState();
-    }
+    this.openNextSaleV2Pick();
     return;
   }
   this.pendingUpgrades = Math.max(0, this.pendingUpgrades - 1);

@@ -6,6 +6,10 @@
 Game.prototype.dropSaleXp = function (enemy) {
   let amount = enemy.xpReward || 1;
   if (enemy.saleBossId) amount = Math.max(amount, 20);
+  if (this.saleV2 && this.saleV2HasEffect && this.saleV2HasEffect('after_dark')
+    && (this.saleTime || 0) >= (typeof SALE_V2_UBER_AFTER_DARK_SEC === 'number' ? SALE_V2_UBER_AFTER_DARK_SEC : 900)) {
+    amount = Math.ceil(amount * 1.4);
+  }
   if (enemy.type === 'boss' || enemy.type === 'director') amount = Math.max(amount, 8);
   if (enemy.type === 'fatty') amount = Math.max(amount, 4);
   const n = amount <= 2 ? 1 : amount <= 5 ? 2 : 3;
