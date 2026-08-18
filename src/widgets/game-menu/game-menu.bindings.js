@@ -191,7 +191,16 @@ Object.assign(Game.prototype, {
     if (!def) return [];
     if (def.evolved) {
       if (def.meta) return [{ done: true, text: 'Мета-эволюция — обе ветки уже в слотах' }];
-      return [{ done: true, text: 'Уже эволюция — дальше не качается' }];
+      const tips = [{ done: true, text: 'Уже эволюция — дальше не качается' }];
+      const family = typeof saleWeaponFamily === 'function' ? saleWeaponFamily(weaponId) : weaponId;
+      const meta = typeof SALE_META_EVOS !== 'undefined' ? SALE_META_EVOS[family] : null;
+      if (this.saleV2 && meta && !(this.saleWeapons && this.saleWeapons[meta.id])) {
+        tips.push({
+          done: false,
+          text: 'Мета: возьми ещё одну такую базу и прокачай до 6',
+        });
+      }
+      return tips;
     }
     if (typeof SALE_EVOLUTIONS === 'undefined') return [];
     const tips = [];

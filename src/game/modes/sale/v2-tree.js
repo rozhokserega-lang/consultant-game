@@ -324,21 +324,16 @@ Game.prototype.buildSaleV2TreeView = function (branchId) {
   return saleV2PassivesInLane(branchId || 'tempo').map((def) => this.saleV2NodeView(def));
 };
 
-Game.prototype.listSaleV2SiblingBranches = function () {
-  const out = [];
-  if (typeof SALE_EVOLUTIONS === 'undefined') return out;
-  const byFrom = {};
-  for (const ev of SALE_EVOLUTIONS) {
-    if (ev.v2Only && !this.saleV2) continue;
-    (byFrom[ev.from] = byFrom[ev.from] || []).push(ev);
-  }
-  for (const evs of Object.values(byFrom)) {
-    const owned = evs.filter((ev) => this.saleWeapons[ev.into]);
-    const missing = evs.filter((ev) => !this.saleWeapons[ev.into]);
-    if (owned.length < 1 || !missing.length) continue;
-    for (const ev of missing) out.push(ev);
-  }
-  return out;
+/** Можно взять ещё одну копию базы: одна эво уже есть, второй ветки нет. */
+Game.prototype.saleV2CanOfferDuplicateBase = function (baseId) {
+  if (!this.saleV2 || !baseId) return false;
+  if ((this.saleWeapons[baseId] || 0) > 0) return false;
+  if (typeof SALE_EVOLUTIONS === 'undefined') return false;
+  const evos = SALE_EVOLUTIONS.filter((ev) => ev.from === baseId && (!ev.v2Only || this.saleV2));
+  if (evos.length < 2) return false;
+  const owned = evos.filter((ev) => this.saleWeapons[ev.into]);
+  const missing = evos.filter((ev) => !this.saleWeapons[ev.into]);
+  return owned.length >= 1 && missing.length >= 1;
 };
 
 Game.prototype.tryGrantSaleV2Meta = function () {
@@ -396,13 +391,17 @@ Game.prototype.buildSaleV2WeaponChoices = function () {
     const lv = this.saleWeapons[def.id] || 0;
     if (lv <= 0) {
       if (!canNewWeapon) continue;
-      if (typeof saleHasFamily === 'function' && saleHasFamily(this.saleWeapons, def.id)) continue;
+      const dupBase = this.saleV2CanOfferDuplicateBase(def.id);
+      if (!dupBase && typeof saleHasFamily === 'function' && saleHasFamily(this.saleWeapons, def.id)) continue;
       if (!this.saleV2WeaponOffered(def.id)) continue;
       const role = SALE_ROLE_LABEL[def.type] || def.type;
       candidates.push({
         kind: 'weapon_new', id: def.id, ico: def.ico,
-        ttl: def.name, desc: `${def.desc} · ${role}`,
-        weight: 2.2, role,
+        ttl: dupBase ? `${def.name} · 2-я ветка` : def.name,
+        desc: dupBase
+          ? `Ещё одна копия — прокачай до ${def.max || 5} для второй эволюции · ${role}`
+          : `${def.desc} · ${role}`,
+        weight: dupBase ? 2.8 : 2.2, role,
       });
     } else if (lv < def.max) {
       const role = SALE_ROLE_LABEL[def.type] || def.type;
@@ -419,21 +418,6 @@ Game.prototype.buildSaleV2WeaponChoices = function () {
         card.weight = 4.5;
         candidates.push(card);
       }
-    }
-  }
-
-  if (canNewWeapon) {
-    for (const ev of this.listSaleV2SiblingBranches()) {
-      const into = SALE_WEAPONS[ev.into];
-      if (!into || banned['w:' + ev.into]) continue;
-      const fromDef = SALE_WEAPONS[ev.from];
-      const role = SALE_ROLE_LABEL[into.type] || into.type;
-      candidates.push({
-        kind: 'branch2', id: ev.into, from: ev.from, ico: into.ico,
-        ttl: `✨ 2-я ветка: ${ev.name}`,
-        desc: `${(fromDef && fromDef.name) || ev.from}: ${into.desc} · ${role}`,
-        weight: 3.8, role, branch: ev.branch || null,
-      });
     }
   }
 
