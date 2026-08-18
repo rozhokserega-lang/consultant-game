@@ -665,4 +665,40 @@ Game.prototype.renderSaleScreenUI = function () {
     ctx.fillText(def.tag, 0, 22);
     ctx.restore();
   }
+  // чемоданчик за экраном — стрелка у края
+  for (const pk of this.pickups || []) {
+    if (pk.dead || pk.type !== 'lunch') continue;
+    const sx = (pk.x - cam.x) * cam.z;
+    const sy = (pk.y - cam.y) * cam.z;
+    const pad = 26;
+    if (sx > -pad && sx < this.W + pad && sy > -pad && sy < this.H + pad) continue;
+    const edge = 46;
+    const ax = Math.max(edge, Math.min(this.W - edge, sx));
+    const ay = Math.max(edge + 40, Math.min(this.H - edge, sy));
+    const ang = Math.atan2(sy - ay, sx - ax);
+    const pulse = 1 + Math.sin(performance.now() / 160) * 0.12;
+    ctx.save();
+    ctx.translate(ax, ay);
+    ctx.rotate(ang);
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = '#c9a227';
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(16 * pulse, 0);
+    ctx.lineTo(-8 * pulse, -10 * pulse);
+    ctx.lineTo(-8 * pulse, 10 * pulse);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.rotate(-ang);
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff';
+    ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+    ctx.lineWidth = 3;
+    ctx.strokeText('🧳', 0, 22);
+    ctx.fillText('🧳', 0, 22);
+    ctx.restore();
+  }
 };
