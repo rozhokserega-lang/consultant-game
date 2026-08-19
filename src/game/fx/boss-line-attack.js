@@ -75,22 +75,32 @@ Object.assign(Game.prototype, {
             this.player.slowTimer = Math.max(this.player.slowTimer || 0, 1.6);
             this.spawnParticles(this.player.x, this.player.y, 8, '#7dd3fc', 90, 0.28);
           } else {
-            this.tookDamage = true;
-            if (this.selectedChallenge === 'no_damage') this.challengeFailed = true;
             const midX = (line.x1 + line.x2) / 2;
             const midY = (line.y1 + line.y2) / 2;
-            if (this.player.takeDamage(midX, midY)) {
+            const killName = line.killName || (line.owner && line.owner.nameTag) || 'Босс';
+            if (this.gameMode === 'sale' && typeof this.saleHurtPlayer === 'function') {
+              const died = this.saleHurtPlayer(midX, midY, 'boss', killName);
+              if (died) {
+                this.spawnParticles(this.player.x, this.player.y, Math.round(36 * this._fxBudget()), '#e74c3c', 320, 0.75);
+                killed = true;
+              } else if (this.tookDamage) {
+                if (this.selectedChallenge === 'no_damage') this.challengeFailed = true;
+                this.spawnParticles(this.player.x, this.player.y, 12, '#ff6b6b', 160, 0.4);
+                this.screenShake = Math.max(this.screenShake, 0.22);
+              }
+            } else if (this.player.takeDamage(midX, midY)) {
+              this.tookDamage = true;
+              if (this.selectedChallenge === 'no_damage') this.challengeFailed = true;
               this.spawnParticles(this.player.x, this.player.y, Math.round(36 * this._fxBudget()), '#e74c3c', 320, 0.75);
-              this.endGame(false, line.killName || (line.owner && line.owner.nameTag) || 'Босс');
+              this.endGame(false, killName);
               killed = true;
             } else {
+              this.tookDamage = true;
+              if (this.selectedChallenge === 'no_damage') this.challengeFailed = true;
               sfx.hurt();
               this.vibrate(45);
               this.spawnParticles(this.player.x, this.player.y, 12, '#ff6b6b', 160, 0.4);
               this.screenShake = Math.max(this.screenShake, 0.22);
-              if (this.gameMode === 'sale' && typeof this.applySaleFragileExtra === 'function') {
-                if (this.applySaleFragileExtra()) killed = true;
-              }
             }
           }
         } else if (!inBand) {

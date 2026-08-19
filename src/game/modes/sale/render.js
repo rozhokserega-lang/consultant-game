@@ -453,7 +453,9 @@ Game.prototype.renderSaleOverlays = function () {
       ctx.textBaseline = 'middle';
       ctx.lineWidth = 3;
       ctx.strokeStyle = 'rgba(0,0,0,0.75)';
-      ctx.fillStyle = dn.big ? '#f1c40f' : '#fff';
+      ctx.fillStyle = dn.kind === 'heal' ? '#4ade80'
+        : dn.kind === 'hurt' ? '#f87171'
+        : dn.big ? '#f1c40f' : '#fff';
       ctx.strokeText(dn.txt, dn.x, dn.y);
       ctx.fillText(dn.txt, dn.x, dn.y);
       ctx.restore();

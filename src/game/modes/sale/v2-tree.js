@@ -61,12 +61,8 @@ Game.prototype.saleV2PathComplete = function (optionId) {
   return !!(t2 || cap);
 };
 
-Game.prototype.saleV2ChoiceLocked = function (forkId, optionId) {
-  if (!forkId || !optionId) return false;
-  this._saleV2Picked = this._saleV2Picked || {};
-  const picked = this._saleV2Picked[forkId];
-  if (!picked || picked === optionId) return false;
-  return !this.saleV2PathComplete(picked);
+Game.prototype.saleV2ChoiceLocked = function () {
+  return false;
 };
 
 Game.prototype.saleV2NodeAvailable = function (def) {
@@ -122,10 +118,10 @@ Game.prototype.investSaleV2Node = function (id, opts) {
   }
   if (def.stat && def.stat.hp) {
     this.player.maxHp += def.stat.hp;
-    this.player.hp = Math.min(this.player.maxHp, this.player.hp + def.stat.hp);
+    this.saleApplyHeal(def.stat.hp);
   }
   if (id === 'medkit' && this.player) {
-    this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);
+    this.saleApplyHeal(saleHp(1));
   }
   this.applySalePassivesToPlayer();
   if (def.capstone && this.saleV2NodeLevel(id) >= (def.max || 1)) {
@@ -618,7 +614,7 @@ Game.prototype.applySaleV2Uber = function (id) {
   this.saleUbers.push(id);
   if (def.stat && def.stat.hp) {
     this.player.maxHp += def.stat.hp;
-    this.player.hp = Math.min(this.player.maxHp, this.player.hp + def.stat.hp);
+    this.saleApplyHeal(def.stat.hp);
   }
   this.applySalePassivesToPlayer();
   this.showEventBanner((def.rarity === 'mythic' ? '👑 ' : '🏷 ') + def.name, 1.6);
@@ -659,12 +655,20 @@ Game.prototype.tickSaleV2Capstones = function (dt) {
   const p = this.player;
 
   const regenLv = this.saleV2Stat('regen');
+  this._saleRegenFxT = (this._saleRegenFxT || 0) - dt;
   if (regenLv > 0 && p.hp < p.maxHp) {
-    this.saleRegenTimer = (this.saleRegenTimer || 0) + dt * regenLv;
-    if (this.saleRegenTimer >= 12) {
-      this.saleRegenTimer -= 12;
-      p.hp = Math.min(p.maxHp, p.hp + 1);
-      this.spawnAnimFx('afx_heal', p.x, p.y - 10, { life: 0.3, scale: 0.55, vy: -14 });
+    this.saleRegenAcc = (this.saleRegenAcc || 0) + regenLv * dt;
+    if (this.saleRegenAcc >= 1) {
+      const heal = Math.floor(this.saleRegenAcc);
+      this.saleRegenAcc -= heal;
+      const gained = this.saleApplyHeal(heal, true);
+      this._saleRegenShow = (this._saleRegenShow || 0) + gained;
+      if (gained > 0 && this._saleRegenFxT <= 0) {
+        this._saleRegenFxT = 0.5;
+        if (this._saleRegenShow > 0) this.pushSalePlayerHpNum(this._saleRegenShow);
+        this._saleRegenShow = 0;
+        this.spawnAnimFx('afx_heal', p.x, p.y - 10, { life: 0.3, scale: 0.55, vy: -14 });
+      }
     }
   }
 
@@ -714,18 +718,13 @@ Game.prototype.hookSaleV2PlayerDefense = function () {
   if (!this.saleV2 || !this.player || this.player._saleV2HurtHooked) return;
   const self = this;
   const orig = this.player.takeDamage.bind(this.player);
-  this.player.takeDamage = function (fromX, fromY) {
+  this.player.takeDamage = function (fromX, fromY, amount) {
     if (window.game && window.game.__god) return false;
-    if (this.invincible > 0 || this.lunchTimer > 0) return orig(fromX, fromY);
-    const armor = self.saleV2Stat('armor');
-    if (armor > 0 && Math.random() < armor) {
-      this.invincible = Math.max(this.invincible || 0, 0.2);
-      self.spawnAnimFx('afx_ring', this.x, this.y, {
-        life: 0.18, scale: 0.35, scaleEnd: 0.7, tint: '#94a3b8',
-      });
-      return false;
-    }
-    const lethal = this.hp <= 1 && !(this.extraLives > 0) && !(this.shieldCharges > 0);
+    if (this.invincible > 0 || this.lunchTimer > 0) return orig(fromX, fromY, amount);
+    let dmg = amount != null ? amount : (this.hitDamage || 1);
+    dmg = self.saleArmorMitigate(dmg);
+    if (dmg <= 0) return false;
+    const lethal = this.hp <= dmg && !(this.extraLives > 0) && !(this.shieldCharges > 0);
     if (lethal && self.saleV2HasEffect('second_wind') && (self._saleV2TillCd || 0) <= 0) {
       this.hp = 1;
       this.invincible = 2;
@@ -734,7 +733,11 @@ Game.prototype.hookSaleV2PlayerDefense = function () {
       sfx.level();
       return false;
     }
-    return orig(fromX, fromY);
+    const dead = orig(fromX, fromY, dmg);
+    if (this.invincible === 0.8) {
+      this.invincible = typeof SALE_IFRAME_V2 === 'number' ? SALE_IFRAME_V2 : 0.4;
+    }
+    return dead;
   };
   this.player._saleV2HurtHooked = true;
 };

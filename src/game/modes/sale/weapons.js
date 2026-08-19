@@ -794,22 +794,10 @@ Game.prototype.updateSalePuddles = function (dt) {
           u._ppAcc = (u._ppAcc || 0) + 1;
           if (u._ppAcc >= 3) {
             u._ppAcc = 0;
-            if (p.takeDamage(u.x, u.y)) {
-              this.endSaleGame(false, u.killName || 'Просрочка');
-              return true;
-            }
-            this.tookDamage = true;
-            sfx.hurt();
-            if (this.applySaleFragileExtra()) return true;
+            if (this.saleHurtPlayer(u.x, u.y, 'trash', u.killName || 'Просрочка')) return true;
           }
         } else if (u.hurtPlayer) {
-          if (p.takeDamage(u.x, u.y)) {
-            this.endSaleGame(false, u.killName || 'Пожар в отделе');
-            return true;
-          }
-          this.tookDamage = true;
-          sfx.hurt();
-          if (this.applySaleFragileExtra()) return true;
+          if (this.saleHurtPlayer(u.x, u.y, 'trash', u.killName || 'Пожар в отделе')) return true;
         }
       }
     }

@@ -3,8 +3,29 @@
  */
 'use strict';
 
-const SALE_VERSION = '0.16.1-second-base';
+const SALE_VERSION = '0.18.1-open-tree';
 const SALE_DURATION = 20 * 60; // классика: конец; 2.0: старт овертайма
+/** 1 старый хит игрока = столько HP. Сердца, банка, overflow — в этих единицах. */
+const SALE_HP_UNIT = 50;
+/** Классика: урон касания / снаряда босса по игроку. */
+const SALE_HIT_DMG = 50;
+/** 2.0: база удара рядового / босса до брони и кривой времени. */
+const SALE_HIT_TRASH = 16;
+const SALE_HIT_FATTY = 22;
+const SALE_HIT_ELITE = 28;
+const SALE_HIT_BOSS = 48;
+/** 2.0: iframe после реального удара (классика — 0.8 в Player.takeDamage). */
+const SALE_IFRAME_V2 = 0.4;
+
+function saleHp(n) {
+  return Math.round((n || 0) * SALE_HP_UNIT);
+}
+
+/** 2.0: к 10:00 ≈×2, к 20:00 ≈×3. */
+function saleTimeHitMul(minutes) {
+  return 1 + 0.10 * (minutes || 0);
+}
+
 const SALE_MAX_ENEMIES = 130; // орда как в VS (мобильный потолок)
 const SALE_WORLD_MUL = 2.75;
 /**

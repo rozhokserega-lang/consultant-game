@@ -167,11 +167,11 @@ Game.prototype.applySalePowerup = function (pu) {
   } else if (pu.kind === 'heart') {
     let heal = 1;
     if (this.saleV2 && this.saleV2HasEffect && this.saleV2HasEffect('heart_boost')) {
-      heal = 2;
+      heal = 1.5;
       if (p.slowTimer) p.slowTimer = 0;
       if (p.muteAttack) p.muteAttack = 0;
     }
-    p.hp = Math.min(p.maxHp, p.hp + heal);
+    this.saleApplyHeal(saleHp(heal));
     if (this._saleBal) {
       this._saleBal.totals.hearts = (this._saleBal.totals.hearts || 0) + 1;
       if (this._saleBal._acc) this._saleBal._acc.hearts = (this._saleBal._acc.hearts || 0) + 1;
@@ -208,17 +208,56 @@ Game.prototype.updateSalePowerups = function (dt) {
   this.salePowerups = this.salePowerups.filter((pu) => !pu.dead && pu.life > 0);
 };
 
-Game.prototype.pushSaleDmgNum = function (x, y, dmg) {
+Game.prototype.pushSaleDmgNum = function (x, y, dmg, kind) {
   if (this.showDmgNumbers === false) return;
   this.saleDmgNums = this.saleDmgNums || [];
   if (this.saleDmgNums.length > 48) this.saleDmgNums.shift();
+  const heal = kind === 'heal';
+  const hurt = kind === 'hurt';
   this.saleDmgNums.push({
-    x: x + rand(-6, 6),
+    x: x + rand(-6, 6) + (heal ? 12 : hurt ? -12 : 0),
     y,
-    txt: String(dmg),
-    big: dmg >= 25,
-    life: 0.65,
-    max: 0.65,
-    vy: -52,
+    txt: heal ? ('+' + dmg) : hurt ? ('-' + dmg) : String(dmg),
+    kind: kind || 'dmg',
+    big: heal || hurt || dmg >= 25,
+    life: heal || hurt ? 0.85 : 0.65,
+    max: heal || hurt ? 0.85 : 0.65,
+    vy: heal || hurt ? -72 : -52,
   });
+};
+
+Game.prototype.pushSalePlayerHpNum = function (delta) {
+  const p = this.player;
+  if (!p || !delta) return;
+  this.pushSaleDmgNum(
+    p.x,
+    p.y - (p.r || 18) - 16,
+    Math.abs(Math.round(delta)),
+    delta > 0 ? 'heal' : 'hurt',
+  );
+};
+
+Game.prototype.saleApplyHeal = function (amount, silent) {
+  const p = this.player;
+  if (!p || !(amount > 0)) return 0;
+  const before = p.hp;
+  p.hp = Math.min(p.maxHp, p.hp + amount);
+  const gained = p.hp - before;
+  if (gained > 0 && !silent) this.pushSalePlayerHpNum(gained);
+  return gained;
+};
+
+Game.prototype.hookSalePlayerHpNums = function () {
+  if (!this.player || this.player._saleHpNumHooked) return;
+  const self = this;
+  const orig = this.player.takeDamage.bind(this.player);
+  this.player.takeDamage = function (fromX, fromY, amount) {
+    const before = this.hp;
+    const dead = orig(fromX, fromY, amount);
+    if (this._justRevived) return dead;
+    const lost = Math.max(0, before - this.hp);
+    if (lost > 0) self.pushSalePlayerHpNum(-lost);
+    return dead;
+  };
+  this.player._saleHpNumHooked = true;
 };

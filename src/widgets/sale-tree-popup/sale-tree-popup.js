@@ -17,7 +17,7 @@
         <h2 class="sale-v2-tree__title" id="sale-v2-tree-title">Дерево смены</h2>
         <p class="sale-v2-tree__points" id="sale-v2-tree-points">Очки 0</p>
       </header>
-      <p class="sale-v2-tree__hint">Стартовые узлы всегда открыты. Внутри ветки — один путь до капстона.</p>
+      <p class="sale-v2-tree__hint">Все ветки открыты. Сначала корень ветки, потом её листья.</p>
       <div class="sale-v2-tree__tabs" id="sale-v2-tree-tabs"></div>
       <div class="sale-v2-tree__board" id="sale-v2-tree-board"></div>
       <div class="sale-v2-tree__inspect" id="sale-v2-tree-inspect">

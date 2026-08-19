@@ -125,10 +125,10 @@ Game.prototype.hookExtractBalancePlayerHurt = function () {
   if (!isExtractBalanceLogEnabled() || !this.player || this.player._extractBalHurtHooked) return;
   const self = this;
   const orig = this.player.takeDamage.bind(this.player);
-  this.player.takeDamage = function (fromX, fromY) {
+  this.player.takeDamage = function (fromX, fromY, amount) {
     const before = this.hp;
     const livesBefore = this.extraLives || 0;
-    const dead = orig(fromX, fromY);
+    const dead = orig(fromX, fromY, amount);
     if (this._justRevived && (this.extraLives || 0) < livesBefore) {
       if (self.recordExtractBalanceHurt) self.recordExtractBalanceHurt(1);
       if (self.recordExtractBalanceRevive) self.recordExtractBalanceRevive();

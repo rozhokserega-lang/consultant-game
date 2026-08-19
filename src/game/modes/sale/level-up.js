@@ -190,8 +190,9 @@ Game.prototype.openSaleUpgradeUI = function () {
     // LN noChoices: слоты полны — тихий хил без баннера
     const n = Math.max(1, this.pendingUpgrades | 0);
     if (this.player) {
-      this.player.maxHp += Math.min(3, n);
-      this.player.hp = Math.min(this.player.maxHp, this.player.hp + Math.min(3, n));
+      const add = saleHp(Math.min(3, n));
+      this.player.maxHp += add;
+      this.saleApplyHeal(add);
       this.spawnAnimFx('afx_heal', this.player.x, this.player.y - 10, { life: 0.45, scale: 0.75, vy: -18 });
     }
     this.choosingUpgrade = false;
@@ -304,8 +305,9 @@ Game.prototype.pickSaleUpgrade = function (i) {
   } else if (up.kind === 'passive') {
     this.salePassives[up.id] = (this.salePassives[up.id] || 0) + 1;
     if (up.id === 'mug') {
-      this.player.maxHp += 1;
-      this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);
+      const add = saleHp(1);
+      this.player.maxHp += add;
+      this.saleApplyHeal(add);
     }
     this.applySalePassivesToPlayer();
     if (this._saleBal) {
@@ -316,15 +318,16 @@ Game.prototype.pickSaleUpgrade = function (i) {
     this.saleOverflow = this.saleOverflow || {};
     this.saleOverflow[up.id] = (this.saleOverflow[up.id] || 0) + 1;
     if (up.id === 'vital') {
-      this.player.maxHp += 1;
-      this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);
+      const add = saleHp(1);
+      this.player.maxHp += add;
+      this.saleApplyHeal(add);
     }
     this.applySalePassivesToPlayer();
   } else if (up.kind === 'weapon_over') {
     this.saleWeaponOver = this.saleWeaponOver || {};
     this.saleWeaponOver[up.id] = (this.saleWeaponOver[up.id] || 0) + 1;
   } else if (up.kind === 'heal') {
-    this.player.hp = Math.min(this.player.maxHp, this.player.hp + 2);
+    this.saleApplyHeal(saleHp(2));
     this.spawnSpriteFx('fx_medkit', this.player.x, this.player.y - 20, { scale: 0.9, life: 0.45, vy: -30 });
     if (typeof drawSpell === 'function') {
       this.spawnSpriteFx('sp_heal2', this.player.x, this.player.y, { scale: 0.55, life: 0.4, vy: -10 });

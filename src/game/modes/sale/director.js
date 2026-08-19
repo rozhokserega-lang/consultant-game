@@ -122,8 +122,8 @@ Game.prototype.applySaleBossDrop = function (bossId, x, y) {
       });
     }
   } else if (drop.kind === 'heal_max' && p) {
-    p.maxHp += 1;
-    p.hp = Math.min(p.maxHp, p.hp + 1);
+    p.maxHp += saleHp(1);
+    this.saleApplyHeal(saleHp(1));
   }
   this.showEventBanner('🎁 Босс: ' + drop.label, 2.0);
 };
@@ -138,7 +138,7 @@ Game.prototype.onSaleBossKilled = function (enemy) {
   if (typeof this.tryUnlockSaleCashier === 'function') this.tryUnlockSaleCashier();
   // LN kill-kit: хил + магнит + хлопушка (+ посылка уже в dropSalePowerup)
   if (this.player && this.player.hp < this.player.maxHp) {
-    this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);
+    this.saleApplyHeal(saleHp(1));
   }
   if (!this.saleV2) this.spawnSalePowerup(enemy.x, enemy.y - 18, 'bomb');
   if (this.saleV2 && typeof this.grantSaleV2BossCoupon === 'function') {

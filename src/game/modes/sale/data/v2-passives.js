@@ -33,9 +33,8 @@ const SALE_V2_FORKS = {
 };
 
 /**
- * fork + option — развилка. T1 всегда открыты.
- * T2/капстон соседнего листа закрыты, пока выбранный путь не дойдёт до капстона.
- * root: сторона (atk/def) — глубина другой стороны тоже после капстона.
+ * Развилки только для раскладки UI. T2/капстон открываются через requires
+ * своей ветки — соседние листья и стороны не запираются.
  */
 const SALE_V2_PASSIVES = {
   haste: {
@@ -115,15 +114,15 @@ const SALE_V2_PASSIVES = {
   mug: {
     id: 'mug', root: 'def', fork: 'def', option: 'vital', lane: 'vital',
     tier: 1, max: 5, ico: '🥫',
-    name: 'Банка энергетика', desc: '+1 макс HP за уровень',
-    stat: { hp: 1 },
+    name: 'Банка энергетика', desc: '+50 макс HP за уровень',
+    stat: { hp: SALE_HP_UNIT },
   },
   armor: {
     id: 'armor', root: 'def', fork: 'vital', option: 'armor', lane: 'vital',
     tier: 2, max: 5, ico: '🧱',
-    name: 'Стальной прилавок', desc: '−6% входящего урона за уровень',
+    name: 'Стальной прилавок', desc: '−4 урона с удара за уровень (на 5 ур. −20)',
     requires: { id: 'mug', lvl: 5 },
-    stat: { armor: 0.06 },
+    stat: { armor: 4 },
   },
   cap_till: {
     id: 'cap_till', root: 'def', fork: 'vital', option: 'armor', lane: 'vital',
@@ -135,9 +134,9 @@ const SALE_V2_PASSIVES = {
   medkit: {
     id: 'medkit', root: 'def', fork: 'vital', option: 'regen', lane: 'vital',
     tier: 2, max: 3, ico: '🩹',
-    name: 'Аптечка', desc: 'Реген HP и шанс сердца при низком HP',
+    name: 'Аптечка', desc: 'Реген 4 HP/с за уровень и шанс сердца при низком HP',
     requires: { id: 'mug', lvl: 5 },
-    stat: { heartLow: 0.04, regen: 1 },
+    stat: { heartLow: 0.02, regen: 4 },
   },
   cap_ems: {
     id: 'cap_ems', root: 'def', fork: 'vital', option: 'regen', lane: 'vital',

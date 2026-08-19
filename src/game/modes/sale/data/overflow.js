@@ -11,5 +11,5 @@ const SALE_OVERFLOW = [
   { id: 'power', ico: '💪', name: 'Сверхурочные', desc: '+8% урона всему', max: 30 },
   { id: 'tempo', ico: '⏱️', name: 'Час пик', desc: '−6% перезарядка оружия', max: 25 },
   { id: 'space', ico: '📐', name: 'Расширение зала', desc: '+8% размер атак', max: 25 },
-  { id: 'vital', ico: '❤️‍🔥', name: 'Медосмотр', desc: '+1 макс HP и +1 HP', max: 20 },
+  { id: 'vital', ico: '❤️‍🔥', name: 'Медосмотр', desc: '+50 макс HP и +50 HP', max: 20 },
 ];

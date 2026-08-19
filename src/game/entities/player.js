@@ -357,7 +357,7 @@ class Player {
     return Math.abs(diff - this.stickSwingAngle * 0.5) < halfArc;
   }
 
-  takeDamage(fromX, fromY) {
+  takeDamage(fromX, fromY, amount) {
     if (window.game && window.game.__god) return false;
     if (this.invincible > 0 || this.lunchTimer > 0) return false;
     if (this.shieldCharges > 0) {
@@ -365,7 +365,8 @@ class Player {
       this.invincible = 0.6;
       return false;
     }
-    this.hp -= 1;
+    const dmg = Math.max(1, Math.round(amount != null ? amount : (this.hitDamage || 1)));
+    this.hp = Math.max(0, this.hp - dmg);
     this.invincible = 0.8;
     const a = angleTo(fromX, fromY, this.x, this.y);
     this.knockback.x = Math.cos(a) * 280;

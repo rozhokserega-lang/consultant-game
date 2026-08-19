@@ -185,6 +185,7 @@ Game.prototype.resetSaleGame = function () {
 
   this.saleWeaponCd = {};
   this.saleRegenTimer = 0;
+  this.saleRegenAcc = 0;
   this.saleOrbits = [];
   this.saleProjectiles = [];
   this.saleBeams = [];
@@ -201,19 +202,14 @@ Game.prototype.resetSaleGame = function () {
   this.initSaleBalanceLog();
   this.hookSaleBalancePlayerHurt();
   if (typeof this.hookSaleV2PlayerDefense === 'function') this.hookSaleV2PlayerDefense();
+  if (typeof this.hookSalePlayerHpNums === 'function') this.hookSalePlayerHpNums();
 
   this.applyMetaToPlayer();
   this.applySalePassivesToPlayer();
   this.applySaleHeroToPlayer();
   const treeHp = this.saleTreeBonus('hp');
   if (treeHp) {
-    this.player.maxHp += treeHp;
-    this.player.hp = this.player.maxHp;
-  }
-  // HP героя после vitality
-  const hero = getSaleHero(this.selectedHeroId);
-  if (hero.maxHpBonus) {
-    this.player.maxHp += hero.maxHpBonus;
+    this.player.maxHp = Math.max(1, this.player.maxHp + saleHp(treeHp));
     this.player.hp = this.player.maxHp;
   }
   this.generateObstacles();
@@ -269,6 +265,10 @@ Game.prototype.applySaleHeroToPlayer = function () {
   p._saleHeroId = hero.id;
   p._saleHeroHue = hero.hue || 0;
   p._saleHeroName = hero.name;
+  const hp = hero.maxHp || (5 + (hero.maxHpBonus || 0));
+  p.maxHp = hp;
+  p.hp = hp;
+  p.hitDamage = typeof SALE_HIT_DMG === 'number' ? SALE_HIT_DMG : 1;
 };
 
 Game.prototype.getSaleFloor = function () {

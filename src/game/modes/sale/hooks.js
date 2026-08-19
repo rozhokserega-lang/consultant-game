@@ -64,13 +64,7 @@ Game.prototype.explodeAt = function (x, y) {
 
   if (this.player.invincible <= 0 && this.player.lunchTimer <= 0) {
     if (dist(x, y, this.player.x, this.player.y) < R + this.player.r) {
-      if (this.player.takeDamage(x, y)) {
-        this.tookDamage = true;
-        this.endSaleGame(false, 'Взрыв жирного покупателя 💣');
-        return true;
-      }
-      this.tookDamage = true;
-      if (this.applySaleFragileExtra && this.applySaleFragileExtra()) return true;
+      if (this.saleHurtPlayer(x, y, 'fatty', 'Взрыв жирного покупателя 💣')) return true;
     }
   }
 

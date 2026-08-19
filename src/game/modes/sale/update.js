@@ -130,14 +130,8 @@ Game.prototype.updateSale = function (dt) {
           enemy.knockback = enemy.knockback || { x: 0, y: 0 };
           enemy.knockback.x -= Math.cos(a) * 180;
           enemy.knockback.y -= Math.sin(a) * 180;
-        } else if (this.player.takeDamage(enemy.x, enemy.y)) {
-          this.endSaleGame(false, enemy.nameTag || 'Покупатель');
+        } else if (this.saleHurtPlayer(enemy.x, enemy.y, this.saleHurtKindFromEnemy(enemy), enemy.nameTag || 'Покупатель')) {
           return;
-        } else {
-          this.tookDamage = true;
-          sfx.hurt();
-          this.vibrate(40);
-          if (this.applySaleFragileExtra()) return;
         }
       }
     }
@@ -239,7 +233,7 @@ Game.prototype.updateSale = function (dt) {
         pk.life = 0;
         sfx.pickup();
       } else if (pk.type === 'heal' && this.player.hp < this.player.maxHp) {
-        this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);
+        this.saleApplyHeal(saleHp(1));
         pk.life = 0;
         sfx.pickup();
       } else if (pk.type === 'lunch') {

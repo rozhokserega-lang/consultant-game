@@ -161,10 +161,10 @@ Game.prototype.hookSaleBalancePlayerHurt = function () {
   if (!isSaleBalanceLogEnabled() || !this.player || this.player._saleBalHurtHooked) return;
   const self = this;
   const orig = this.player.takeDamage.bind(this.player);
-  this.player.takeDamage = function (fromX, fromY) {
+  this.player.takeDamage = function (fromX, fromY, amount) {
     const before = this.hp;
     const livesBefore = this.extraLives || 0;
-    const dead = orig(fromX, fromY);
+    const dead = orig(fromX, fromY, amount);
     if (this._justRevived && (this.extraLives || 0) < livesBefore) {
       // смертельный удар + ревайв: HP вырос, но удар был — считаем hurt и revive
       if (self.recordSaleBalanceHurt) self.recordSaleBalanceHurt(1);

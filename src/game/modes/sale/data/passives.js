@@ -4,7 +4,7 @@
 'use strict';
 
 const SALE_PASSIVES = {
-  mug: { id: 'mug', name: 'Банка энергетика', ico: '🥫', max: 1, weapon: 'coffee', desc: '+1 макс HP · ключ: Холодный латте' },
+  mug: { id: 'mug', name: 'Банка энергетика', ico: '🥫', max: 1, weapon: 'coffee', desc: '+50 макс HP · ключ: Холодный латте' },
   energy: { id: 'energy', name: 'Кофеиновый шот', ico: '⚡', max: 1, weapon: 'coffee', desc: '−6% КД · ключ: КОФЕИН' },
   printer: { id: 'printer', name: 'Чековый аппарат', ico: '🖨️', max: 1, weapon: 'receipt', desc: '+6% область · ключ: Бесконечный чек' },
   pouch: { id: 'pouch', name: 'Поясная сумка', ico: '👝', max: 1, weapon: 'receipt', desc: '+1 снаряд · ключ: Возврат чека' },

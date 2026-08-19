@@ -46,7 +46,7 @@ Game.prototype.saleHitEnemy = function (e, dmg, srcX, srcY, knock, opts) {
   if (opts.lifesteal && died && this.player.hp < this.player.maxHp) {
     // вампиризм только с убийства + общий КД — нельзя AFK-хилиться с ауры
     if ((this._saleLsCd || 0) <= 0 && Math.random() < opts.lifesteal) {
-      this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);
+      this.saleApplyHeal(saleHp(1));
       this._saleLsCd = SALE_LIFESTEAL_CD;
       this.spawnAnimFx('afx_heal', this.player.x, this.player.y - 10, { life: 0.45, scale: 0.7, vy: -20 });
     }
@@ -77,12 +77,60 @@ Game.prototype.nearestSaleEnemy = function (x, y, maxDist) {
   return best;
 };
 
+Game.prototype.saleHurtKindFromEnemy = function (enemy) {
+  if (!enemy) return 'trash';
+  if (enemy.saleBossId || enemy.type === 'boss' || enemy.type === 'director') return 'boss';
+  if (enemy._saleElite || enemy.type === 'miniboss') return 'elite';
+  if (enemy.type === 'fatty' || enemy.type === 'tank' || enemy.explodes) return 'fatty';
+  return 'trash';
+};
+
+Game.prototype.saleIncomingDmg = function (kind) {
+  if (!this.saleV2) return typeof SALE_HIT_DMG === 'number' ? SALE_HIT_DMG : 1;
+  let base = SALE_HIT_TRASH;
+  if (kind === 'boss') base = SALE_HIT_BOSS;
+  else if (kind === 'elite') base = SALE_HIT_ELITE;
+  else if (kind === 'fatty' || kind === 'tank') base = SALE_HIT_FATTY;
+  const m = (this.saleTime || 0) / 60;
+  const timeMul = typeof saleTimeHitMul === 'function' ? saleTimeHitMul(m) : (1 + 0.10 * m);
+  return Math.max(1, Math.round(base * timeMul));
+};
+
+Game.prototype.saleArmorMitigate = function (amount) {
+  const dmg = Math.max(0, Math.round(amount || 0));
+  if (!this.saleV2) return dmg;
+  const armor = this.saleV2Stat('armor') || 0;
+  return Math.max(0, dmg - armor);
+};
+
+/**
+ * Урон игроку в Распродаже. true = умер (забег уже завершён).
+ * После брони 0 — без iframe и звука.
+ */
+Game.prototype.saleHurtPlayer = function (fromX, fromY, kind, killName) {
+  const p = this.player;
+  if (!p || this.__god) return false;
+  if (p.invincible > 0 || p.lunchTimer > 0) return false;
+  const amount = this.saleIncomingDmg(kind || 'trash');
+  if (this.saleArmorMitigate(amount) <= 0) return false;
+  if (p.takeDamage(fromX, fromY, amount)) {
+    this.endSaleGame(false, killName || 'Покупатель');
+    return true;
+  }
+  this.tookDamage = true;
+  if (typeof sfx !== 'undefined' && sfx.hurt) sfx.hurt();
+  if (this.vibrate) this.vibrate(40);
+  return this.applySaleFragileExtra ? this.applySaleFragileExtra() : false;
+};
+
 Game.prototype.applySaleFragileExtra = function () {
   if (!this.saleFragile || !this.player || this.player.hp <= 0) return false;
   // смертельный удар уже потратил вторую жизнь в takeDamage — не добиваем тем же хитом
   if (this.player._justRevived) return false;
-  this.player.hp -= 1;
-  if (this.recordSaleBalanceHurt) this.recordSaleBalanceHurt(1);
+  const extra = saleHp(1);
+  this.player.hp -= extra;
+  this.pushSalePlayerHpNum(-extra);
+  if (this.recordSaleBalanceHurt) this.recordSaleBalanceHurt(extra);
   if (this.player.hp <= 0) {
     if ((this.player.extraLives || 0) > 0) {
       this.player.extraLives -= 1;
